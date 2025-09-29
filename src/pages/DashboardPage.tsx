@@ -19,29 +19,29 @@ import {
 
 // Mock data for charts
 const revenueData = [
-  { month: "Jan", revenue: 45000, expenses: 32000 },
-  { month: "Feb", revenue: 52000, expenses: 35000 },
-  { month: "Mar", revenue: 48000, expenses: 33000 },
-  { month: "Apr", revenue: 61000, expenses: 38000 },
-  { month: "May", revenue: 55000, expenses: 36000 },
-  { month: "Jun", revenue: 67000, expenses: 41000 },
+  { month: "يناير", revenue: 45000, expenses: 32000 },
+  { month: "فبراير", revenue: 52000, expenses: 35000 },
+  { month: "مارس", revenue: 48000, expenses: 33000 },
+  { month: "أبريل", revenue: 61000, expenses: 38000 },
+  { month: "مايو", revenue: 55000, expenses: 36000 },
+  { month: "يونيو", revenue: 67000, expenses: 41000 },
 ]
 
 const enrollmentData = [
-  { month: "Jan", students: 120 },
-  { month: "Feb", students: 135 },
-  { month: "Mar", students: 142 },
-  { month: "Apr", students: 158 },
-  { month: "May", students: 165 },
-  { month: "Jun", students: 178 },
+  { month: "يناير", students: 120 },
+  { month: "فبراير", students: 135 },
+  { month: "مارس", students: 142 },
+  { month: "أبريل", students: 158 },
+  { month: "مايو", students: 165 },
+  { month: "يونيو", students: 178 },
 ]
 
 const courseDistribution = [
-  { name: "Mathematics", value: 45, color: "#DC2626" },
-  { name: "Science", value: 35, color: "#EF4444" },
-  { name: "English", value: 25, color: "#F87171" },
-  { name: "History", value: 20, color: "#FCA5A5" },
-  { name: "Arts", value: 15, color: "#FECACA" },
+  { name: "الرياضيات", value: 45, color: "#DC2626" },
+  { name: "العلوم", value: 35, color: "#EF4444" },
+  { name: "اللغة الإنجليزية", value: 25, color: "#F87171" },
+  { name: "التاريخ", value: 20, color: "#FCA5A5" },
+  { name: "الفنون", value: 15, color: "#FECACA" },
 ]
 
 export function DashboardPage() {
@@ -50,37 +50,37 @@ export function DashboardPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your finance management system</p>
+          <h1 className="text-3xl font-bold text-foreground">لوحة التحكم</h1>
+          <p className="text-muted-foreground">نظرة عامة على نظام إدارة الشؤون المالية</p>
         </div>
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Total Revenue"
-            value="$328,000"
-            change="+12.5% from last month"
+            title="إجمالي الإيرادات"
+            value="328,000 ر.س"
+            change="+12.5% من الشهر الماضي"
             changeType="positive"
             icon={DollarSign}
           />
           <StatCard
-            title="Total Students"
+            title="إجمالي الطلاب"
             value="178"
-            change="+8 new this month"
+            change="+8 طلاب جدد هذا الشهر"
             changeType="positive"
             icon={GraduationCap}
           />
           <StatCard
-            title="Active Courses"
+            title="الدورات النشطة"
             value="12"
-            change="2 starting next month"
+            change="دورتان تبدآن الشهر القادم"
             changeType="neutral"
             icon={BookOpen}
           />
           <StatCard
-            title="Pending Payments"
-            value="$15,240"
-            change="23 invoices pending"
+            title="المدفوعات المعلقة"
+            value="15,240 ر.س"
+            change="23 فاتورة معلقة"
             changeType="negative"
             icon={CreditCard}
           />
@@ -93,9 +93,9 @@ export function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                Revenue vs Expenses
+                الإيرادات مقابل المصروفات
               </CardTitle>
-              <CardDescription>Monthly comparison of income and expenses</CardDescription>
+              <CardDescription>مقارنة شهرية للدخل والمصروفات</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -136,9 +136,9 @@ export function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Student Enrollment
+                تسجيل الطلاب
               </CardTitle>
-              <CardDescription>Monthly student enrollment growth</CardDescription>
+              <CardDescription>نمو تسجيل الطلاب الشهري</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -173,9 +173,9 @@ export function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" />
-                Course Distribution
+                توزيع الدورات
               </CardTitle>
-              <CardDescription>Students enrolled by course</CardDescription>
+              <CardDescription>الطلاب المسجلون حسب الدورة</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -204,23 +204,29 @@ export function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="h-5 w-5 text-primary" />
-                Recent Transactions
+                المعاملات الأخيرة
               </CardTitle>
-              <CardDescription>Latest financial activities</CardDescription>
+              <CardDescription>آخر الأنشطة المالية</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[
                   {
-                    type: "Payment",
-                    student: "John Smith",
-                    amount: "$1,200",
-                    course: "Mathematics",
-                    time: "2 hours ago",
+                    type: "دفعة",
+                    student: "أحمد محمد",
+                    amount: "1,200 ر.س",
+                    course: "الرياضيات",
+                    time: "منذ ساعتين",
                   },
-                  { type: "Expense", description: "Office Supplies", amount: "-$340", time: "4 hours ago" },
-                  { type: "Refund", student: "Sarah Johnson", amount: "-$800", course: "Science", time: "1 day ago" },
-                  { type: "Payment", student: "Mike Wilson", amount: "$1,500", course: "English", time: "2 days ago" },
+                  { type: "مصروف", description: "مستلزمات مكتبية", amount: "-340 ر.س", time: "منذ 4 ساعات" },
+                  { type: "استرداد", student: "سارة أحمد", amount: "-800 ر.س", course: "العلوم", time: "منذ يوم" },
+                  {
+                    type: "دفعة",
+                    student: "محمد علي",
+                    amount: "1,500 ر.س",
+                    course: "اللغة الإنجليزية",
+                    time: "منذ يومين",
+                  },
                 ].map((transaction, index) => (
                   <div
                     key={index}

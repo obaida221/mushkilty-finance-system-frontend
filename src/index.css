@@ -55,5 +55,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Adding RTL support and Arabic font */
+    direction: rtl;
+    font-family: "Segoe UI", "Tahoma", "Arial", sans-serif;
+  }
+
+  /* RTL-specific styles */
+  .rtl-flip {
+    transform: scaleX(-1);
+  }
+
+  /* Arabic number styling */
+  .arabic-numbers {
+    font-feature-settings: "lnum" 1;
   }
 }

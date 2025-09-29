@@ -17,7 +17,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
+          <p className="mt-2 text-muted-foreground">جاري التحميل...</p>
         </div>
       </div>
     )
@@ -31,8 +31,8 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">You don't have permission to access this page.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">تم رفض الوصول</h1>
+          <p className="text-muted-foreground">ليس لديك صلاحية للوصول إلى هذه الصفحة.</p>
         </div>
       </div>
     )

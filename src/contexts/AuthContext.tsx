@@ -10,25 +10,27 @@ const mockUsers = [
   {
     id: "1",
     email: "admin@school.com",
-    name: "Admin User",
+    name: "مستخدم المدير",
     role: {
       id: "1",
       name: "admin",
-      description: "System Administrator",
+      description: "مدير النظام",
       permissions: [
-        { id: "1", name: "manage_users", description: "Manage Users", resource: "users", action: "manage" },
-        { id: "2", name: "manage_students", description: "Manage Students", resource: "students", action: "manage" },
-        { id: "3", name: "manage_courses", description: "Manage Courses", resource: "courses", action: "manage" },
-        { id: "4", name: "manage_finances", description: "Manage Finances", resource: "finances", action: "manage" },
-        { id: "5", name: "view_analytics", description: "View Analytics", resource: "analytics", action: "view" },
+        { id: "1", name: "manage_users", description: "إدارة المستخدمين", resource: "users", action: "manage" },
+        { id: "2", name: "manage_students", description: "إدارة الطلاب", resource: "students", action: "manage" },
+        { id: "3", name: "manage_courses", description: "إدارة الدورات", resource: "courses", action: "manage" },
+        { id: "4", name: "manage_finance", description: "إدارة المالية", resource: "finance", action: "manage" },
+        { id: "5", name: "view_analytics", description: "عرض التحليلات", resource: "analytics", action: "view" },
+        { id: "6", name: "view_finance", description: "عرض المالية", resource: "finance", action: "view" },
       ],
     },
     permissions: [
-      { id: "1", name: "manage_users", description: "Manage Users", resource: "users", action: "manage" },
-      { id: "2", name: "manage_students", description: "Manage Students", resource: "students", action: "manage" },
-      { id: "3", name: "manage_courses", description: "Manage Courses", resource: "courses", action: "manage" },
-      { id: "4", name: "manage_finances", description: "Manage Finances", resource: "finances", action: "manage" },
-      { id: "5", name: "view_analytics", description: "View Analytics", resource: "analytics", action: "view" },
+      { id: "1", name: "manage_users", description: "إدارة المستخدمين", resource: "users", action: "manage" },
+      { id: "2", name: "manage_students", description: "إدارة الطلاب", resource: "students", action: "manage" },
+      { id: "3", name: "manage_courses", description: "إدارة الدورات", resource: "courses", action: "manage" },
+      { id: "4", name: "manage_finance", description: "إدارة المالية", resource: "finance", action: "manage" },
+      { id: "5", name: "view_analytics", description: "عرض التحليلات", resource: "analytics", action: "view" },
+      { id: "6", name: "view_finance", description: "عرض المالية", resource: "finance", action: "view" },
     ],
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
@@ -36,19 +38,21 @@ const mockUsers = [
   {
     id: "2",
     email: "accountant@school.com",
-    name: "Accountant User",
+    name: "مستخدم المحاسب",
     role: {
       id: "2",
       name: "accountant",
-      description: "Financial Manager",
+      description: "مدير مالي",
       permissions: [
-        { id: "4", name: "manage_finances", description: "Manage Finances", resource: "finances", action: "manage" },
-        { id: "5", name: "view_analytics", description: "View Analytics", resource: "analytics", action: "view" },
+        { id: "4", name: "manage_finance", description: "إدارة المالية", resource: "finance", action: "manage" },
+        { id: "5", name: "view_analytics", description: "عرض التحليلات", resource: "analytics", action: "view" },
+        { id: "6", name: "view_finance", description: "عرض المالية", resource: "finance", action: "view" },
       ],
     },
     permissions: [
-      { id: "4", name: "manage_finances", description: "Manage Finances", resource: "finances", action: "manage" },
-      { id: "5", name: "view_analytics", description: "View Analytics", resource: "analytics", action: "view" },
+      { id: "4", name: "manage_finance", description: "إدارة المالية", resource: "finance", action: "manage" },
+      { id: "5", name: "view_analytics", description: "عرض التحليلات", resource: "analytics", action: "view" },
+      { id: "6", name: "view_finance", description: "عرض المالية", resource: "finance", action: "view" },
     ],
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
@@ -86,7 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem("auth_token", "mock_token")
       localStorage.setItem("auth_user", JSON.stringify(foundUser))
     } else {
-      throw new Error("Invalid credentials")
+      throw new Error("بيانات اعتماد غير صحيحة")
     }
 
     setIsLoading(false)
