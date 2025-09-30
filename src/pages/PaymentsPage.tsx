@@ -1,437 +1,252 @@
 "use client"
 
-import React, { useState } from "react"
-import { Layout } from "@/components/layout/Layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Select } from "@/components/ui/Select"
-import { Badge } from "@/components/ui/Badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { Plus, Search, Edit, Trash2, CreditCard, DollarSign, Calendar, Receipt } from "lucide-react"
-import type { Payment } from "@/types/finance"
+import type React from "react"
+import { useState } from "react"
+import {
+  Box,
+  Typography,
+  Paper,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  InputAdornment,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  Chip,
+} from "@mui/material"
+import { DataGrid, type GridColDef } from "@mui/x-data-grid"
+import { Search, Add, Payment as PaymentIcon } from "@mui/icons-material"
+import type { Payment } from "../types"
 
 // Mock data
 const mockPayments: Payment[] = [
   {
     id: "1",
     studentId: "1",
-    studentName: "John Smith",
-    courseId: "1",
-    courseName: "Advanced Mathematics",
-    amount: 1200,
-    paymentMethod: "card",
+    amount: 500000,
+    paymentMethod: "cash",
     transactionId: "1",
-    status: "completed",
-    date: "2024-01-15",
-    description: "Course fee payment",
-    receiptNumber: "RCP-001",
-    createdAt: "2024-01-15T10:30:00Z",
-    updatedAt: "2024-01-15T10:30:00Z",
+    date: "2024-03-15",
+    notes: "دفعة كاملة للدورة",
+    createdAt: "2024-03-15T10:30:00",
   },
   {
     id: "2",
     studentId: "2",
-    studentName: "Sarah Wilson",
-    courseId: "2",
-    courseName: "Physics Fundamentals",
-    amount: 400,
-    paymentMethod: "bank_transfer",
-    transactionId: "3",
-    status: "completed",
-    date: "2024-01-13",
-    description: "Partial payment",
-    receiptNumber: "RCP-002",
-    createdAt: "2024-01-13T09:15:00Z",
-    updatedAt: "2024-01-13T09:15:00Z",
+    amount: 400000,
+    paymentMethod: "card",
+    transactionId: "4",
+    date: "2024-03-13",
+    notes: "دفعة كاملة",
+    createdAt: "2024-03-13T11:15:00",
   },
   {
     id: "3",
-    studentId: "3",
-    studentName: "Mike Johnson",
-    courseId: "1",
-    courseName: "Advanced Mathematics",
-    amount: 600,
-    paymentMethod: "cash",
+    studentId: "1",
+    amount: 250000,
+    paymentMethod: "bank_transfer",
     transactionId: "6",
-    status: "pending",
-    date: "2024-01-10",
-    description: "Installment payment",
-    receiptNumber: "RCP-003",
-    createdAt: "2024-01-10T14:20:00Z",
-    updatedAt: "2024-01-10T14:20:00Z",
+    date: "2024-03-10",
+    notes: "دفعة أولى",
+    createdAt: "2024-03-10T09:20:00",
   },
 ]
 
-export function PaymentsPage() {
-  const [payments, setPayments] = useState<Payment[]>(mockPayments)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [methodFilter, setMethodFilter] = useState<string>("all")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+const PaymentsPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [openDialog, setOpenDialog] = useState(false)
+  const [payments] = useState<Payment[]>(mockPayments)
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.courseName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus = statusFilter === "all" || payment.status === statusFilter
-    const matchesMethod = methodFilter === "all" || payment.paymentMethod === methodFilter
-
-    return matchesSearch && matchesStatus && matchesMethod
-  })
-
-  const totalPayments = payments.reduce((sum, payment) => sum + payment.amount, 0)
-  const completedPayments = payments.filter((p) => p.status === "completed")
-  const pendingPayments = payments.filter((p) => p.status === "pending")
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default"
-      case "pending":
-        return "secondary"
-      case "failed":
-        return "destructive"
-      default:
-        return "secondary"
-    }
-  }
-
-  const getMethodIcon = (method: string) => {
-    switch (method) {
-      case "card":
-        return <CreditCard className="h-4 w-4" />
-      case "cash":
-        return <DollarSign className="h-4 w-4" />
-      case "bank_transfer":
-        return <Receipt className="h-4 w-4" />
-      default:
-        return <Receipt className="h-4 w-4" />
-    }
-  }
-
-  return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Payments</h1>
-            <p className="text-muted-foreground">Record and track student payments</p>
-          </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Record Payment
-          </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${totalPayments.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">{payments.length} transactions</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{completedPayments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                ${completedPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{pendingPayments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                ${pendingPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Payment</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${payments.length > 0 ? Math.round(totalPayments / payments.length).toLocaleString() : 0}
-              </div>
-              <p className="text-xs text-muted-foreground">Per transaction</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Records</CardTitle>
-            <CardDescription>Track and manage student payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search payments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </Select>
-              <Select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)}>
-                <option value="all">All Methods</option>
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="check">Check</option>
-              </Select>
-            </div>
-
-            {/* Payments Table */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Receipt</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      <div className="font-medium">{payment.receiptNumber}</div>
-                      <div className="text-sm text-muted-foreground">{payment.description}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{payment.studentName}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{payment.courseName || "N/A"}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-green-600">${payment.amount.toLocaleString()}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {getMethodIcon(payment.paymentMethod)}
-                        <span className="capitalize">{payment.paymentMethod.replace("_", " ")}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(payment.status)}>{payment.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div>{new Date(payment.date).toLocaleDateString()}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(payment.createdAt).toLocaleTimeString()}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPayment(payment)
-                            setIsDialogOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Payment Dialog */}
-        <PaymentDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          payment={selectedPayment}
-          onClose={() => {
-            setSelectedPayment(null)
-            setIsDialogOpen(false)
-          }}
-        />
-      </div>
-    </Layout>
-  )
-}
-
-interface PaymentDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  payment: Payment | null
-  onClose: () => void
-}
-
-function PaymentDialog({ open, onOpenChange, payment, onClose }: PaymentDialogProps) {
-  const [formData, setFormData] = useState({
-    studentName: "",
-    courseName: "",
+  const [paymentForm, setPaymentForm] = useState({
+    studentId: "",
     amount: "",
-    paymentMethod: "cash",
-    description: "",
-    date: new Date().toISOString().split("T")[0],
+    paymentMethod: "",
+    notes: "",
   })
 
-  React.useEffect(() => {
-    if (payment) {
-      setFormData({
-        studentName: payment.studentName,
-        courseName: payment.courseName || "",
-        amount: payment.amount.toString(),
-        paymentMethod: payment.paymentMethod,
-        description: payment.description,
-        date: payment.date,
-      })
-    } else {
-      setFormData({
-        studentName: "",
-        courseName: "",
-        amount: "",
-        paymentMethod: "cash",
-        description: "",
-        date: new Date().toISOString().split("T")[0],
-      })
-    }
-  }, [payment])
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Handle payment creation/update
-    onClose()
+  const handleOpenDialog = () => {
+    setPaymentForm({ studentId: "", amount: "", paymentMethod: "", notes: "" })
+    setOpenDialog(true)
   }
 
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
+
+  const handleCreatePayment = () => {
+    console.log("Creating payment:", paymentForm)
+    handleCloseDialog()
+  }
+
+  const getPaymentMethodLabel = (method: string) => {
+    const labels: Record<string, string> = {
+      cash: "نقدي",
+      card: "بطاقة",
+      bank_transfer: "تحويل بنكي",
+      online: "أونلاين",
+    }
+    return labels[method] || method
+  }
+
+  const columns: GridColDef[] = [
+    {
+      field: "date",
+      headerName: "التاريخ",
+      width: 120,
+    },
+    {
+      field: "studentId",
+      headerName: "الطالب",
+      flex: 1,
+      minWidth: 150,
+      renderCell: () => <Typography>علي أحمد</Typography>, // In production, fetch student name
+    },
+    {
+      field: "amount",
+      headerName: "المبلغ",
+      width: 150,
+      renderCell: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "success.main" }}>{params.value.toLocaleString()} د.ع</Typography>
+      ),
+    },
+    {
+      field: "paymentMethod",
+      headerName: "طريقة الدفع",
+      width: 130,
+      renderCell: (params) => <Chip label={getPaymentMethodLabel(params.value)} size="small" color="primary" />,
+    },
+    {
+      field: "notes",
+      headerName: "ملاحظات",
+      flex: 1,
+      minWidth: 200,
+    },
+  ]
+
+  const filteredPayments = payments.filter((payment) => payment.notes.toLowerCase().includes(searchQuery.toLowerCase()))
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{payment ? "Edit Payment" : "Record New Payment"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="studentName" className="text-sm font-medium">
-                Student Name
-              </label>
-              <Input
-                id="studentName"
-                value={formData.studentName}
-                onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="courseName" className="text-sm font-medium">
-                Course Name (Optional)
-              </label>
-              <Input
-                id="courseName"
-                value={formData.courseName}
-                onChange={(e) => setFormData({ ...formData, courseName: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">
-                Amount ($)
-              </label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="paymentMethod" className="text-sm font-medium">
-                Payment Method
-              </label>
+    <Box>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          المدفوعات
+        </Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+          تسجيل دفعة
+        </Button>
+      </Box>
+
+      <Paper>
+        <Box sx={{ p: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="البحث في المدفوعات..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 3 }}
+          />
+
+          <DataGrid
+            rows={filteredPayments}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10 },
+              },
+              sorting: {
+                sortModel: [{ field: "date", sort: "desc" }],
+              },
+            }}
+            pageSizeOptions={[5, 10, 25]}
+            disableRowSelectionOnClick
+            autoHeight
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-cell": {
+                borderColor: "divider",
+              },
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "background.default",
+                borderColor: "divider",
+              },
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* Create Payment Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <PaymentIcon />
+            تسجيل دفعة جديدة
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>الطالب</InputLabel>
               <Select
-                value={formData.paymentMethod}
-                onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                value={paymentForm.studentId}
+                label="الطالب"
+                onChange={(e) => setPaymentForm({ ...paymentForm, studentId: e.target.value })}
               >
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="check">Check</option>
+                <MenuItem value="1">علي أحمد</MenuItem>
+                <MenuItem value="2">سارة محمد</MenuItem>
+                <MenuItem value="3">حسن علي</MenuItem>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="date" className="text-sm font-medium">
-                Payment Date
-              </label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description
-            </label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="e.g., Course fee payment, Installment payment"
-              required
+            </FormControl>
+            <TextField
+              fullWidth
+              label="المبلغ (دينار عراقي)"
+              type="number"
+              value={paymentForm.amount}
+              onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
             />
-          </div>
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">{payment ? "Update Payment" : "Record Payment"}</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <FormControl fullWidth>
+              <InputLabel>طريقة الدفع</InputLabel>
+              <Select
+                value={paymentForm.paymentMethod}
+                label="طريقة الدفع"
+                onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+              >
+                <MenuItem value="cash">نقدي</MenuItem>
+                <MenuItem value="card">بطاقة</MenuItem>
+                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                <MenuItem value="online">أونلاين</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="ملاحظات"
+              multiline
+              rows={3}
+              value={paymentForm.notes}
+              onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>إلغاء</Button>
+          <Button onClick={handleCreatePayment} variant="contained">
+            تسجيل
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   )
 }
+
+export default PaymentsPage

@@ -1,135 +1,98 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import { AuthProvider } from "@/contexts/AuthContext"
-import { ProtectedRoute } from "@/components/ProtectedRoute"
-import { LoginPage } from "@/pages/LoginPage"
-import { DashboardPage } from "@/pages/DashboardPage"
-import { UsersPage } from "@/pages/UsersPage"
-import { CoursesPage } from "@/pages/CoursesPage"
-import { TeachersPage } from "@/pages/TeachersPage"
-import { StudentsPage } from "@/pages/StudentsPage"
-import { TransactionsPage } from "@/pages/TransactionsPage"
-import { PaymentsPage } from "@/pages/PaymentsPage"
-import { ExpensesPage } from "@/pages/ExpensesPage"
-import { RefundsPage } from "@/pages/RefundsPage"
-import { PayrollPage } from "@/pages/PayrollPage"
-import { DiscountsPage } from "@/pages/DiscountsPage"
-import { AnalyticsPage } from "@/pages/AnalyticsPage"
+"use client"
+
+import type React from "react"
+
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { ThemeProvider } from "@mui/material/styles"
+import CssBaseline from "@mui/material/CssBaseline"
+import rtlPlugin from "stylis-plugin-rtl"
+import { CacheProvider } from "@emotion/react"
+import createCache from "@emotion/cache"
+import { prefixer } from "stylis"
+import { ThemeContextProvider, useThemeMode } from "./context/ThemeContext"
+import { AuthProvider, useAuth } from "./context/AuthContext"
+import LoginPage from "./pages/LoginPage"
+import DashboardLayout from "./components/DashboardLayout"
+import DashboardPage from "./pages/DashboardPage"
+import UsersPage from "./pages/UsersPage"
+import StudentsPage from "./pages/StudentsPage"
+import CoursesPage from "./pages/CoursesPage"
+import TeachersPage from "./pages/TeachersPage"
+import TransactionsPage from "./pages/TransactionsPage"
+import PaymentsPage from "./pages/PaymentsPage"
+import ExpensesPage from "./pages/ExpensesPage"
+import RefundsPage from "./pages/RefundsPage"
+import DiscountsPage from "./pages/DiscountsPage"
+import PayrollPage from "./pages/PayrollPage"
+import AnalyticsPage from "./pages/AnalyticsPage"
+
+// Create RTL cache
+const cacheRtl = createCache({
+  key: "muirtl",
+  stylisPlugins: [prefixer, rtlPlugin],
+})
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <div>جاري التحميل...</div>
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+const AppContent: React.FC = () => {
+  const { theme } = useThemeMode()
+  
+  return (
+    <CacheProvider value={cacheRtl}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout>
+                      <Routes>
+                        <Route path="/" element={<DashboardPage />} />
+                        <Route path="/users" element={<UsersPage />} />
+                        <Route path="/students" element={<StudentsPage />} />
+                        <Route path="/courses" element={<CoursesPage />} />
+                        <Route path="/teachers" element={<TeachersPage />} />
+                        <Route path="/transactions" element={<TransactionsPage />} />
+                        <Route path="/payments" element={<PaymentsPage />} />
+                        <Route path="/expenses" element={<ExpensesPage />} />
+                        <Route path="/refunds" element={<RefundsPage />} />
+                        <Route path="/discounts" element={<DiscountsPage />} />
+                        <Route path="/payroll" element={<PayrollPage />} />
+                        <Route path="/analytics" element={<AnalyticsPage />} />
+                      </Routes>
+                    </DashboardLayout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </CacheProvider>
+  )
+}
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "users", action: "manage" }}>
-                  <UsersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/students"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "students", action: "manage" }}>
-                  <StudentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/courses"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "courses", action: "manage" }}>
-                  <CoursesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teachers"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "courses", action: "manage" }}>
-                  <TeachersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/transactions"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "finance", action: "view" }}>
-                  <TransactionsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payments"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "finance", action: "manage" }}>
-                  <PaymentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/expenses"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "finance", action: "manage" }}>
-                  <ExpensesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/refunds"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "finance", action: "manage" }}>
-                  <RefundsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payroll"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "finance", action: "manage" }}>
-                  <PayrollPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/discounts"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "finance", action: "manage" }}>
-                  <DiscountsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute requiredPermission={{ resource: "analytics", action: "view" }}>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <ThemeContextProvider>
+      <AppContent />
+    </ThemeContextProvider>
   )
 }
 

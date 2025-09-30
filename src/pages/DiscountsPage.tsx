@@ -1,382 +1,302 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
-import { Layout } from "@/components/layout/Layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Select } from "@/components/ui/Select"
-import { Badge } from "@/components/ui/Badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { Plus, Search, Edit, Trash2, Percent, Tag, Calendar, TrendingDown } from "lucide-react"
-import type { Discount, DiscountUsage } from "@/types/payroll"
+import {
+  Box,
+  Typography,
+  Paper,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Chip,
+  InputAdornment,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  Grid,
+} from "@mui/material"
+import { DataGrid, type GridColDef } from "@mui/x-data-grid"
+import { Search, Edit, Delete, Add, Discount as DiscountIcon } from "@mui/icons-material"
+import type { Discount } from "../types"
 
 // Mock data
 const mockDiscounts: Discount[] = [
   {
     id: "1",
-    code: "EARLY2024",
-    name: "Early Bird Discount",
-    description: "20% off for early enrollment",
+    code: "SUMMER2024",
     type: "percentage",
     value: 20,
-    minAmount: 100,
-    maxDiscount: 500,
-    validFrom: "2024-01-01",
-    validTo: "2024-03-31",
-    usageLimit: 100,
-    usedCount: 45,
+    description: "خصم صيفي 20%",
+    startDate: "2024-06-01",
+    endDate: "2024-08-31",
+    usageCount: 15,
+    maxUsage: 50,
     isActive: true,
-    applicableTo: "all",
-    createdBy: "admin",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-15T10:30:00Z",
+    createdAt: "2024-05-01",
   },
   {
     id: "2",
-    code: "STUDENT50",
-    name: "Student Discount",
-    description: "$50 off any course",
+    code: "NEWSTUDENT",
     type: "fixed",
-    value: 50,
-    minAmount: 200,
-    validFrom: "2024-01-01",
-    validTo: "2024-12-31",
-    usageLimit: 200,
-    usedCount: 78,
+    value: 50000,
+    description: "خصم للطلاب الجدد",
+    startDate: "2024-01-01",
+    endDate: "2024-12-31",
+    usageCount: 8,
+    maxUsage: null,
     isActive: true,
-    applicableTo: "all",
-    createdBy: "admin",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-20T14:15:00Z",
-  },
-  {
-    id: "3",
-    code: "PREMIUM25",
-    name: "Premium Course Discount",
-    description: "25% off premium courses only",
-    type: "percentage",
-    value: 25,
-    minAmount: 500,
-    maxDiscount: 200,
-    validFrom: "2024-02-01",
-    validTo: "2024-04-30",
-    usageLimit: 50,
-    usedCount: 12,
-    isActive: true,
-    applicableTo: "specific",
-    courseIds: ["1", "3"],
-    createdBy: "admin",
-    createdAt: "2024-02-01T00:00:00Z",
-    updatedAt: "2024-02-01T00:00:00Z",
-  },
-  {
-    id: "4",
-    code: "EXPIRED10",
-    name: "Expired Discount",
-    description: "10% off - expired",
-    type: "percentage",
-    value: 10,
-    validFrom: "2023-12-01",
-    validTo: "2023-12-31",
-    usageLimit: 100,
-    usedCount: 85,
-    isActive: false,
-    applicableTo: "all",
-    createdBy: "admin",
-    createdAt: "2023-12-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
+    createdAt: "2024-01-01",
   },
 ]
 
-const mockDiscountUsage: DiscountUsage[] = [
-  {
-    id: "1",
-    discountId: "1",
-    studentId: "1",
-    studentName: "John Smith",
-    transactionId: "1",
-    discountAmount: 200,
-    usedAt: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: "2",
-    discountId: "2",
-    studentId: "2",
-    studentName: "Sarah Johnson",
-    transactionId: "3",
-    discountAmount: 50,
-    usedAt: "2024-01-20T14:15:00Z",
-  },
-]
+const DiscountsPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [openDialog, setOpenDialog] = useState(false)
+  const [discounts] = useState<Discount[]>(mockDiscounts)
 
-export function DiscountsPage() {
-  const [discounts, setDiscounts] = useState<Discount[]>(mockDiscounts)
-  const [discountUsage, setDiscountUsage] = useState<DiscountUsage[]>(mockDiscountUsage)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [activeTab, setActiveTab] = useState<"discounts" | "usage">("discounts")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null)
-
-  const filteredDiscounts = discounts.filter((discount) => {
-    const matchesSearch =
-      discount.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      discount.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      discount.description.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && discount.isActive) ||
-      (statusFilter === "inactive" && !discount.isActive)
-
-    const matchesType = typeFilter === "all" || discount.type === typeFilter
-
-    return matchesSearch && matchesStatus && matchesType
+  const [discountForm, setDiscountForm] = useState({
+    code: "",
+    type: "",
+    value: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+    maxUsage: "",
   })
 
-  const activeDiscounts = discounts.filter((d) => d.isActive)
-  const totalSavings = discountUsage.reduce((sum, usage) => sum + usage.discountAmount, 0)
-  const totalUsage = discountUsage.length
-
-  const getStatusColor = (discount: Discount) => {
-    if (!discount.isActive) return "secondary"
-    const now = new Date()
-    const validTo = new Date(discount.validTo)
-    if (validTo < now) return "secondary"
-    return "default"
+  const handleOpenDialog = () => {
+    setDiscountForm({ code: "", type: "", value: "", description: "", startDate: "", endDate: "", maxUsage: "" })
+    setOpenDialog(true)
   }
 
-  const getTypeColor = (type: string) => {
-    return type === "percentage" ? "default" : "secondary"
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
   }
+
+  const handleCreateDiscount = () => {
+    console.log("Creating discount:", discountForm)
+    handleCloseDialog()
+  }
+
+  const columns: GridColDef[] = [
+    {
+      field: "code",
+      headerName: "الكود",
+      width: 150,
+      renderCell: (params) => <Typography sx={{ fontFamily: "monospace", fontWeight: 600 }}>{params.value}</Typography>,
+    },
+    {
+      field: "description",
+      headerName: "الوصف",
+      flex: 1,
+      minWidth: 200,
+    },
+    {
+      field: "type",
+      headerName: "النوع",
+      width: 120,
+      renderCell: (params) => (
+        <Chip label={params.value === "percentage" ? "نسبة مئوية" : "مبلغ ثابت"} size="small" color="secondary" />
+      ),
+    },
+    {
+      field: "value",
+      headerName: "القيمة",
+      width: 120,
+      renderCell: (params) => {
+        const row = params.row as Discount
+        return row.type === "percentage" ? `${params.value}%` : `${params.value.toLocaleString()} د.ع`
+      },
+    },
+    {
+      field: "usageCount",
+      headerName: "الاستخدام",
+      width: 120,
+      renderCell: (params) => {
+        const row = params.row as Discount
+        return `${params.value} / ${row.maxUsage || "∞"}`
+      },
+    },
+    {
+      field: "isActive",
+      headerName: "الحالة",
+      width: 100,
+      renderCell: (params) => (
+        <Chip label={params.value ? "نشط" : "غير نشط"} size="small" color={params.value ? "success" : "default"} />
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "الإجراءات",
+      width: 120,
+      sortable: false,
+      renderCell: () => (
+        <Box>
+          <IconButton size="small" color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
+
+  const filteredDiscounts = discounts.filter(
+    (discount) =>
+      discount.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      discount.description.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
 
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Discounts</h1>
-            <p className="text-muted-foreground">Manage promotional codes and discounts</p>
-          </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Discount
+    <Box>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          الخصومات والأكواد الترويجية
+        </Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+          إضافة كود خصم
+        </Button>
+      </Box>
+
+      <Paper>
+        <Box sx={{ p: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="البحث عن كود خصم..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 3 }}
+          />
+
+          <DataGrid
+            rows={filteredDiscounts}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10 },
+              },
+            }}
+            pageSizeOptions={[5, 10, 25]}
+            disableRowSelectionOnClick
+            autoHeight
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-cell": {
+                borderColor: "divider",
+              },
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "background.default",
+                borderColor: "divider",
+              },
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* Create Discount Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <DiscountIcon />
+            إضافة كود خصم جديد
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="كود الخصم"
+                  value={discountForm.code}
+                  onChange={(e) => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })}
+                  placeholder="SUMMER2024"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>نوع الخصم</InputLabel>
+                  <Select
+                    value={discountForm.type}
+                    label="نوع الخصم"
+                    onChange={(e) => setDiscountForm({ ...discountForm, type: e.target.value })}
+                  >
+                    <MenuItem value="percentage">نسبة مئوية</MenuItem>
+                    <MenuItem value="fixed">مبلغ ثابت</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+            <TextField
+              fullWidth
+              label="الوصف"
+              value={discountForm.description}
+              onChange={(e) => setDiscountForm({ ...discountForm, description: e.target.value })}
+            />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label={discountForm.type === "percentage" ? "النسبة المئوية" : "المبلغ (دينار عراقي)"}
+                  type="number"
+                  value={discountForm.value}
+                  onChange={(e) => setDiscountForm({ ...discountForm, value: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="تاريخ البداية"
+                  type="date"
+                  value={discountForm.startDate}
+                  onChange={(e) => setDiscountForm({ ...discountForm, startDate: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="تاريخ النهاية"
+                  type="date"
+                  value={discountForm.endDate}
+                  onChange={(e) => setDiscountForm({ ...discountForm, endDate: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+            <TextField
+              fullWidth
+              label="الحد الأقصى للاستخدام (اتركه فارغاً لعدد غير محدود)"
+              type="number"
+              value={discountForm.maxUsage}
+              onChange={(e) => setDiscountForm({ ...discountForm, maxUsage: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>إلغاء</Button>
+          <Button onClick={handleCreateDiscount} variant="contained">
+            إضافة
           </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Discounts</CardTitle>
-              <Tag className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeDiscounts.length}</div>
-              <p className="text-xs text-muted-foreground">Currently available</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">${totalSavings.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Student savings</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Usage Count</CardTitle>
-              <Percent className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalUsage}</div>
-              <p className="text-xs text-muted-foreground">Times used</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Discount</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${totalUsage > 0 ? Math.round(totalSavings / totalUsage) : 0}</div>
-              <p className="text-xs text-muted-foreground">Per usage</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
-          <Button
-            variant={activeTab === "discounts" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("discounts")}
-          >
-            Discount Codes
-          </Button>
-          <Button variant={activeTab === "usage" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("usage")}>
-            Usage History
-          </Button>
-        </div>
-
-        {activeTab === "discounts" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Discount Codes</CardTitle>
-              <CardDescription>Create and manage promotional discount codes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Filters */}
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search discounts..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-                <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                  <option value="all">All Types</option>
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed Amount</option>
-                </Select>
-              </div>
-
-              {/* Discounts Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Usage</TableHead>
-                    <TableHead>Valid Until</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDiscounts.map((discount) => (
-                    <TableRow key={discount.id}>
-                      <TableCell>
-                        <div className="font-mono font-medium">{discount.code}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{discount.name}</div>
-                          <div className="text-sm text-muted-foreground">{discount.description}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getTypeColor(discount.type)}>{discount.type}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
-                          {discount.type === "percentage" ? `${discount.value}%` : `$${discount.value}`}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{discount.usedCount}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {discount.usageLimit ? `/ ${discount.usageLimit}` : "unlimited"}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>{new Date(discount.validTo).toLocaleDateString()}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(discount)}>{discount.isActive ? "active" : "inactive"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedDiscount(discount)
-                              setIsDialogOpen(true)
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "usage" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Usage History</CardTitle>
-              <CardDescription>Track discount code usage and savings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Discount Code</TableHead>
-                    <TableHead>Savings</TableHead>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Used At</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {discountUsage.map((usage) => {
-                    const discount = discounts.find((d) => d.id === usage.discountId)
-                    return (
-                      <TableRow key={usage.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{usage.studentName}</div>
-                            <div className="text-sm text-muted-foreground">ID: {usage.studentId}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-mono">{discount?.code}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-green-600">${usage.discountAmount}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-mono text-sm">{usage.transactionId}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div>{new Date(usage.usedAt).toLocaleDateString()}</div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </Layout>
+        </DialogActions>
+      </Dialog>
+    </Box>
   )
 }
+
+export default DiscountsPage

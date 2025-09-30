@@ -2,441 +2,447 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Layout } from "@/components/layout/Layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Select } from "@/components/ui/Select"
-import { Badge } from "@/components/ui/Badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { Plus, Search, Edit, Trash2, UserCheck, Shield } from "lucide-react"
-import type { User, Role, CreateUserData } from "@/types/user"
+import {
+  Box,
+  Typography,
+  Paper,
+  Tabs,
+  Tab,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Chip,
+  InputAdornment,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+} from "@mui/material"
+import { DataGrid, type GridColDef } from "@mui/x-data-grid"
+import { Search, Edit, Delete, PersonAdd, AdminPanelSettings } from "@mui/icons-material"
+import type { User, Role } from "../types"
 
 // Mock data
 const mockUsers: User[] = [
   {
     id: "1",
-    email: "admin@school.com",
-    name: "Admin User",
-    role: {
-      id: "1",
-      name: "admin",
-      description: "System Administrator",
-      permissions: [],
-      createdAt: "",
-      updatedAt: "",
-    },
-    permissions: [],
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
-    status: "active",
+    username: "admin",
+    email: "admin@example.com",
+    fullName: "أحمد محمد",
+    roleId: "1",
+    isActive: true,
+    createdAt: "2024-01-15",
   },
   {
     id: "2",
-    email: "accountant@school.com",
-    name: "Accountant User",
-    role: {
-      id: "2",
-      name: "accountant",
-      description: "Financial Manager",
-      permissions: [],
-      createdAt: "",
-      updatedAt: "",
-    },
-    permissions: [],
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
-    status: "active",
+    username: "accountant",
+    email: "accountant@example.com",
+    fullName: "فاطمة علي",
+    roleId: "2",
+    isActive: true,
+    createdAt: "2024-02-20",
   },
   {
     id: "3",
-    email: "teacher@school.com",
-    name: "John Teacher",
-    role: { id: "3", name: "teacher", description: "Course Instructor", permissions: [], createdAt: "", updatedAt: "" },
-    permissions: [],
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
-    status: "active",
+    username: "teacher1",
+    email: "teacher1@example.com",
+    fullName: "محمود حسن",
+    roleId: "3",
+    isActive: true,
+    createdAt: "2024-03-10",
   },
 ]
 
 const mockRoles: Role[] = [
   {
     id: "1",
-    name: "admin",
-    description: "System Administrator",
+    name: "Admin",
+    nameAr: "مدير النظام",
+    description: "صلاحيات كاملة للنظام",
     permissions: [],
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
   },
   {
     id: "2",
-    name: "accountant",
-    description: "Financial Manager",
+    name: "Accountant",
+    nameAr: "محاسب",
+    description: "إدارة المالية والطلاب",
     permissions: [],
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
   },
   {
     id: "3",
-    name: "teacher",
-    description: "Course Instructor",
+    name: "Teacher",
+    nameAr: "مدرس",
+    description: "عرض الدورات والطلاب",
     permissions: [],
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
   },
 ]
 
-export function UsersPage() {
-  const [users, setUsers] = useState<User[]>(mockUsers)
-  const [roles, setRoles] = useState<Role[]>(mockRoles)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
-  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"users" | "roles">("users")
+interface TabPanelProps {
+  children?: React.ReactNode
+  index: number
+  value: number
+}
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  const handleCreateUser = (userData: CreateUserData) => {
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: userData.email,
-      name: userData.name,
-      role: roles.find((r) => r.id === userData.roleId) || roles[0],
-      permissions: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: "active",
-    }
-    setUsers([...users, newUser])
-    setIsUserDialogOpen(false)
-  }
-
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Users & Roles</h1>
-            <p className="text-muted-foreground">Manage system users and role-based permissions</p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "users"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <UserCheck className="h-4 w-4 inline mr-2" />
-            Users
-          </button>
-          <button
-            onClick={() => setActiveTab("roles")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "roles"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Shield className="h-4 w-4 inline mr-2" />
-            Roles
-          </button>
-        </div>
-
-        {activeTab === "users" && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>System Users</CardTitle>
-                  <CardDescription>Manage user accounts and their role assignments</CardDescription>
-                </div>
-                <Button onClick={() => setIsUserDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add User
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search */}
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              {/* Users Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{user.role.name}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.status === "active" ? "default" : "secondary"}>{user.status}</Badge>
-                      </TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "roles" && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>System Roles</CardTitle>
-                  <CardDescription>Manage roles and their associated permissions</CardDescription>
-                </div>
-                <Button onClick={() => setIsRoleDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Role
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Role Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Users</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {roles.map((role) => (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium">{role.name}</TableCell>
-                      <TableCell>{role.description}</TableCell>
-                      <TableCell>{users.filter((u) => u.role.id === role.id).length} users</TableCell>
-                      <TableCell>{new Date(role.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Create User Dialog */}
-        <CreateUserDialog
-          open={isUserDialogOpen}
-          onOpenChange={setIsUserDialogOpen}
-          onCreateUser={handleCreateUser}
-          roles={roles}
-        />
-
-        {/* Create Role Dialog */}
-        <CreateRoleDialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen} />
-      </div>
-    </Layout>
+    <div role="tabpanel" hidden={value !== index}>
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
   )
 }
 
-interface CreateUserDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onCreateUser: (userData: CreateUserData) => void
-  roles: Role[]
-}
+const UsersPage: React.FC = () => {
+  const [tabValue, setTabValue] = useState(0)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [openUserDialog, setOpenUserDialog] = useState(false)
+  const [openRoleDialog, setOpenRoleDialog] = useState(false)
+  const [users] = useState<User[]>(mockUsers)
+  const [roles] = useState<Role[]>(mockRoles)
 
-function CreateUserDialog({ open, onOpenChange, onCreateUser, roles }: CreateUserDialogProps) {
-  const [formData, setFormData] = useState<CreateUserData>({
+  // User form state
+  const [userForm, setUserForm] = useState({
+    username: "",
     email: "",
-    name: "",
-    roleId: "",
+    fullName: "",
     password: "",
+    roleId: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onCreateUser(formData)
-    setFormData({ email: "", name: "", roleId: "", password: "" })
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New User</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">
-              Full Name
-            </label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="role" className="text-sm font-medium">
-              Role
-            </label>
-            <Select
-              value={formData.roleId}
-              onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-              required
-            >
-              <option value="">Select a role</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name} - {role.description}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-            />
-          </div>
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Create User</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-interface CreateRoleDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) {
-  const [formData, setFormData] = useState({
+  // Role form state
+  const [roleForm, setRoleForm] = useState({
     name: "",
+    nameAr: "",
     description: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Handle role creation
-    onOpenChange(false)
-    setFormData({ name: "", description: "" })
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
   }
 
+  const handleOpenUserDialog = () => {
+    setUserForm({ username: "", email: "", fullName: "", password: "", roleId: "" })
+    setOpenUserDialog(true)
+  }
+
+  const handleOpenRoleDialog = () => {
+    setRoleForm({ name: "", nameAr: "", description: "" })
+    setOpenRoleDialog(true)
+  }
+
+  const handleCloseUserDialog = () => {
+    setOpenUserDialog(false)
+  }
+
+  const handleCloseRoleDialog = () => {
+    setOpenRoleDialog(false)
+  }
+
+  const handleCreateUser = () => {
+    // In production, this would call an API
+    console.log("Creating user:", userForm)
+    handleCloseUserDialog()
+  }
+
+  const handleCreateRole = () => {
+    // In production, this would call an API
+    console.log("Creating role:", roleForm)
+    handleCloseRoleDialog()
+  }
+
+  const userColumns: GridColDef[] = [
+    {
+      field: "fullName",
+      headerName: "الاسم الكامل",
+      flex: 1,
+      minWidth: 150,
+    },
+    {
+      field: "username",
+      headerName: "اسم المستخدم",
+      flex: 1,
+      minWidth: 120,
+    },
+    {
+      field: "email",
+      headerName: "البريد الإلكتروني",
+      flex: 1,
+      minWidth: 180,
+    },
+    {
+      field: "roleId",
+      headerName: "الدور",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) => {
+        const role = roles.find((r) => r.id === params.value)
+        return <Chip label={role?.nameAr || "غير محدد"} size="small" color="primary" />
+      },
+    },
+    {
+      field: "isActive",
+      headerName: "الحالة",
+      width: 100,
+      renderCell: (params) => (
+        <Chip label={params.value ? "نشط" : "غير نشط"} size="small" color={params.value ? "success" : "default"} />
+      ),
+    },
+    {
+      field: "createdAt",
+      headerName: "تاريخ الإنشاء",
+      width: 120,
+    },
+    {
+      field: "actions",
+      headerName: "الإجراءات",
+      width: 120,
+      sortable: false,
+      renderCell: () => (
+        <Box>
+          <IconButton size="small" color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
+
+  const roleColumns: GridColDef[] = [
+    {
+      field: "nameAr",
+      headerName: "اسم الدور",
+      flex: 1,
+      minWidth: 150,
+    },
+    {
+      field: "name",
+      headerName: "الاسم بالإنجليزية",
+      flex: 1,
+      minWidth: 150,
+    },
+    {
+      field: "description",
+      headerName: "الوصف",
+      flex: 2,
+      minWidth: 200,
+    },
+    {
+      field: "actions",
+      headerName: "الإجراءات",
+      width: 120,
+      sortable: false,
+      renderCell: () => (
+        <Box>
+          <IconButton size="small" color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
+  const filteredRoles = roles.filter(
+    (role) =>
+      role.nameAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      role.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Role</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="roleName" className="text-sm font-medium">
-              Role Name
-            </label>
-            <Input
-              id="roleName"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
+    <Box>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          إدارة المستخدمين والأدوار
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={tabValue === 0 ? <PersonAdd /> : <AdminPanelSettings />}
+          onClick={tabValue === 0 ? handleOpenUserDialog : handleOpenRoleDialog}
+        >
+          {tabValue === 0 ? "إضافة مستخدم" : "إضافة دور"}
+        </Button>
+      </Box>
+
+      <Paper>
+        <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: "divider", px: 2 }}>
+          <Tab label="المستخدمين" />
+          <Tab label="الأدوار" />
+        </Tabs>
+
+        <Box sx={{ p: 3 }}>
+          <TextField
+            fullWidth
+            placeholder={tabValue === 0 ? "البحث عن مستخدم..." : "البحث عن دور..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 3 }}
+          />
+
+          <TabPanel value={tabValue} index={0}>
+            <DataGrid
+              rows={filteredUsers}
+              columns={userColumns}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25]}
+              disableRowSelectionOnClick
+              autoHeight
+              sx={{
+                border: "none",
+                "& .MuiDataGrid-cell": {
+                  borderColor: "divider",
+                },
+                "& .MuiDataGrid-columnHeaders": {
+                  bgcolor: "background.default",
+                  borderColor: "divider",
+                },
+              }}
             />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="roleDescription" className="text-sm font-medium">
-              Description
-            </label>
-            <Input
-              id="roleDescription"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={1}>
+            <DataGrid
+              rows={filteredRoles}
+              columns={roleColumns}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25]}
+              disableRowSelectionOnClick
+              autoHeight
+              sx={{
+                border: "none",
+                "& .MuiDataGrid-cell": {
+                  borderColor: "divider",
+                },
+                "& .MuiDataGrid-columnHeaders": {
+                  bgcolor: "background.default",
+                  borderColor: "divider",
+                },
+              }}
             />
-          </div>
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Create Role</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </TabPanel>
+        </Box>
+      </Paper>
+
+      {/* Create User Dialog */}
+      <Dialog open={openUserDialog} onClose={handleCloseUserDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>إضافة مستخدم جديد</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              label="الاسم الكامل"
+              value={userForm.fullName}
+              onChange={(e) => setUserForm({ ...userForm, fullName: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="اسم المستخدم"
+              value={userForm.username}
+              onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="البريد الإلكتروني"
+              type="email"
+              value={userForm.email}
+              onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="كلمة المرور"
+              type="password"
+              value={userForm.password}
+              onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+            />
+            <FormControl fullWidth>
+              <InputLabel>الدور</InputLabel>
+              <Select
+                value={userForm.roleId}
+                label="الدور"
+                onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
+              >
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.id}>
+                    {role.nameAr}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseUserDialog}>إلغاء</Button>
+          <Button onClick={handleCreateUser} variant="contained">
+            إضافة
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create Role Dialog */}
+      <Dialog open={openRoleDialog} onClose={handleCloseRoleDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>إضافة دور جديد</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              label="اسم الدور بالعربية"
+              value={roleForm.nameAr}
+              onChange={(e) => setRoleForm({ ...roleForm, nameAr: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="اسم الدور بالإنجليزية"
+              value={roleForm.name}
+              onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="الوصف"
+              multiline
+              rows={3}
+              value={roleForm.description}
+              onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRoleDialog}>إلغاء</Button>
+          <Button onClick={handleCreateRole} variant="contained">
+            إضافة
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   )
 }
+
+export default UsersPage

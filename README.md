@@ -1,2 +1,0 @@
-# mushkilty-finance-system-frontend
-

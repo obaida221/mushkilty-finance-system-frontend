@@ -1,303 +1,290 @@
-"use client"
-
+import type React from "react"
 import { useState } from "react"
-import { Layout } from "@/components/layout/Layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Select } from "@/components/ui/Select"
-import { Badge } from "@/components/ui/Badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { Search, Download, Receipt, TrendingUp, TrendingDown, DollarSign } from "lucide-react"
-import type { Transaction } from "@/types/finance"
+import {
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  InputAdornment,
+  Chip,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  type SelectChangeEvent,
+} from "@mui/material"
+import { DataGrid, type GridColDef } from "@mui/x-data-grid"
+import { Search, TrendingUp, TrendingDown, Receipt, AccountBalance } from "@mui/icons-material"
+import type { Transaction } from "../types"
 
 // Mock data
 const mockTransactions: Transaction[] = [
   {
     id: "1",
     type: "payment",
-    amount: 1200,
-    description: "Course fee payment - Advanced Mathematics",
-    date: "2024-01-15",
-    status: "completed",
-    reference: "PAY-001",
-    relatedId: "payment-1",
-    category: "Course Fees",
-    createdBy: "system",
-    createdAt: "2024-01-15T10:30:00Z",
-    updatedAt: "2024-01-15T10:30:00Z",
+    amount: 500000,
+    description: "دفعة من الطالب علي أحمد - دورة البرمجة",
+    date: "2024-03-15",
+    referenceId: "PAY001",
+    createdBy: "1",
+    createdAt: "2024-03-15T10:30:00",
   },
   {
     id: "2",
     type: "expense",
-    amount: -340,
-    description: "Office supplies purchase",
-    date: "2024-01-14",
-    status: "completed",
-    reference: "EXP-001",
-    relatedId: "expense-1",
-    category: "Office Supplies",
-    createdBy: "admin",
-    createdAt: "2024-01-14T14:20:00Z",
-    updatedAt: "2024-01-14T14:20:00Z",
+    amount: 150000,
+    description: "فواتير الكهرباء والماء",
+    date: "2024-03-14",
+    referenceId: "EXP001",
+    createdBy: "1",
+    createdAt: "2024-03-14T14:20:00",
   },
   {
     id: "3",
-    type: "payment",
-    amount: 800,
-    description: "Course fee payment - Physics Fundamentals",
-    date: "2024-01-13",
-    status: "completed",
-    reference: "PAY-002",
-    relatedId: "payment-2",
-    category: "Course Fees",
-    createdBy: "system",
-    createdAt: "2024-01-13T09:15:00Z",
-    updatedAt: "2024-01-13T09:15:00Z",
+    type: "payroll",
+    amount: 1000000,
+    description: "راتب د. محمد أحمد - مارس 2024",
+    date: "2024-03-01",
+    referenceId: "PAY001",
+    createdBy: "1",
+    createdAt: "2024-03-01T09:00:00",
   },
   {
     id: "4",
-    type: "refund",
-    amount: -400,
-    description: "Partial refund - Course withdrawal",
-    date: "2024-01-12",
-    status: "completed",
-    reference: "REF-001",
-    relatedId: "refund-1",
-    category: "Refunds",
-    createdBy: "admin",
-    createdAt: "2024-01-12T16:45:00Z",
-    updatedAt: "2024-01-12T16:45:00Z",
+    type: "payment",
+    amount: 400000,
+    description: "دفعة من الطالبة سارة محمد - دورة التصميم",
+    date: "2024-03-13",
+    referenceId: "PAY002",
+    createdBy: "2",
+    createdAt: "2024-03-13T11:15:00",
   },
   {
     id: "5",
-    type: "payroll",
-    amount: -5000,
-    description: "Monthly salary - Dr. Sarah Johnson",
-    date: "2024-01-01",
-    status: "completed",
-    reference: "PAY-003",
-    relatedId: "payroll-1",
-    category: "Salaries",
-    createdBy: "admin",
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-01-01T00:00:00Z",
+    type: "refund",
+    amount: 100000,
+    description: "استرجاع مبلغ للطالب حسن علي",
+    date: "2024-03-12",
+    referenceId: "REF001",
+    createdBy: "1",
+    createdAt: "2024-03-12T16:45:00",
   },
 ]
 
-export function TransactionsPage() {
-  const [transactions] = useState<Transaction[]>(mockTransactions)
-  const [searchTerm, setSearchTerm] = useState("")
+const TransactionsPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [dateRange, setDateRange] = useState<string>("all")
+  const [transactions] = useState<Transaction[]>(mockTransactions)
+
+  const handleTypeFilterChange = (event: SelectChangeEvent) => {
+    setTypeFilter(event.target.value)
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "payment":
+        return <TrendingUp sx={{ fontSize: 18 }} />
+      case "expense":
+        return <TrendingDown sx={{ fontSize: 18 }} />
+      case "refund":
+        return <Receipt sx={{ fontSize: 18 }} />
+      case "payroll":
+        return <AccountBalance sx={{ fontSize: 18 }} />
+      default:
+        return null
+    }
+  }
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      payment: "دفعة",
+      expense: "مصروف",
+      refund: "مرتجع",
+      payroll: "راتب",
+    }
+    return labels[type] || type
+  }
+
+  const getTypeColor = (type: string): "success" | "error" | "warning" | "info" => {
+    const colors: Record<string, "success" | "error" | "warning" | "info"> = {
+      payment: "success",
+      expense: "error",
+      refund: "warning",
+      payroll: "info",
+    }
+    return colors[type] || "info"
+  }
+
+  const columns: GridColDef[] = [
+    {
+      field: "date",
+      headerName: "التاريخ",
+      width: 120,
+    },
+    {
+      field: "type",
+      headerName: "النوع",
+      width: 130,
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {getTypeIcon(params.value)}
+          <Chip label={getTypeLabel(params.value)} size="small" color={getTypeColor(params.value)} />
+        </Box>
+      ),
+    },
+    {
+      field: "description",
+      headerName: "الوصف",
+      flex: 2,
+      minWidth: 250,
+    },
+    {
+      field: "amount",
+      headerName: "المبلغ",
+      width: 150,
+      renderCell: (params) => {
+        const row = params.row as Transaction
+        const isIncome = row.type === "payment"
+        return (
+          <Typography color={isIncome ? "success.main" : "error.main"} sx={{ fontWeight: 600 }}>
+            {isIncome ? "+" : "-"}
+            {params.value.toLocaleString()} د.ع
+          </Typography>
+        )
+      },
+    },
+    {
+      field: "referenceId",
+      headerName: "رقم المرجع",
+      width: 130,
+    },
+  ]
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
-      transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.category.toLowerCase().includes(searchTerm.toLowerCase())
-
+      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.referenceId?.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = typeFilter === "all" || transaction.type === typeFilter
-    const matchesStatus = statusFilter === "all" || transaction.status === statusFilter
-
-    return matchesSearch && matchesType && matchesStatus
+    return matchesSearch && matchesType
   })
 
-  const totalIncome = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
-
-  const totalExpenses = Math.abs(transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0))
-
-  const netIncome = totalIncome - totalExpenses
-
-  const getTransactionTypeColor = (type: string) => {
-    switch (type) {
-      case "payment":
-        return "default"
-      case "expense":
-        return "destructive"
-      case "refund":
-        return "secondary"
-      case "payroll":
-        return "outline"
-      default:
-        return "secondary"
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default"
-      case "pending":
-        return "secondary"
-      case "failed":
-        return "destructive"
-      default:
-        return "secondary"
-    }
-  }
+  const totalIncome = transactions.filter((t) => t.type === "payment").reduce((sum, t) => sum + t.amount, 0)
+  const totalExpenses =
+    transactions.filter((t) => t.type === "expense" || t.type === "payroll").reduce((sum, t) => sum + t.amount, 0) +
+    transactions.filter((t) => t.type === "refund").reduce((sum, t) => sum + t.amount, 0)
 
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
-            <p className="text-muted-foreground">Unified ledger of all financial activities</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        </div>
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+        المعاملات المالية
+      </Typography>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">${totalIncome.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                {transactions.filter((t) => t.amount > 0).length} transactions
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">${totalExpenses.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                {transactions.filter((t) => t.amount < 0).length} transactions
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Income</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${netIncome >= 0 ? "text-green-600" : "text-red-600"}`}>
-                ${netIncome.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">This period</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{transactions.length}</div>
-              <p className="text-xs text-muted-foreground">All time</p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Summary Cards */}
+      <Box sx={{ display: "flex", gap: 3, mb: 3, flexWrap: "wrap" }}>
+        <Paper sx={{ p: 3, flex: 1, minWidth: 250 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ bgcolor: "success.main", p: 1.5, borderRadius: 2 }}>
+              <TrendingUp sx={{ color: "white" }} />
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                إجمالي الدخل
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "success.main" }}>
+                {totalIncome.toLocaleString()} د.ع
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 3, flex: 1, minWidth: 250 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ bgcolor: "error.main", p: 1.5, borderRadius: 2 }}>
+              <TrendingDown sx={{ color: "white" }} />
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                إجمالي المصروفات
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "error.main" }}>
+                {totalExpenses.toLocaleString()} د.ع
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 3, flex: 1, minWidth: 250 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ bgcolor: "primary.main", p: 1.5, borderRadius: 2 }}>
+              <AccountBalance sx={{ color: "white" }} />
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                صافي الربح
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                {(totalIncome - totalExpenses).toLocaleString()} د.ع
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
 
-        {/* Main Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Transaction History</CardTitle>
-            <CardDescription>Complete record of all financial transactions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search transactions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                <option value="all">All Types</option>
-                <option value="payment">Payments</option>
-                <option value="expense">Expenses</option>
-                <option value="refund">Refunds</option>
-                <option value="payroll">Payroll</option>
+      <Paper>
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+            <TextField
+              placeholder="البحث في المعاملات..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ flex: 1, minWidth: 250 }}
+            />
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>نوع المعاملة</InputLabel>
+              <Select value={typeFilter} label="نوع المعاملة" onChange={handleTypeFilterChange}>
+                <MenuItem value="all">جميع المعاملات</MenuItem>
+                <MenuItem value="payment">الدفعات</MenuItem>
+                <MenuItem value="expense">المصروفات</MenuItem>
+                <MenuItem value="refund">المرتجعات</MenuItem>
+                <MenuItem value="payroll">الرواتب</MenuItem>
               </Select>
-              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </Select>
-              <Select value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-              </Select>
-            </div>
+            </FormControl>
+          </Box>
 
-            {/* Transactions Table */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>
-                      <div className="font-medium">{transaction.reference}</div>
-                      <div className="text-sm text-muted-foreground">ID: {transaction.id}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getTransactionTypeColor(transaction.type)}>{transaction.type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-xs">
-                        <div className="font-medium truncate">{transaction.description}</div>
-                        <div className="text-sm text-muted-foreground">By: {transaction.createdBy}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{transaction.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className={`font-medium ${transaction.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {transaction.amount >= 0 ? "+" : ""}${Math.abs(transaction.amount).toLocaleString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(transaction.status)}>{transaction.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div>{new Date(transaction.date).toLocaleDateString()}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(transaction.createdAt).toLocaleTimeString()}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    </Layout>
+          <DataGrid
+            rows={filteredTransactions}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10 },
+              },
+              sorting: {
+                sortModel: [{ field: "date", sort: "desc" }],
+              },
+            }}
+            pageSizeOptions={[5, 10, 25, 50]}
+            disableRowSelectionOnClick
+            autoHeight
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-cell": {
+                borderColor: "divider",
+              },
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "background.default",
+                borderColor: "divider",
+              },
+            }}
+          />
+        </Box>
+      </Paper>
+    </Box>
   )
 }
+
+export default TransactionsPage

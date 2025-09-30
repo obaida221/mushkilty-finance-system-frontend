@@ -1,313 +1,240 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
-import { Layout } from "@/components/layout/Layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Select } from "@/components/ui/Select"
-import { Badge } from "@/components/ui/Badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { Plus, Search, Edit, Trash2, TrendingDown, DollarSign, Calendar, Receipt } from "lucide-react"
-import type { Expense } from "@/types/finance"
+import {
+  Box,
+  Typography,
+  Paper,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  InputAdornment,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  Chip,
+} from "@mui/material"
+import { DataGrid, type GridColDef } from "@mui/x-data-grid"
+import { Search, Add, MoneyOff } from "@mui/icons-material"
+import type { Expense } from "../types"
 
 // Mock data
 const mockExpenses: Expense[] = [
   {
     id: "1",
-    category: "Office Supplies",
-    description: "Stationery and printing materials",
-    amount: 340,
-    date: "2024-01-14",
-    paymentMethod: "card",
+    category: "utilities",
+    description: "فواتير الكهرباء والماء",
+    amount: 150000,
     transactionId: "2",
-    status: "completed",
-    vendor: "Office Depot",
-    createdBy: "admin",
-    createdAt: "2024-01-14T14:20:00Z",
-    updatedAt: "2024-01-14T14:20:00Z",
+    date: "2024-03-14",
+    createdBy: "1",
+    createdAt: "2024-03-14T14:20:00",
   },
   {
     id: "2",
-    category: "Utilities",
-    description: "Monthly electricity bill",
-    amount: 450,
-    date: "2024-01-10",
-    paymentMethod: "bank_transfer",
+    category: "rent",
+    description: "إيجار المبنى - مارس 2024",
+    amount: 500000,
     transactionId: "7",
-    status: "completed",
-    vendor: "Electric Company",
-    createdBy: "admin",
-    createdAt: "2024-01-10T09:00:00Z",
-    updatedAt: "2024-01-10T09:00:00Z",
+    date: "2024-03-01",
+    createdBy: "1",
+    createdAt: "2024-03-01T10:00:00",
   },
   {
     id: "3",
-    category: "Marketing",
-    description: "Social media advertising",
-    amount: 200,
-    date: "2024-01-08",
-    paymentMethod: "card",
+    category: "supplies",
+    description: "قرطاسية ومستلزمات مكتبية",
+    amount: 75000,
     transactionId: "8",
-    status: "completed",
-    vendor: "Facebook Ads",
-    createdBy: "admin",
-    createdAt: "2024-01-08T16:30:00Z",
-    updatedAt: "2024-01-08T16:30:00Z",
-  },
-  {
-    id: "4",
-    category: "Maintenance",
-    description: "Classroom equipment repair",
-    amount: 150,
-    date: "2024-01-05",
-    paymentMethod: "cash",
-    transactionId: "9",
-    status: "pending",
-    vendor: "Tech Repair Co",
-    createdBy: "admin",
-    createdAt: "2024-01-05T11:15:00Z",
-    updatedAt: "2024-01-05T11:15:00Z",
+    date: "2024-03-10",
+    createdBy: "2",
+    createdAt: "2024-03-10T15:30:00",
   },
 ]
 
-const expenseCategories = [
-  "Office Supplies",
-  "Utilities",
-  "Marketing",
-  "Maintenance",
-  "Equipment",
-  "Software",
-  "Travel",
-  "Training",
-  "Insurance",
-  "Other",
-]
+const ExpensesPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [openDialog, setOpenDialog] = useState(false)
+  const [expenses] = useState<Expense[]>(mockExpenses)
 
-export function ExpensesPage() {
-  const [expenses, setExpenses] = useState<Expense[]>(mockExpenses)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
-
-  const filteredExpenses = expenses.filter((expense) => {
-    const matchesSearch =
-      expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.category.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter
-    const matchesStatus = statusFilter === "all" || expense.status === statusFilter
-
-    return matchesSearch && matchesCategory && matchesStatus
+  const [expenseForm, setExpenseForm] = useState({
+    category: "",
+    description: "",
+    amount: "",
   })
 
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-  const completedExpenses = expenses.filter((e) => e.status === "completed")
-  const pendingExpenses = expenses.filter((e) => e.status === "pending")
-
-  const expensesByCategory = expenseCategories
-    .map((category) => ({
-      category,
-      amount: expenses.filter((e) => e.category === category).reduce((sum, e) => sum + e.amount, 0),
-      count: expenses.filter((e) => e.category === category).length,
-    }))
-    .filter((item) => item.count > 0)
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default"
-      case "pending":
-        return "secondary"
-      default:
-        return "secondary"
-    }
+  const handleOpenDialog = () => {
+    setExpenseForm({ category: "", description: "", amount: "" })
+    setOpenDialog(true)
   }
 
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
+
+  const handleCreateExpense = () => {
+    console.log("Creating expense:", expenseForm)
+    handleCloseDialog()
+  }
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      utilities: "مرافق",
+      rent: "إيجار",
+      supplies: "مستلزمات",
+      maintenance: "صيانة",
+      marketing: "تسويق",
+      other: "أخرى",
+    }
+    return labels[category] || category
+  }
+
+  const columns: GridColDef[] = [
+    {
+      field: "date",
+      headerName: "التاريخ",
+      width: 120,
+    },
+    {
+      field: "category",
+      headerName: "الفئة",
+      width: 130,
+      renderCell: (params) => <Chip label={getCategoryLabel(params.value)} size="small" color="secondary" />,
+    },
+    {
+      field: "description",
+      headerName: "الوصف",
+      flex: 2,
+      minWidth: 250,
+    },
+    {
+      field: "amount",
+      headerName: "المبلغ",
+      width: 150,
+      renderCell: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "error.main" }}>{params.value.toLocaleString()} د.ع</Typography>
+      ),
+    },
+  ]
+
+  const filteredExpenses = expenses.filter(
+    (expense) =>
+      expense.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getCategoryLabel(expense.category).includes(searchQuery),
+  )
+
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Expenses</h1>
-            <p className="text-muted-foreground">Track and manage business expenses</p>
-          </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
+    <Box>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          المصروفات
+        </Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+          إضافة مصروف
+        </Button>
+      </Box>
+
+      <Paper>
+        <Box sx={{ p: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="البحث في المصروفات..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 3 }}
+          />
+
+          <DataGrid
+            rows={filteredExpenses}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10 },
+              },
+              sorting: {
+                sortModel: [{ field: "date", sort: "desc" }],
+              },
+            }}
+            pageSizeOptions={[5, 10, 25]}
+            disableRowSelectionOnClick
+            autoHeight
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-cell": {
+                borderColor: "divider",
+              },
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "background.default",
+                borderColor: "divider",
+              },
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* Create Expense Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <MoneyOff />
+            إضافة مصروف جديد
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>الفئة</InputLabel>
+              <Select
+                value={expenseForm.category}
+                label="الفئة"
+                onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+              >
+                <MenuItem value="utilities">مرافق</MenuItem>
+                <MenuItem value="rent">إيجار</MenuItem>
+                <MenuItem value="supplies">مستلزمات</MenuItem>
+                <MenuItem value="maintenance">صيانة</MenuItem>
+                <MenuItem value="marketing">تسويق</MenuItem>
+                <MenuItem value="other">أخرى</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="الوصف"
+              multiline
+              rows={3}
+              value={expenseForm.description}
+              onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="المبلغ (دينار عراقي)"
+              type="number"
+              value={expenseForm.amount}
+              onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>إلغاء</Button>
+          <Button onClick={handleCreateExpense} variant="contained">
+            إضافة
           </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">${totalExpenses.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">{expenses.length} transactions</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completedExpenses.length}</div>
-              <p className="text-xs text-muted-foreground">
-                ${completedExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{pendingExpenses.length}</div>
-              <p className="text-xs text-muted-foreground">
-                ${pendingExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{expensesByCategory.length}</div>
-              <p className="text-xs text-muted-foreground">Active categories</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Main Content */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Expense Records</CardTitle>
-              <CardDescription>Track and categorize business expenses</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Filters */}
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search expenses..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-                  <option value="all">All Categories</option>
-                  {expenseCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </Select>
-                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="all">All Status</option>
-                  <option value="completed">Completed</option>
-                  <option value="pending">Pending</option>
-                </Select>
-              </div>
-
-              {/* Expenses Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{expense.description}</div>
-                          <div className="text-sm text-muted-foreground">{expense.vendor}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{expense.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-red-600">${expense.amount.toLocaleString()}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(expense.status)}>{expense.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>{new Date(expense.date).toLocaleDateString()}</div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedExpense(expense)
-                              setIsDialogOpen(true)
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Category Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Expense Categories</CardTitle>
-              <CardDescription>Breakdown by category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {expensesByCategory.map((item) => (
-                  <div key={item.category} className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{item.category}</div>
-                      <div className="text-sm text-muted-foreground">{item.count} expenses</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium">${item.amount.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {((item.amount / totalExpenses) * 100).toFixed(1)}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </Layout>
+        </DialogActions>
+      </Dialog>
+    </Box>
   )
 }
+
+export default ExpensesPage
