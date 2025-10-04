@@ -18,49 +18,27 @@ import {
   InputLabel,
   Select,
   Chip,
+  Grid,
+  Card,
+  CardContent,
+  IconButton,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, Payment as PaymentIcon } from "@mui/icons-material"
+import { Search, Add, Payment as PaymentIcon, Edit, Delete } from "@mui/icons-material"
 import type { Payment } from "../types"
 
 // Mock data
 const mockPayments: Payment[] = [
-  {
-    id: "1",
-    studentId: "1",
-    amount: 500000,
-    paymentMethod: "cash",
-    transactionId: "1",
-    date: "2024-03-15",
-    notes: "دفعة كاملة للدورة",
-    createdAt: "2024-03-15T10:30:00",
-  },
-  {
-    id: "2",
-    studentId: "2",
-    amount: 400000,
-    paymentMethod: "card",
-    transactionId: "4",
-    date: "2024-03-13",
-    notes: "دفعة كاملة",
-    createdAt: "2024-03-13T11:15:00",
-  },
-  {
-    id: "3",
-    studentId: "1",
-    amount: 250000,
-    paymentMethod: "bank_transfer",
-    transactionId: "6",
-    date: "2024-03-10",
-    notes: "دفعة أولى",
-    createdAt: "2024-03-10T09:20:00",
-  },
+  { id: "1", studentId: "1", amount: 500000, paymentMethod: "cash", transactionId: "1", date: "2024-03-15", notes: "دفعة كاملة للدورة", createdAt: "2024-03-15T10:30:00" },
+  { id: "2", studentId: "2", amount: 400000, paymentMethod: "card", transactionId: "4", date: "2024-03-13", notes: "دفعة كاملة", createdAt: "2024-03-13T11:15:00" },
+  { id: "3", studentId: "1", amount: 250000, paymentMethod: "bank_transfer", transactionId: "6", date: "2024-03-10", notes: "دفعة أولى", createdAt: "2024-03-10T09:20:00" },
 ]
 
 const PaymentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [payments] = useState<Payment[]>(mockPayments)
+  const [payments, setPayments] = useState<Payment[]>(mockPayments)
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
 
   const [paymentForm, setPaymentForm] = useState({
     studentId: "",
@@ -69,8 +47,19 @@ const PaymentsPage: React.FC = () => {
     notes: "",
   })
 
-  const handleOpenDialog = () => {
-    setPaymentForm({ studentId: "", amount: "", paymentMethod: "", notes: "" })
+  const handleOpenDialog = (payment?: Payment) => {
+    if (payment) {
+      setEditingPayment(payment)
+      setPaymentForm({
+        studentId: payment.studentId,
+        amount: payment.amount.toString(),
+        paymentMethod: payment.paymentMethod,
+        notes: payment.notes,
+      })
+    } else {
+      setEditingPayment(null)
+      setPaymentForm({ studentId: "", amount: "", paymentMethod: "", notes: "" })
+    }
     setOpenDialog(true)
   }
 
@@ -78,9 +67,35 @@ const PaymentsPage: React.FC = () => {
     setOpenDialog(false)
   }
 
-  const handleCreatePayment = () => {
-    console.log("Creating payment:", paymentForm)
+  const handleCreateOrUpdatePayment = () => {
+    if (editingPayment) {
+      // Update existing payment
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.id === editingPayment.id
+            ? { ...p, studentId: paymentForm.studentId, amount: Number(paymentForm.amount), paymentMethod: paymentForm.paymentMethod, notes: paymentForm.notes }
+            : p
+        )
+      )
+    } else {
+      // Create new payment
+      const newPayment: Payment = {
+        id: (payments.length + 1).toString(),
+        studentId: paymentForm.studentId,
+        amount: Number(paymentForm.amount),
+        paymentMethod: paymentForm.paymentMethod,
+        transactionId: (payments.length + 1).toString(),
+        date: new Date().toISOString().split("T")[0],
+        notes: paymentForm.notes,
+        createdAt: new Date().toISOString(),
+      }
+      setPayments((prev) => [...prev, newPayment])
+    }
     handleCloseDialog()
+  }
+
+  const handleDeletePayment = (id: string) => {
+    setPayments((prev) => prev.filter((p) => p.id !== id))
   }
 
   const getPaymentMethodLabel = (method: string) => {
@@ -94,17 +109,16 @@ const PaymentsPage: React.FC = () => {
   }
 
   const columns: GridColDef[] = [
-    {
-      field: "date",
-      headerName: "التاريخ",
-      width: 120,
-    },
+    { field: "date", headerName: "التاريخ", width: 120 },
     {
       field: "studentId",
       headerName: "الطالب",
       flex: 1,
       minWidth: 150,
-      renderCell: () => <Typography>علي أحمد</Typography>, // In production, fetch student name
+      renderCell: (params) => {
+        const studentNameMap: Record<string, string> = { "1": "علي أحمد", "2": "سارة محمد", "3": "حسن علي" }
+        return <Typography>{studentNameMap[params.value]}</Typography>
+      },
     },
     {
       field: "amount",
@@ -120,15 +134,33 @@ const PaymentsPage: React.FC = () => {
       width: 130,
       renderCell: (params) => <Chip label={getPaymentMethodLabel(params.value)} size="small" color="primary" />,
     },
+    { field: "notes", headerName: "ملاحظات", flex: 1, minWidth: 200 },
     {
-      field: "notes",
-      headerName: "ملاحظات",
-      flex: 1,
-      minWidth: 200,
+      field: "actions",
+      headerName: "الإجراءات",
+      width: 120,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <IconButton size="small" color="primary" onClick={() => handleOpenDialog(params.row)}>
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" color="error" onClick={() => handleDeletePayment(params.row.id)}>
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
     },
   ]
 
-  const filteredPayments = payments.filter((payment) => payment.notes.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredPayments = payments.filter(
+    (payment) =>
+      payment.notes.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0)
 
   return (
     <Box>
@@ -136,10 +168,33 @@ const PaymentsPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           المدفوعات
         </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
           تسجيل دفعة
         </Button>
       </Box>
+
+      {/* Stats Card */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box sx={{ bgcolor: "primary.main", p: 1.5, borderRadius: 2 }}>
+                  <PaymentIcon sx={{ color: "white" }} />
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    إجمالي المدفوعات
+                  </Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                    {totalPayments.toLocaleString()} د.ع
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       <Paper>
         <Box sx={{ p: 3 }}>
@@ -162,36 +217,27 @@ const PaymentsPage: React.FC = () => {
             rows={filteredPayments}
             columns={columns}
             initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 },
-              },
-              sorting: {
-                sortModel: [{ field: "date", sort: "desc" }],
-              },
+              pagination: { paginationModel: { pageSize: 10 } },
+              sorting: { sortModel: [{ field: "date", sort: "desc" }] },
             }}
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             autoHeight
             sx={{
               border: "none",
-              "& .MuiDataGrid-cell": {
-                borderColor: "divider",
-              },
-              "& .MuiDataGrid-columnHeaders": {
-                bgcolor: "background.default",
-                borderColor: "divider",
-              },
+              "& .MuiDataGrid-cell": { borderColor: "divider" },
+              "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
             }}
           />
         </Box>
       </Paper>
 
-      {/* Create Payment Dialog */}
+      {/* Create / Edit Payment Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <PaymentIcon />
-            تسجيل دفعة جديدة
+            {editingPayment ? "تعديل الدفعة" : "تسجيل دفعة جديدة"}
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -240,8 +286,8 @@ const PaymentsPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleCreatePayment} variant="contained">
-            تسجيل
+          <Button onClick={handleCreateOrUpdatePayment} variant="contained">
+            {editingPayment ? "تحديث" : "تسجيل"}
           </Button>
         </DialogActions>
       </Dialog>

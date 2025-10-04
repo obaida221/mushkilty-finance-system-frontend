@@ -143,7 +143,7 @@ const AnalyticsPage: React.FC = () => {
               <LineChart data={monthlyRevenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8" />
+                <YAxis stroke="#94A3B8"  tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start'}}/>
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
@@ -201,9 +201,9 @@ const AnalyticsPage: React.FC = () => {
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={expenseCategoryData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B"  />
                 <XAxis type="number" stroke="#94A3B8" />
-                <YAxis dataKey="category" type="category" stroke="#94A3B8" width={80} />
+                <YAxis dataKey="category" type="category" stroke="#94A3B8" width={80} tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start' }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",

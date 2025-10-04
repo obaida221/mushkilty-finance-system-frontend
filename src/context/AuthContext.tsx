@@ -92,11 +92,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null)
     localStorage.removeItem("user")
   }
-
-  const hasPermission = (resource: string, action: string): boolean => {
-    if (!user || !user.role) return false
-    return user.role.permissions.some((p) => p.resource === resource && p.action === action)
-  }
+    const hasPermission = (resource: string, action: string): boolean => {
+      if (!user || !user.role) return false
+      return (user.role.permissions || []).some(
+        (p) => p.resource === resource && p.action === action
+      )
+    }
 
   return (
     <AuthContext.Provider value={{ user, login, logout, hasPermission, isLoading }}>{children}</AuthContext.Provider>
