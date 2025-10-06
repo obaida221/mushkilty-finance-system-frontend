@@ -48,7 +48,7 @@ const expenseCategoryData = [
 const AnalyticsPage: React.FC = () => {
   return (
     <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }} dir="rtl">
         التحليلات والتقارير
       </Typography>
 
@@ -133,28 +133,30 @@ const AnalyticsPage: React.FC = () => {
       </Grid>
 
       {/* Charts */}
-      <Grid container spacing={3}>
+      <Grid container spacing={3} dir="ltr">
         <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               تحليل الإيرادات والمصروفات الشهرية
             </Typography>
             <ResponsiveContainer width="100%" height={350}>
               <LineChart data={monthlyRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
                 <YAxis stroke="#94A3B8" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1E293B",
-                    border: "1px solid #334155",
+                    backgroundColor: "#F1F1F1",
+                    color: "#94A3B8",
+                    // border: "1px solid #334155",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} name="الدخل" />
+                <Line type="monotone" dataKey="income" stroke="#1E293B" strokeWidth={2} name="الدخل" />
                 <Line type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={2} name="المصروفات" />
-                <Line type="monotone" dataKey="profit" stroke="#DC2626" strokeWidth={2} name="الربح" />
+                <Line type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={2} name="الربح" />
               </LineChart>
             </ResponsiveContainer>
           </Paper>
@@ -162,7 +164,7 @@ const AnalyticsPage: React.FC = () => {
 
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               إيرادات الدورات
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
@@ -183,9 +185,10 @@ const AnalyticsPage: React.FC = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1E293B",
+                    backgroundColor: "#94A3B8bb",
                     border: "1px solid #334155",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                   formatter={(value: number) => `${value.toLocaleString()} د.ع`}
                 />
@@ -196,7 +199,7 @@ const AnalyticsPage: React.FC = () => {
 
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               توزيع المصروفات
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
@@ -207,8 +210,10 @@ const AnalyticsPage: React.FC = () => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
+                    color: "#94A3B8",
                     border: "1px solid #334155",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                   formatter={(value: number) => `${value.toLocaleString()} د.ع`}
                 />

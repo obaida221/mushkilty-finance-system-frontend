@@ -105,12 +105,34 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <Box>
       <Toolbar sx={{ justifyContent: "center", py: 3 }}>
         <Box sx={{ textAlign: "center" }}>
-          <AccountBalance sx={{ fontSize: 40, color: "primary.main", mb: 1 }} />
+          {/* <AccountBalance sx={{ fontSize: 40, color: "primary.main", mb: 1 }} /> */}
+          <Box
+            component="img"
+            src="https://mushkilty.com/img/logo.webp"
+            alt="Mushkilty Logo"
+            sx={{
+              height: 60,
+              objectFit: 'contain'
+            }}
+          />
           <Typography variant="h6" noWrap component="div">
-            نظام إدارة المالية
+            نظام الإدارة المالية
           </Typography>
+          
         </Box>
       </Toolbar>
+      <Divider />
+      <Box sx={{ px: 2, py: 1, flexDirection: "row", alignItems: "center", gap: 0.5, display: { xs: "flex", md: "none" } }}>
+        <Avatar sx={{ bgcolor: "primary.main" }}>
+          <AccountCircle />
+        </Avatar>
+        <Box sx={{ px: 2, py: 1, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+          <Typography variant="subtitle2">{user?.fullName}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {`(${user?.role?.nameAr})`}
+          </Typography>
+        </Box>
+      </Box>
       <Divider />
       <List sx={{ px: 2, py: 2 }}>
         {filteredMenuItems.map((item) => (
@@ -125,6 +147,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 borderRadius: 1,
                 "&.Mui-selected": {
                   bgcolor: "primary.main",
+                  color: "white",
                   "&:hover": {
                     bgcolor: "primary.dark",
                   },
@@ -138,6 +161,13 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </ListItemButton>
           </ListItem>
         ))}
+        <Divider />
+        <MenuItem onClick={handleLogout}>
+          <ListItemIcon>
+            <Logout fontSize="small" />
+          </ListItemIcon>
+          تسجيل الخروج
+        </MenuItem>
       </List>
     </Box>
   )
@@ -157,11 +187,11 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       >
         <Toolbar>
           <Box sx={{ flexGrow: 1 }} />
-          <Tooltip title={mode === "dark" ? "الوضع النهاري" : "الوضع الليلي"}>
+          <Tooltip title={mode === "dark" ? "الوضع المشرق" : "الوضع الداكن"}>
             <IconButton 
               onClick={toggleTheme} 
               color="inherit"
-              sx={{ mr: 1 }}
+              sx={{ mr: 1, color: "text.primary" }}
             >
               {mode === "dark" ? <LightMode /> : <DarkMode />}
             </IconButton>
@@ -171,12 +201,12 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
             aria-label="open drawer"
             edge="end"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: "none" } }}
+            sx={{ display: { md: "none" }, color: "text.primary" }}
           >
             <MenuIcon />
           </IconButton>
           <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
-            <Avatar sx={{ bgcolor: "primary.main" }}>
+            <Avatar sx={{ bgcolor: "primary.main", display: { xs: "none", md: "flex" } }}>
               <AccountCircle />
             </Avatar>
           </IconButton>
@@ -188,6 +218,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
               vertical: "bottom",
               horizontal: "left",
             }}
+            style={{ marginTop: 5 }}
           >
             <Box sx={{ px: 2, py: 1 }}>
               <Typography variant="subtitle2">{user?.fullName}</Typography>
@@ -196,12 +227,12 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
               </Typography>
             </Box>
             <Divider />
-            <MenuItem onClick={toggleTheme}>
+            {/* <MenuItem onClick={toggleTheme}>
               <ListItemIcon>
                 {mode === "dark" ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
               </ListItemIcon>
               {mode === "dark" ? "الوضع النهاري" : "الوضع الليلي"}
-            </MenuItem>
+            </MenuItem> */}
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <Logout fontSize="small" />

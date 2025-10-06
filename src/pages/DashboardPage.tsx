@@ -1,8 +1,6 @@
 "use client"
 
 import React from "react"
-
-import type { ReactElement } from "react"
 import { Box, Typography, Grid, Card, CardContent, Paper } from "@mui/material"
 import { TrendingUp, TrendingDown, School, AccountBalance } from "@mui/icons-material"
 import {
@@ -41,17 +39,17 @@ const studentEnrollmentData = [
 ]
 
 const courseDistributionData = [
-  { name: "البرمجة", value: 35, color: "#DC2626" },
-  { name: "التصميم", value: 25, color: "#F59E0B" },
-  { name: "التسويق", value: 20, color: "#10B981" },
-  { name: "الإدارة", value: 20, color: "#3B82F6" },
+  { name: "أونلاين", value: 40, color: "#DC2626" },
+  { name: "حضوري", value: 30, color: "#F59E0B" },
+  { name: "كيدز", value: 25, color: "#10B981" },
+  { name: "آيلتس", value: 5, color: "#3B82F6" },
 ]
 
 const paymentMethodData = [
   { method: "نقدي", amount: 45000 },
-  { method: "بطاقة", amount: 32000 },
-  { method: "تحويل", amount: 28000 },
-  { method: "أونلاين", amount: 15000 },
+  { method: "ماستر", amount: 32000 },
+  { method: "زين كاش", amount: 28000 },
+  { method: "آسيا حوالة", amount: 15000 },
 ]
 
 interface StatCardProps {
@@ -59,13 +57,13 @@ interface StatCardProps {
   value: string
   change: string
   isPositive: boolean
-  icon: ReactElement
+  icon: React.ReactElement
   color: string
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, icon, color }) => {
   return (
-    <Card>
+    <Card sx={{ height: '100%' }}>
       <CardContent>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
           <Box>
@@ -109,7 +107,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, i
 
 const DashboardPage: React.FC = () => {
   return (
-    <Box>
+    <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
         لوحة التحكم
       </Typography>
@@ -160,9 +158,9 @@ const DashboardPage: React.FC = () => {
 
       {/* Charts Row 1 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+        <Grid item xs={12} lg={6} dir="ltr">
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               الدخل والمصروفات
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
@@ -173,8 +171,10 @@ const DashboardPage: React.FC = () => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
+                    color: "#94A3B8",
                     border: "1px solid #334155",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                 />
                 <Legend />
@@ -185,9 +185,9 @@ const DashboardPage: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+        <Grid item xs={12} lg={6} dir="ltr">
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               توزيع الدورات
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
@@ -196,8 +196,8 @@ const DashboardPage: React.FC = () => {
                   data={courseDistributionData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={true}
+                  label={({ name, percent }) => `%${name} ${(percent * 100).toFixed(0)}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -208,9 +208,10 @@ const DashboardPage: React.FC = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1E293B",
-                    border: "1px solid #334155",
+                    backgroundColor: "#c0c8d3bb",
+                    border: "1px solid #556377",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                 />
               </PieChart>
@@ -220,10 +221,10 @@ const DashboardPage: React.FC = () => {
       </Grid>
 
       {/* Charts Row 2 */}
-      <Grid container spacing={3}>
+      <Grid container spacing={3} dir="ltr">
         <Grid item xs={12} lg={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               تسجيل الطلاب الشهري
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
@@ -234,8 +235,10 @@ const DashboardPage: React.FC = () => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
+                    color: "#94A3B8",
                     border: "1px solid #334155",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                 />
                 <Bar dataKey="students" fill="#DC2626" name="الطلاب" />
@@ -245,8 +248,8 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} lg={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }} dir="rtl">
               طرق الدفع
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
@@ -257,8 +260,10 @@ const DashboardPage: React.FC = () => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
+                    color: "#94A3B8",
                     border: "1px solid #334155",
                     borderRadius: "8px",
+                    direction: "rtl",
                   }}
                 />
                 <Bar dataKey="amount" fill="#3B82F6" name="المبلغ" />
