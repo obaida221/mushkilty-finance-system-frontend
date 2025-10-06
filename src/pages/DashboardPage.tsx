@@ -167,7 +167,7 @@ const DashboardPage: React.FC = () => {
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8" tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start'}}/>
+                <YAxis stroke="#94A3B8" tick={{ fontSize: 15 }}/>
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
@@ -231,7 +231,7 @@ const DashboardPage: React.FC = () => {
               <BarChart data={studentEnrollmentData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8" tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start'}} />
+                <YAxis stroke="#94A3B8" tick={{ fontSize: 15 }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
@@ -256,7 +256,7 @@ const DashboardPage: React.FC = () => {
               <BarChart data={paymentMethodData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis type="number" stroke="#94A3B8" />
-                <YAxis dataKey="method" type="category" stroke="#94A3B8" tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start'}} />
+                <YAxis dataKey="method" type="category" stroke="#94A3B8" tick={{ fontSize: 15 }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",

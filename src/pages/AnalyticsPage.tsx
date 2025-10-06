@@ -30,10 +30,10 @@ const monthlyRevenueData = [
 ]
 
 const courseRevenueData = [
-  { name: "البرمجة", revenue: 17500000, color: "#DC2626" },
-  { name: "التصميم", revenue: 10000000, color: "#F59E0B" },
-  { name: "التسويق", revenue: 7000000, color: "#10B981" },
-  { name: "الإدارة", revenue: 5500000, color: "#3B82F6" },
+  { name: "أونلاين", revenue: 17500000, color: "#DC2626" },
+  { name: "حضوري", revenue: 10000000, color: "#F59E0B" },
+  { name: "كيدز", revenue: 7000000, color: "#10B981" },
+  { name: "آيلتس", revenue: 5500000, color: "#3B82F6" },
 ]
 
 const expenseCategoryData = [
@@ -143,7 +143,7 @@ const AnalyticsPage: React.FC = () => {
               <LineChart data={monthlyRevenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8"  tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start'}}/>
+                <YAxis stroke="#94A3B8"  tick={{ fontSize: 15 }}/>
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#F1F1F1",
@@ -173,8 +173,8 @@ const AnalyticsPage: React.FC = () => {
                   data={courseRevenueData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={true}
+                  label={({ name, percent }) => `%${name} ${(percent * 100).toFixed(0)}`}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="revenue"
@@ -206,7 +206,7 @@ const AnalyticsPage: React.FC = () => {
               <BarChart data={expenseCategoryData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B"  />
                 <XAxis type="number" stroke="#94A3B8" />
-                <YAxis dataKey="category" type="category" stroke="#94A3B8" width={80} tick={{ fontSize: 15, angle: 0 ,textAnchor: 'start' }} />
+                <YAxis dataKey="category" type="category" stroke="#94A3B8" width={80} tick={{ fontSize: 15  }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
