@@ -25,42 +25,16 @@ import type { Teacher } from "../types"
 
 // Mock data
 const mockTeachers: Teacher[] = [
-  {
-    id: "1",
-    fullName: "د. محمد أحمد",
-    email: "mohamed@example.com",
-    phone: "07701111111",
-    specialization: "البرمجة",
-    salary: 1000000,
-    status: "active",
-    createdAt: "2024-01-01",
-  },
-  {
-    id: "2",
-    fullName: "د. فاطمة علي",
-    email: "fatima@example.com",
-    phone: "07702222222",
-    specialization: "التصميم",
-    salary: 900000,
-    status: "active",
-    createdAt: "2024-01-01",
-  },
-  {
-    id: "3",
-    fullName: "د. حسن محمود",
-    email: "hassan@example.com",
-    phone: "07703333333",
-    specialization: "التسويق",
-    salary: 850000,
-    status: "active",
-    createdAt: "2024-01-15",
-  },
+  { id: "1", fullName: "د. محمد أحمد", email: "mohamed@example.com", phone: "07701111111", specialization: "البرمجة", salary: 1000000, status: "active", createdAt: "2024-01-01" },
+  { id: "2", fullName: "د. فاطمة علي", email: "fatima@example.com", phone: "07702222222", specialization: "التصميم", salary: 900000, status: "active", createdAt: "2024-01-01" },
+  { id: "3", fullName: "د. حسن محمود", email: "hassan@example.com", phone: "07703333333", specialization: "التسويق", salary: 850000, status: "active", createdAt: "2024-01-15" },
 ]
 
 const TeachersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [teachers] = useState<Teacher[]>(mockTeachers)
+  const [teachers, setTeachers] = useState<Teacher[]>(mockTeachers)
+  const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null)
 
   const [teacherForm, setTeacherForm] = useState({
     fullName: "",
@@ -70,8 +44,22 @@ const TeachersPage: React.FC = () => {
     salary: "",
   })
 
-  const handleOpenDialog = () => {
-    setTeacherForm({ fullName: "", email: "", phone: "", specialization: "", salary: "" })
+  const handleOpenDialog = (teacher?: Teacher) => {
+    if (teacher) {
+      // تعديل مدرس موجود
+      setEditingTeacherId(teacher.id)
+      setTeacherForm({
+        fullName: teacher.fullName,
+        email: teacher.email,
+        phone: teacher.phone,
+        specialization: teacher.specialization,
+        salary: teacher.salary.toString(),
+      })
+    } else {
+      // إضافة مدرس جديد
+      setEditingTeacherId(null)
+      setTeacherForm({ fullName: "", email: "", phone: "", specialization: "", salary: "" })
+    }
     setOpenDialog(true)
   }
 
@@ -79,35 +67,38 @@ const TeachersPage: React.FC = () => {
     setOpenDialog(false)
   }
 
-  const handleCreateTeacher = () => {
-    console.log("Creating teacher:", teacherForm)
+  const handleCreateOrEditTeacher = () => {
+    const newTeacher: Teacher = {
+      id: editingTeacherId ? editingTeacherId : (teachers.length + 1).toString(),
+      fullName: teacherForm.fullName,
+      email: teacherForm.email,
+      phone: teacherForm.phone,
+      specialization: teacherForm.specialization,
+      salary: Number(teacherForm.salary),
+      status: "active",
+      createdAt: new Date().toISOString().split("T")[0],
+    }
+
+    if (editingTeacherId) {
+      // تعديل
+      setTeachers((prev) => prev.map((t) => (t.id === editingTeacherId ? newTeacher : t)))
+    } else {
+      // إضافة
+      setTeachers((prev) => [...prev, newTeacher])
+    }
+
     handleCloseDialog()
   }
 
+  const handleDeleteTeacher = (id: string) => {
+    setTeachers((prev) => prev.filter((t) => t.id !== id))
+  }
+
   const columns: GridColDef[] = [
-    {
-      field: "fullName",
-      headerName: "اسم المدرس",
-      flex: 1,
-      minWidth: 150,
-    },
-    {
-      field: "email",
-      headerName: "البريد الإلكتروني",
-      flex: 1,
-      minWidth: 180,
-    },
-    {
-      field: "phone",
-      headerName: "رقم الهاتف",
-      width: 130,
-    },
-    {
-      field: "specialization",
-      headerName: "التخصص",
-      flex: 1,
-      minWidth: 120,
-    },
+    { field: "fullName", headerName: "اسم المدرس", flex: 1, minWidth: 150 },
+    { field: "email", headerName: "البريد الإلكتروني", flex: 1, minWidth: 180 },
+    { field: "phone", headerName: "رقم الهاتف", width: 130 },
+    { field: "specialization", headerName: "التخصص", flex: 1, minWidth: 120 },
     {
       field: "salary",
       headerName: "الراتب",
@@ -131,12 +122,12 @@ const TeachersPage: React.FC = () => {
       headerName: "الإجراءات",
       width: 120,
       sortable: false,
-      renderCell: () => (
+      renderCell: (params) => (
         <Box>
-          <IconButton size="small" color="primary">
+          <IconButton size="small" color="primary" onClick={() => handleOpenDialog(params.row)}>
             <Edit fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error">
+          <IconButton size="small" color="error" onClick={() => handleDeleteTeacher(params.row.id)}>
             <Delete fontSize="small" />
           </IconButton>
         </Box>
@@ -160,7 +151,7 @@ const TeachersPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           إدارة المدرسين
         </Typography>
-        <Button variant="contained" startIcon={<PersonAdd />} onClick={handleOpenDialog}>
+        <Button variant="contained" startIcon={<PersonAdd />} onClick={() => handleOpenDialog()}>
           إضافة مدرس
         </Button>
       </Box>
@@ -256,21 +247,16 @@ const TeachersPage: React.FC = () => {
             autoHeight
             sx={{
               border: "none",
-              "& .MuiDataGrid-cell": {
-                borderColor: "divider",
-              },
-              "& .MuiDataGrid-columnHeaders": {
-                bgcolor: "background.default",
-                borderColor: "divider",
-              },
+              "& .MuiDataGrid-cell": { borderColor: "divider" },
+              "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
             }}
           />
         </Box>
       </Paper>
 
-      {/* Create Teacher Dialog */}
+      {/* Create/Edit Teacher Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>إضافة مدرس جديد</DialogTitle>
+        <DialogTitle>{editingTeacherId ? "تعديل بيانات المدرس" : "إضافة مدرس جديد"}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             <TextField
@@ -309,8 +295,8 @@ const TeachersPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleCreateTeacher} variant="contained">
-            إضافة
+          <Button onClick={handleCreateOrEditTeacher} variant="contained">
+            {editingTeacherId ? "تحديث" : "إضافة"}
           </Button>
         </DialogActions>
       </Dialog>

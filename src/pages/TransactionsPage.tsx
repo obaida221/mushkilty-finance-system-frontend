@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { useState } from "react"
 import {
@@ -11,13 +13,16 @@ import {
   FormControl,
   InputLabel,
   Select,
-  type SelectChangeEvent,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, TrendingUp, TrendingDown, Receipt, AccountBalance } from "@mui/icons-material"
+import { Search, TrendingUp, TrendingDown, Receipt, AccountBalance, Add, Edit, Delete } from "@mui/icons-material"
 import type { Transaction } from "../types"
 
-// Mock data
 const mockTransactions: Transaction[] = [
   {
     id: "1",
@@ -39,69 +44,36 @@ const mockTransactions: Transaction[] = [
     createdBy: "1",
     createdAt: "2024-03-14T14:20:00",
   },
-  {
-    id: "3",
-    type: "payroll",
-    amount: 1000000,
-    description: "راتب د. محمد أحمد - مارس 2024",
-    date: "2024-03-01",
-    referenceId: "PAY001",
-    createdBy: "1",
-    createdAt: "2024-03-01T09:00:00",
-  },
-  {
-    id: "4",
-    type: "payment",
-    amount: 400000,
-    description: "دفعة من الطالبة سارة محمد - دورة التصميم",
-    date: "2024-03-13",
-    referenceId: "PAY002",
-    createdBy: "2",
-    createdAt: "2024-03-13T11:15:00",
-  },
-  {
-    id: "5",
-    type: "refund",
-    amount: 100000,
-    description: "استرجاع مبلغ للطالب حسن علي",
-    date: "2024-03-12",
-    referenceId: "REF001",
-    createdBy: "1",
-    createdAt: "2024-03-12T16:45:00",
-  },
 ]
 
 const TransactionsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [transactions] = useState<Transaction[]>(mockTransactions)
+  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions)
 
-  const handleTypeFilterChange = (event: SelectChangeEvent) => {
-    setTypeFilter(event.target.value)
-  }
+  const [openDialog, setOpenDialog] = useState(false)
+  const [transactionForm, setTransactionForm] = useState({
+    type: "",
+    amount: "",
+    description: "",
+    date: "",
+    referenceId: "",
+  })
+
+  const handleTypeFilterChange = (event: any) => setTypeFilter(event.target.value)
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "payment":
-        return <TrendingUp sx={{ fontSize: 18 }} />
-      case "expense":
-        return <TrendingDown sx={{ fontSize: 18 }} />
-      case "refund":
-        return <Receipt sx={{ fontSize: 18 }} />
-      case "payroll":
-        return <AccountBalance sx={{ fontSize: 18 }} />
-      default:
-        return null
+      case "payment": return <TrendingUp sx={{ fontSize: 18 }} />
+      case "expense": return <TrendingDown sx={{ fontSize: 18 }} />
+      case "refund": return <Receipt sx={{ fontSize: 18 }} />
+      case "payroll": return <AccountBalance sx={{ fontSize: 18 }} />
+      default: return null
     }
   }
 
   const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      payment: "دفعة",
-      expense: "مصروف",
-      refund: "مرتجع",
-      payroll: "راتب",
-    }
+    const labels: Record<string, string> = { payment: "دفعة", expense: "مصروف", refund: "مرتجع", payroll: "راتب" }
     return labels[type] || type
   }
 
@@ -115,12 +87,34 @@ const TransactionsPage: React.FC = () => {
     return colors[type] || "info"
   }
 
+  const handleOpenDialog = () => {
+    setTransactionForm({ type: "", amount: "", description: "", date: "", referenceId: "" })
+    setOpenDialog(true)
+  }
+
+  const handleCloseDialog = () => setOpenDialog(false)
+
+  const handleCreateTransaction = () => {
+    const newTransaction: Transaction = {
+      id: (transactions.length + 1).toString(),
+      type: transactionForm.type,
+      amount: Number(transactionForm.amount),
+      description: transactionForm.description,
+      date: transactionForm.date,
+      referenceId: transactionForm.referenceId,
+      createdBy: "1",
+      createdAt: new Date().toISOString(),
+    }
+    setTransactions([newTransaction, ...transactions])
+    handleCloseDialog()
+  }
+
+  const handleDeleteTransaction = (id: string) => {
+    setTransactions(transactions.filter((t) => t.id !== id))
+  }
+
   const columns: GridColDef[] = [
-    {
-      field: "date",
-      headerName: "التاريخ",
-      width: 120,
-    },
+    { field: "date", headerName: "التاريخ", width: 120 },
     {
       field: "type",
       headerName: "النوع",
@@ -132,12 +126,7 @@ const TransactionsPage: React.FC = () => {
         </Box>
       ),
     },
-    {
-      field: "description",
-      headerName: "الوصف",
-      flex: 2,
-      minWidth: 250,
-    },
+    { field: "description", headerName: "الوصف", flex: 2, minWidth: 250 },
     {
       field: "amount",
       headerName: "المبلغ",
@@ -147,16 +136,24 @@ const TransactionsPage: React.FC = () => {
         const isIncome = row.type === "payment"
         return (
           <Typography color={isIncome ? "success.main" : "error.main"} sx={{ fontWeight: 600 }}>
-            {isIncome ? "+" : "-"}
-            {params.value.toLocaleString()} د.ع
+            {isIncome ? "+" : "-"}{params.value.toLocaleString()} د.ع
           </Typography>
         )
       },
     },
+    { field: "referenceId", headerName: "رقم المرجع", width: 130 },
     {
-      field: "referenceId",
-      headerName: "رقم المرجع",
-      width: 130,
+      field: "actions",
+      headerName: "الإجراءات",
+      width: 120,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <Button color="error" onClick={() => handleDeleteTransaction(params.row.id)} startIcon={<Delete />}>
+            حذف
+          </Button>
+        </Box>
+      ),
     },
   ]
 
@@ -179,54 +176,9 @@ const TransactionsPage: React.FC = () => {
         المعاملات المالية
       </Typography>
 
-      {/* Summary Cards */}
-      <Box sx={{ display: "flex", gap: 3, mb: 3, flexWrap: "wrap" }}>
-        <Paper sx={{ p: 3, flex: 1, minWidth: 250 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box sx={{ bgcolor: "success.main", p: 1.5, borderRadius: 2 }}>
-              <TrendingUp sx={{ color: "white" }} />
-            </Box>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                إجمالي الدخل
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: "success.main" }}>
-                {totalIncome.toLocaleString()} د.ع
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-        <Paper sx={{ p: 3, flex: 1, minWidth: 250 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box sx={{ bgcolor: "error.main", p: 1.5, borderRadius: 2 }}>
-              <TrendingDown sx={{ color: "white" }} />
-            </Box>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                إجمالي المصروفات
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: "error.main" }}>
-                {totalExpenses.toLocaleString()} د.ع
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-        <Paper sx={{ p: 3, flex: 1, minWidth: 250 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box sx={{ bgcolor: "primary.main", p: 1.5, borderRadius: 2 }}>
-              <AccountBalance sx={{ color: "white" }} />
-            </Box>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                صافي الربح
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                {(totalIncome - totalExpenses).toLocaleString()} د.ع
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
+      <Button variant="contained" startIcon={<Add />} sx={{ mb: 3 }} onClick={handleOpenDialog}>
+        إضافة معاملة جديدة
+      </Button>
 
       <Paper>
         <Box sx={{ p: 3 }}>
@@ -235,13 +187,7 @@ const TransactionsPage: React.FC = () => {
               placeholder="البحث في المعاملات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
+              InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
               sx={{ flex: 1, minWidth: 250 }}
             />
             <FormControl sx={{ minWidth: 200 }}>
@@ -259,30 +205,72 @@ const TransactionsPage: React.FC = () => {
           <DataGrid
             rows={filteredTransactions}
             columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 },
-              },
-              sorting: {
-                sortModel: [{ field: "date", sort: "desc" }],
-              },
-            }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[5, 10, 25, 50]}
             disableRowSelectionOnClick
             autoHeight
             sx={{
               border: "none",
-              "& .MuiDataGrid-cell": {
-                borderColor: "divider",
-              },
-              "& .MuiDataGrid-columnHeaders": {
-                bgcolor: "background.default",
-                borderColor: "divider",
-              },
+              "& .MuiDataGrid-cell": { borderColor: "divider" },
+              "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
             }}
           />
         </Box>
       </Paper>
+
+      {/* Create Transaction Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>إضافة معاملة جديدة</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>نوع المعاملة</InputLabel>
+              <Select
+                value={transactionForm.type}
+                onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value })}
+              >
+                <MenuItem value="payment">دفعة</MenuItem>
+                <MenuItem value="expense">مصروف</MenuItem>
+                <MenuItem value="refund">مرتجع</MenuItem>
+                <MenuItem value="payroll">راتب</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="الوصف"
+              value={transactionForm.description}
+              onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="المبلغ"
+              type="number"
+              value={transactionForm.amount}
+              onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="تاريخ المعاملة"
+              type="date"
+              value={transactionForm.date}
+              onChange={(e) => setTransactionForm({ ...transactionForm, date: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              label="رقم المرجع"
+              value={transactionForm.referenceId}
+              onChange={(e) => setTransactionForm({ ...transactionForm, referenceId: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>إلغاء</Button>
+          <Button onClick={handleCreateTransaction} variant="contained">
+            إضافة
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
