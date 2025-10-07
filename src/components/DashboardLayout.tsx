@@ -28,19 +28,21 @@ import {
   Dashboard,
   People,
   School,
-  Class,
-  Person,
+  // Class,
+  // Person,
   Receipt,
   Payment,
   MoneyOff,
-  Undo,
+  // Undo,
   Discount,
-  AccountBalance,
-  Analytics,
+  // AccountBalance,
+  // Analytics,
   Logout,
   AccountCircle,
   LightMode,
   DarkMode,
+  Equalizer,
+  Paid,
 } from "@mui/icons-material"
 import { useAuth } from "../context/AuthContext"
 import { useThemeMode } from "../context/ThemeContext"
@@ -56,17 +58,17 @@ interface DashboardMenuItem {
 
 const menuItems: DashboardMenuItem[] = [
   { text: "لوحة التحكم", icon: <Dashboard />, path: "/" },
-  { text: "المستخدمين", icon: <People />, path: "/users", permission: { resource: "users", action: "read" } },
-  { text: "الطلاب", icon: <School />, path: "/students" },
-  { text: "الدورات", icon: <Class />, path: "/courses" },
-  { text: "المدرسين", icon: <Person />, path: "/teachers" },
+  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permission: { resource: "users", action: "read" } },
+  { text: "الدورات والخصومات", icon: <Discount />, path: "/courses" }, // تتضمن دُفعات الدورات Batches مثل وضع الـroles في المستخدمين
+  // { text: "الخصومات", icon: <Discount />, path: "/discounts" }, 
+  { text: "الطلاب وتسجيلاتهم", icon: <School />, path: "/students" },
+  // { text: "المدرسين", icon: <Person />, path: "/teachers" }, // ما له داعي لأن نفسه المستخدمين لهم صلاحية المدرسين
   { text: "المعاملات", icon: <Receipt />, path: "/transactions" },
-  { text: "المدفوعات", icon: <Payment />, path: "/payments" },
-  { text: "المصروفات", icon: <MoneyOff />, path: "/expenses" },
-  { text: "المرتجعات", icon: <Undo />, path: "/refunds" },
-  { text: "الخصومات", icon: <Discount />, path: "/discounts" },
-  { text: "الرواتب", icon: <AccountBalance />, path: "/payroll" },
-  { text: "التحليلات", icon: <Analytics />, path: "/analytics" },
+  { text: "الواردات وطرق الدفع", icon: <Payment />, path: "/payments" }, // تجمع كل الواردات والمصاريف والرواتب المسجلة في النظام
+  // { text: "المرتجعات", icon: <Undo />, path: "/refunds" }, // تابعة للواردات - إما نظهر الواردات بلون أحمر أو نخليها بقسم مخصص ونحذف الواردة المرتبطة بها من قسم الواردات
+  { text: "المصاريف", icon: <MoneyOff />, path: "/expenses" },
+  { text: "الرواتب", icon: <Paid />, path: "/payroll" },
+  { text: "التحليلات", icon: <Equalizer />, path: "/analytics" },
 ]
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -227,12 +229,6 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
               </Typography>
             </Box>
             <Divider />
-            {/* <MenuItem onClick={toggleTheme}>
-              <ListItemIcon>
-                {mode === "dark" ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
-              </ListItemIcon>
-              {mode === "dark" ? "الوضع النهاري" : "الوضع الليلي"}
-            </MenuItem> */}
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <Logout fontSize="small" />

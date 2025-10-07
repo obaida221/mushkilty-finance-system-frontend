@@ -1,123 +1,141 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  InputAdornment,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Chip,
-  Grid,
-  Card,
-  CardContent,
-  IconButton,
+  Box, Typography, Paper, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
+  InputAdornment, MenuItem, FormControl, InputLabel, Select, Chip, Grid, Card, CardContent, IconButton
 } from "@mui/material"
-import { DataGrid, type GridColDef } from "@mui/x-data-grid"
+import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { Search, Add, Payment as PaymentIcon, Edit, Delete } from "@mui/icons-material"
-import type { Payment } from "../types"
 
 // Mock data
-const mockPayments: Payment[] = [
-  { id: "1", studentId: "1", amount: 500000, paymentMethod: "cash", transactionId: "1", date: "2024-03-15", notes: "دفعة كاملة للدورة", createdAt: "2024-03-15T10:30:00" },
-  { id: "2", studentId: "2", amount: 400000, paymentMethod: "card", transactionId: "4", date: "2024-03-13", notes: "دفعة كاملة", createdAt: "2024-03-13T11:15:00" },
-  { id: "3", studentId: "1", amount: 250000, paymentMethod: "bank_transfer", transactionId: "6", date: "2024-03-10", notes: "دفعة أولى", createdAt: "2024-03-10T09:20:00" },
+const mockPayments = [
+  {
+    id: "1",
+    enrollmentId: "1",
+    payer: null,
+    payment_method_id: "1",
+    amount: 500000,
+    currency: "IQD",
+    type: "full",
+    note: "دفعة كاملة للدورة",
+    paid_at: "2024-03-15",
+  },
+  {
+    id: "2",
+    enrollmentId: null,
+    payer: "شركة الحياة",
+    payment_method_id: "2",
+    amount: 300000,
+    currency: "IQD",
+    type: "installment",
+    note: "دفعة خارجية",
+    paid_at: "2024-03-18",
+  },
 ]
 
-const PaymentsPage: React.FC = () => {
+const mockPaymentMethods = [
+  { id: "1", name: "cash", description: "نقدي" },
+  { id: "2", name: "card", description: "بطاقة مصرفية" },
+  { id: "3", name: "transfer", description: "تحويل بنكي" },
+]
+
+const mockEnrollments = [
+  { id: "1", student_name: "علي أحمد", batch_name: "IELTS A1" },
+  { id: "2", student_name: "سارة محمد", batch_name: "Kids A2" },
+]
+
+const PaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [payments, setPayments] = useState<Payment[]>(mockPayments)
-  const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
-
+  const [payments, setPayments] = useState(mockPayments)
+  const [editingPayment, setEditingPayment] = useState(null)
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [filteredEnrollments, setFilteredEnrollments] = useState([]);
   const [paymentForm, setPaymentForm] = useState({
-    studentId: "",
+    source: "student", // student | external
+    enrollmentId: "",
+    payer: "",
+    payment_method_id: "",
     amount: "",
-    paymentMethod: "",
-    notes: "",
+    currency: "IQD",
+    type: "full",
+    note: "",
   })
 
-  const handleOpenDialog = (payment?: Payment) => {
+  const handleOpenDialog = (payment) => {
     if (payment) {
       setEditingPayment(payment)
       setPaymentForm({
-        studentId: payment.studentId,
+        source: payment.enrollmentId ? "student" : "external",
+        enrollmentId: payment.enrollmentId || "",
+        payer: payment.payer || "",
+        payment_method_id: payment.payment_method_id,
         amount: payment.amount.toString(),
-        paymentMethod: payment.paymentMethod,
-        notes: payment.notes,
+        currency: payment.currency,
+        type: payment.type,
+        note: payment.note,
       })
     } else {
       setEditingPayment(null)
-      setPaymentForm({ studentId: "", amount: "", paymentMethod: "", notes: "" })
+      setPaymentForm({
+        source: "student",
+        enrollmentId: "",
+        payer: "",
+        payment_method_id: "",
+        amount: "",
+        currency: "IQD",
+        type: "full",
+        note: "",
+      })
     }
     setOpenDialog(true)
   }
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false)
-  }
+  const handleCloseDialog = () => setOpenDialog(false)
 
-  const handleCreateOrUpdatePayment = () => {
+  const handleSavePayment = () => {
     if (editingPayment) {
-      // Update existing payment
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === editingPayment.id
-            ? { ...p, studentId: paymentForm.studentId, amount: Number(paymentForm.amount), paymentMethod: paymentForm.paymentMethod, notes: paymentForm.notes }
-            : p
-        )
+      setPayments(prev =>
+        prev.map(p => p.id === editingPayment.id ? { ...p, ...paymentForm } : p)
       )
     } else {
-      // Create new payment
-      const newPayment: Payment = {
+      const newPayment = {
         id: (payments.length + 1).toString(),
-        studentId: paymentForm.studentId,
-        amount: Number(paymentForm.amount),
-        paymentMethod: paymentForm.paymentMethod,
-        transactionId: (payments.length + 1).toString(),
-        date: new Date().toISOString().split("T")[0],
-        notes: paymentForm.notes,
-        createdAt: new Date().toISOString(),
+        ...paymentForm,
+        paid_at: new Date().toISOString().split("T")[0],
       }
-      setPayments((prev) => [...prev, newPayment])
+      setPayments(prev => [...prev, newPayment])
     }
     handleCloseDialog()
   }
 
-  const handleDeletePayment = (id: string) => {
-    setPayments((prev) => prev.filter((p) => p.id !== id))
+  const handleDeletePayment = (id: any) => {
+    setPayments(prev => prev.filter(p => p.id !== id))
   }
 
-  const getPaymentMethodLabel = (method: string) => {
-    const labels: Record<string, string> = {
-      cash: "نقدي",
-      card: "بطاقة",
-      bank_transfer: "تحويل بنكي",
-      online: "أونلاين",
-    }
-    return labels[method] || method
+  const handleStudentSelect = (id: any) => {
+    setSelectedStudentId(id);
+    const filtered = mockEnrollments.filter(e => e.id === id);
+    setFilteredEnrollments(filtered);
   }
+
 
   const columns: GridColDef[] = [
-    { field: "date", headerName: "التاريخ", width: 120 },
+    { field: "paid_at", headerName: "التاريخ", width: 120 },
     {
-      field: "studentId",
-      headerName: "الطالب",
+      field: "source",
+      headerName: "المصدر",
       flex: 1,
-      minWidth: 150,
+      // minWidth: 150,
       renderCell: (params) => {
-        const studentNameMap: Record<string, string> = { "1": "علي أحمد", "2": "سارة محمد", "3": "حسن علي" }
-        return <Typography>{studentNameMap[params.value]}</Typography>
+        const row = params.row
+        if (row.enrollmentId) {
+          const enrollment = mockEnrollments.find(e => e.id === row.enrollmentId)
+          return <Typography>{enrollment?.student_name || "—"}</Typography>
+        } else {
+          return <Typography color="text.secondary">{row.payer}</Typography>
+        }
       },
     },
     {
@@ -125,19 +143,25 @@ const PaymentsPage: React.FC = () => {
       headerName: "المبلغ",
       width: 150,
       renderCell: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "success.main" }}>{params.value.toLocaleString()} د.ع</Typography>
+        <Typography sx={{ fontWeight: 600, color: "success.main" }}>
+          {Number(params.value).toLocaleString()} {params.row.currency}
+        </Typography>
       ),
     },
     {
-      field: "paymentMethod",
+      field: "payment_method_id",
       headerName: "طريقة الدفع",
       width: 130,
-      renderCell: (params) => <Chip label={getPaymentMethodLabel(params.value)} size="small" color="primary" />,
+      renderCell: (params) => {
+        const method = mockPaymentMethods.find(m => m.id === params.value)
+        return <Chip label={method?.description || "غير محدد"} size="small" color="primary" />
+      },
     },
-    { field: "notes", headerName: "ملاحظات", flex: 1, minWidth: 200 },
+    { field: "type", headerName: "النوع", width: 100 },
+    { field: "note", headerName: "ملاحظات", flex: 1 },
     {
       field: "actions",
-      headerName: "الإجراءات",
+      headerName: "إجراءات",
       width: 120,
       sortable: false,
       renderCell: (params) => (
@@ -153,23 +177,19 @@ const PaymentsPage: React.FC = () => {
     },
   ]
 
-  const filteredPayments = payments.filter(
-    (payment) =>
-      payment.notes.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())
+  const filtered = payments.filter(p =>
+    (p.note || "").includes(searchQuery) ||
+    (p.payer || "").includes(searchQuery)
   )
 
-  const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0)
+  const total = payments.reduce((sum, p) => sum + Number(p.amount), 0)
 
   return (
     <Box>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          المدفوعات
-        </Typography>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>الواردات</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
-          تسجيل دفعة
+          تسجيل واردة جديدة
         </Button>
       </Box>
 
@@ -183,11 +203,9 @@ const PaymentsPage: React.FC = () => {
                   <PaymentIcon sx={{ color: "white" }} />
                 </Box>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    إجمالي المدفوعات
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary">إجمالي الواردات</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {totalPayments.toLocaleString()} د.ع
+                    {total.toLocaleString()} د.ع
                   </Typography>
                 </Box>
               </Box>
@@ -200,27 +218,24 @@ const PaymentsPage: React.FC = () => {
         <Box sx={{ p: 3 }}>
           <TextField
             fullWidth
-            placeholder="البحث في المدفوعات..."
+            placeholder="بحث..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
+              startAdornment: <InputAdornment position="start"><Search /></InputAdornment>,
             }}
             sx={{ mb: 3 }}
           />
 
           <DataGrid
-            rows={filteredPayments}
+            rows={filtered}
             columns={columns}
             initialState={{
               pagination: { paginationModel: { pageSize: 10 } },
               sorting: { sortModel: [{ field: "date", sort: "desc" }] },
             }}
             pageSizeOptions={[5, 10, 25]}
+            autoHeight
             disableRowSelectionOnClick
             autoHeight
             sx={{
@@ -234,59 +249,101 @@ const PaymentsPage: React.FC = () => {
 
       {/* Create / Edit Payment Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <PaymentIcon />
-            {editingPayment ? "تعديل الدفعة" : "تسجيل دفعة جديدة"}
-          </Box>
-        </DialogTitle>
+        <DialogTitle>{editingPayment ? "تعديل الدفعة" : "تسجيل دفعة جديدة"}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             <FormControl fullWidth>
-              <InputLabel>الطالب</InputLabel>
+              <InputLabel>المصدر</InputLabel>
               <Select
-                value={paymentForm.studentId}
-                label="الطالب"
-                onChange={(e) => setPaymentForm({ ...paymentForm, studentId: e.target.value })}
+                value={paymentForm.source}
+                label="المصدر"
+                onChange={(e) => setPaymentForm({ ...paymentForm, source: e.target.value })}
               >
-                <MenuItem value="1">علي أحمد</MenuItem>
-                <MenuItem value="2">سارة محمد</MenuItem>
-                <MenuItem value="3">حسن علي</MenuItem>
+                <MenuItem value="student">طالب</MenuItem>
+                <MenuItem value="external">جهة خارجية</MenuItem>
               </Select>
             </FormControl>
+
+            {paymentForm.source === "student" ? (
+              <>
+              <FormControl fullWidth>
+                <InputLabel>الطالب</InputLabel>
+                <Select value={selectedStudentId} onChange={(e) => handleStudentSelect(e.target.value)}>
+                    {mockEnrollments.map((s) => (
+                      <MenuItem key={s.id} value={s.id}>{s.student_name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {selectedStudentId && (
+                <FormControl fullWidth>
+                  <InputLabel>الدورة</InputLabel>
+                  <Select
+                    value={paymentForm.enrollmentId}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, enrollmentId: e.target.value })}
+                  >
+                    {filteredEnrollments.map((e) => (
+                      <MenuItem key={e.id} value={e.id}>{e.batch_name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+              </>
+            ) : (
+              <TextField
+                fullWidth
+                label="اسم الجهة الدافعة"
+                value={paymentForm.payer}
+                onChange={(e) => setPaymentForm({ ...paymentForm, payer: e.target.value })}
+              />
+            )}
+
+            <FormControl fullWidth>
+              <InputLabel>طريقة الدفع</InputLabel>
+              <Select
+                value={paymentForm.payment_method_id}
+                label="طريقة الدفع"
+                onChange={(e) => setPaymentForm({ ...paymentForm, payment_method_id: e.target.value })}
+              >
+                {mockPaymentMethods.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>{m.description}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <TextField
               fullWidth
-              label="المبلغ (دينار عراقي)"
+              label="المبلغ"
               type="number"
               value={paymentForm.amount}
               onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
             />
+
             <FormControl fullWidth>
-              <InputLabel>طريقة الدفع</InputLabel>
+              <InputLabel>نوع الدفعة</InputLabel>
               <Select
-                value={paymentForm.paymentMethod}
-                label="طريقة الدفع"
-                onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+                value={paymentForm.type}
+                label="نوع الدفعة"
+                onChange={(e) => setPaymentForm({ ...paymentForm, type: e.target.value })}
               >
-                <MenuItem value="cash">نقدي</MenuItem>
-                <MenuItem value="card">بطاقة</MenuItem>
-                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                <MenuItem value="online">أونلاين</MenuItem>
+                <MenuItem value="full">كاملة</MenuItem>
+                <MenuItem value="installment">قسط</MenuItem>
               </Select>
             </FormControl>
+
             <TextField
               fullWidth
               label="ملاحظات"
               multiline
               rows={3}
-              value={paymentForm.notes}
-              onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+              value={paymentForm.note}
+              onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
             />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleCreateOrUpdatePayment} variant="contained">
+          <Button variant="contained" onClick={handleSavePayment}>
             {editingPayment ? "تحديث" : "تسجيل"}
           </Button>
         </DialogActions>
