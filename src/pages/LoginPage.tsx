@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext"
 import { useThemeMode } from "../context/ThemeContext"
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -23,10 +23,10 @@ const LoginPage: React.FC = () => {
     setIsLoading(true)
 
     try {
-      await login(username, password)
+      await login(email, password)
       navigate("/")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "حدث خطأ أثناء تسجيل الدخول")
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || "حدث خطأ أثناء تسجيل الدخول")
     } finally {
       setIsLoading(false)
     }
@@ -118,9 +118,10 @@ const LoginPage: React.FC = () => {
             <form onSubmit={handleSubmit}>
               <TextField
                 fullWidth
-                label="اسم المستخدم"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                label="البريد الإلكتروني"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 margin="normal"
                 required
                 autoFocus
@@ -173,14 +174,14 @@ const LoginPage: React.FC = () => {
                   sx={{ mt: 1 }}
                   color={mode === 'light' ? "text.secondary" : "rgba(255,255,255,0.7)"}
                 >
-                  المدير: admin / password
+                  المدير: admin@example.com / Admin@123
                 </Typography>
                 <Typography
                   variant="caption"
                   display="block"
                   color={mode === 'light' ? "text.secondary" : "rgba(255,255,255,0.7)"}
                 >
-                  المحاسب: accountant / password
+                  المحاسب: accountant@example.com / Accountant@123
                 </Typography>
               </Box>
             </form>

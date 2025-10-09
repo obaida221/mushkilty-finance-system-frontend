@@ -1,29 +1,116 @@
-// User and Authentication Types
+// User and Authentication Types (Based on Actual Backend Response)
 export interface User {
-  id: string
-  username: string
+  id: number
   email: string
-  fullName: string
-  roleId: string
+  name: string
+  role_id?: number
   role?: Role
-  isActive: boolean
-  createdAt: string
+  permissions?: Permission[]  // Direct permissions array from backend
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Role {
-  id: string
+  id: number
   name: string
-  nameAr: string
   description: string
-  permissions: Permission[]
+  users?: User[]
+  rolePermissions?: RolePermission[]
 }
 
 export interface Permission {
-  id: string
+  id: number
   name: string
-  nameAr: string
-  resource: string
-  action: "create" | "read" | "update" | "delete"
+  description: string | null
+}
+
+export interface RolePermission {
+  permission: Permission
+}
+
+// User Management Request/Response Types
+export interface CreateUserRequest {
+  email: string
+  name?: string
+  password?: string
+  password_hash?: string
+  role_id: number
+}
+
+export interface UpdateUserRequest {
+  email?: string
+  name?: string
+  password?: string
+  role_id?: number
+}
+
+export interface CreateRoleRequest {
+  name: string
+  description: string
+}
+
+export interface UpdateRoleRequest {
+  name?: string
+  description?: string
+}
+
+export interface CreatePermissionRequest {
+  name: string
+  description: string
+}
+
+export interface AssignPermissionsRequest {
+  permissions?: string[]
+  permissionIds?: number[]
+  replace?: boolean
+}
+
+export interface RolePermissionsResponse {
+  role: Role
+  permissions: Permission[]
+}
+
+// Backend permission response structure
+export interface BackendPermissionResponse {
+  user: {
+    id: number
+    email: string
+    name: string
+  }
+  role: {
+    id: number
+    name: string
+    description: string
+  }
+  permissions: Permission[]
+}
+
+// Auth API Types
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface RegisterRequest {
+  email: string
+  name: string
+  password: string
+  role_id: number
+}
+
+export interface LoginResponse {
+  access_token: string
+  user: User
+}
+
+export interface AuthContextType {
+  user: User | null
+  token: string | null
+  login: (email: string, password: string) => Promise<LoginResponse>
+  register: (userData: RegisterRequest) => Promise<User>
+  logout: () => void
+  loading: boolean
+  isAuthenticated: boolean
 }
 
 // Student Types

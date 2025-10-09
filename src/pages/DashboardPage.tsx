@@ -1,8 +1,8 @@
 "use client"
 
 import React from "react"
-import { Box, Typography, Grid, Card, CardContent, Paper } from "@mui/material"
-import { TrendingUp, TrendingDown, School, AccountBalance } from "@mui/icons-material"
+import { Box, Typography, Grid, Card, CardContent, Paper, Alert, CircularProgress, IconButton, Tooltip } from "@mui/material"
+import { TrendingUp, TrendingDown, School, AccountBalance, Refresh } from "@mui/icons-material"
 import {
   LineChart,
   Line,
@@ -14,43 +14,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from "recharts"
-
-// Mock data for charts
-const revenueData = [
-  { month: "يناير", income: 45000, expenses: 28000 },
-  { month: "فبراير", income: 52000, expenses: 31000 },
-  { month: "مارس", income: 48000, expenses: 29000 },
-  { month: "أبريل", income: 61000, expenses: 34000 },
-  { month: "مايو", income: 55000, expenses: 32000 },
-  { month: "يونيو", income: 67000, expenses: 38000 },
-]
-
-const studentEnrollmentData = [
-  { month: "يناير", students: 45 },
-  { month: "فبراير", students: 52 },
-  { month: "مارس", students: 48 },
-  { month: "أبريل", students: 61 },
-  { month: "مايو", students: 58 },
-  { month: "يونيو", students: 67 },
-]
-
-const courseDistributionData = [
-  { name: "أونلاين", value: 40, color: "#DC2626" },
-  { name: "حضوري", value: 30, color: "#F59E0B" },
-  { name: "كيدز", value: 25, color: "#10B981" },
-  { name: "آيلتس", value: 5, color: "#3B82F6" },
-]
-
-const paymentMethodData = [
-  { method: "نقدي", amount: 45000 },
-  { method: "ماستر", amount: 32000 },
-  { method: "زين كاش", amount: 28000 },
-  { method: "آسيا حوالة", amount: 15000 },
-]
+import { useDashboard } from '../hooks/useDashboard'
+import ProtectedRoute from '../components/ProtectedRoute'
+import DashboardErrorBoundary from '../components/DashboardErrorBoundary'
 
 interface StatCardProps {
   title: string
@@ -105,21 +75,77 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, i
   )
 }
 
-const DashboardPage: React.FC = () => {
+// Dashboard Content Component
+const DashboardContent: React.FC = () => {
+  const { data, loading, error, lastUpdated, refresh } = useDashboard({
+    months: 6,
+    activityLimit: 10,
+    autoRefresh: true,
+    refreshInterval: 300000 // 5 minutes
+  });
+
+  if (loading && !data) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          جاري تحميل لوحة التحكم...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 3 }}>
+        <Typography variant="h6">خطأ في تحميل البيانات</Typography>
+        <Typography variant="body2">{error}</Typography>
+        <Box sx={{ mt: 2 }}>
+          <IconButton onClick={refresh} color="primary">
+            <Refresh />
+          </IconButton>
+        </Box>
+      </Alert>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Alert severity="warning" sx={{ m: 3 }}>
+        <Typography>لا توجد بيانات متاحة</Typography>
+      </Alert>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-        لوحة التحكم
-      </Typography>
+      {/* Header */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+          لوحة التحكم
+        </Typography>
+        <Box display="flex" alignItems="center" gap={2}>
+          {lastUpdated && (
+            <Typography variant="body2" color="text.secondary">
+              آخر تحديث: {lastUpdated.toLocaleTimeString('ar-IQ')}
+            </Typography>
+          )}
+          <Tooltip title="تحديث البيانات">
+            <IconButton onClick={refresh} color="primary" disabled={loading}>
+              <Refresh />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             title="إجمالي الدخل"
-            value="67,000 د.ع"
-            change="+12.5%"
-            isPositive={true}
+            value={`${data.stats.totalIncome.toLocaleString()} د.ع`}
+            change={data.stats.incomeChange}
+            isPositive={data.stats.incomeChange.includes('+')}
             icon={<TrendingUp />}
             color="#10B981"
           />
@@ -127,9 +153,9 @@ const DashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             title="إجمالي المصروفات"
-            value="38,000 د.ع"
-            change="+8.2%"
-            isPositive={false}
+            value={`${data.stats.totalExpenses.toLocaleString()} د.ع`}
+            change={data.stats.expensesChange}
+            isPositive={!data.stats.expensesChange.includes('+')}
             icon={<TrendingDown />}
             color="#EF4444"
           />
@@ -137,9 +163,9 @@ const DashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             title="الطلاب النشطين"
-            value="67"
-            change="+15.8%"
-            isPositive={true}
+            value={data.stats.activeStudents.toString()}
+            change={data.stats.studentsChange}
+            isPositive={data.stats.studentsChange.includes('+')}
             icon={<School />}
             color="#3B82F6"
           />
@@ -147,9 +173,9 @@ const DashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             title="صافي الربح"
-            value="29,000 د.ع"
-            change="+18.3%"
-            isPositive={true}
+            value={`${data.stats.netProfit.toLocaleString()} د.ع`}
+            change={data.stats.profitChange}
+            isPositive={data.stats.profitChange.includes('+')}
             icon={<AccountBalance />}
             color="#DC2626"
           />
@@ -164,11 +190,11 @@ const DashboardPage: React.FC = () => {
               الدخل والمصروفات
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueData}>
+              <LineChart data={data.charts.revenue}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
                 <YAxis stroke="#94A3B8" tick={{ fontSize: 15 }}/>
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
                     color: "#94A3B8",
@@ -193,20 +219,20 @@ const DashboardPage: React.FC = () => {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={courseDistributionData}
+                  data={data.charts.courseDistribution as any}
                   cx="50%"
                   cy="50%"
                   labelLine={true}
-                  label={({ name, percent }) => `%${name} ${(percent * 100).toFixed(0)}`}
+                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {courseDistributionData.map((entry, index) => (
+                  {data.charts.courseDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     backgroundColor: "#c0c8d3bb",
                     border: "1px solid #556377",
@@ -228,11 +254,11 @@ const DashboardPage: React.FC = () => {
               تسجيل الطلاب الشهري
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={studentEnrollmentData}>
+              <BarChart data={data.charts.enrollment}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="month" stroke="#94A3B8" />
                 <YAxis stroke="#94A3B8" tick={{ fontSize: 15 }} />
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
                     color: "#94A3B8",
@@ -253,11 +279,11 @@ const DashboardPage: React.FC = () => {
               طرق الدفع
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={paymentMethodData} layout="vertical">
+              <BarChart data={data.charts.paymentMethods} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis type="number" stroke="#94A3B8" />
                 <YAxis dataKey="method" type="category" stroke="#94A3B8" tick={{ fontSize: 15 }} />
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     backgroundColor: "#1E293B",
                     color: "#94A3B8",
@@ -272,7 +298,65 @@ const DashboardPage: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Recent Activities */}
+      <Box sx={{ mt: 4 }}>
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            الأنشطة الحديثة
+          </Typography>
+          {data.recentActivities.length > 0 ? (
+            <Box>
+              {data.recentActivities.slice(0, 5).map((activity, index) => (
+                <Box 
+                  key={activity.id} 
+                  sx={{ 
+                    p: 2, 
+                    borderBottom: index < 4 ? '1px solid' : 'none',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Box>
+                    <Typography variant="body1" fontWeight={500}>
+                      {activity.description}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(activity.date).toLocaleDateString('ar-IQ')}
+                    </Typography>
+                  </Box>
+                  {activity.amount && (
+                    <Typography variant="body1" fontWeight={600} color="primary.main">
+                      {activity.amount.toLocaleString()} د.ع
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+              لا توجد أنشطة حديثة
+            </Typography>
+          )}
+        </Paper>
+      </Box>
     </Box>
+  )
+}
+
+// Main Dashboard Page with Protection
+const DashboardPage: React.FC = () => {
+  return (
+    <DashboardErrorBoundary>
+      <ProtectedRoute 
+        requiredPermission="dashboard:read"
+        showAccessDenied={true}
+      >
+        <DashboardContent />
+      </ProtectedRoute>
+    </DashboardErrorBoundary>
   )
 }
 

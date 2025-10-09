@@ -25,6 +25,10 @@ import RefundsPage from "./pages/RefundsPage"
 import DiscountsPage from "./pages/DiscountsPage"
 import PayrollPage from "./pages/PayrollPage"
 import AnalyticsPage from "./pages/AnalyticsPage"
+import DebugPermissionsPage from "./pages/DebugPermissionsPage"
+import UserManagementPage from "./pages/UserManagementPage"
+import RoleManagementPage from "./pages/RoleManagementPage"
+import PermissionManagementPage from "./pages/PermissionManagementPage"
 
 // Create RTL cache
 const cacheRtl = createCache({
@@ -33,9 +37,9 @@ const cacheRtl = createCache({
 })
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth()
+  const { user, loading } = useAuth()
 
-  if (isLoading) {
+  if (loading) {
     return <div>جاري التحميل...</div>
   }
 
@@ -57,6 +61,7 @@ const AppContent: React.FC = () => {
           <Router>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/debug-permissions" element={<DebugPermissionsPage />} />
               <Route
                 path="/*"
                 element={
@@ -65,6 +70,9 @@ const AppContent: React.FC = () => {
                       <Routes>
                         <Route path="/" element={<DashboardPage />} />
                         <Route path="/users" element={<UsersPage />} />
+                        <Route path="/users/manage" element={<UserManagementPage />} />
+                        <Route path="/roles/manage" element={<RoleManagementPage />} />
+                        <Route path="/permissions/manage" element={<PermissionManagementPage />} />
                         <Route path="/students" element={<StudentsPage />} />
                         <Route path="/courses" element={<CoursesPage />} />
                         <Route path="/teachers" element={<TeachersPage />} />

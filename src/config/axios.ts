@@ -14,18 +14,18 @@ interface ApiError {
 }
 
 const api: AxiosInstance = axios.create({
-  baseURL: 'https://localhost:5000',
+  baseURL: 'http://localhost:3001',
   timeout: 35000,
 });
 
 const guestApi: AxiosInstance = axios.create({
-  baseURL: 'https://localhost:5000',
+  baseURL: 'http://localhost:3001',
   timeout: 30000,
 });
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.set('Authorization', `Bearer ${token}`);
     }
@@ -43,7 +43,7 @@ api.interceptors.response.use(
   },
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

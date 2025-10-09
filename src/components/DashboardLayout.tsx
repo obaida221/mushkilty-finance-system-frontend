@@ -28,23 +28,26 @@ import {
   Dashboard,
   People,
   School,
-  // Class,
-  // Person,
+  Class,
+  Person,
   Receipt,
   Payment,
   MoneyOff,
-  // Undo,
+  Undo,
   Discount,
-  // AccountBalance,
-  // Analytics,
+  AccountBalance,
+  Analytics,
   Logout,
   AccountCircle,
   LightMode,
   DarkMode,
   Equalizer,
   Paid,
+  CurrencyExchange,
+  AttachMoney,
 } from "@mui/icons-material"
 import { useAuth } from "../context/AuthContext"
+import { usePermission } from "../context/AuthContext"
 import { useThemeMode } from "../context/ThemeContext"
 
 const drawerWidth = 280
@@ -53,28 +56,29 @@ interface DashboardMenuItem {
   text: string
   icon: React.ReactElement
   path: string
-  permission?: { resource: string; action: string }
+  permission?: string
 }
 
 const menuItems: DashboardMenuItem[] = [
   { text: "لوحة التحكم", icon: <Dashboard />, path: "/" },
-  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permission: { resource: "users", action: "read" } },
-  { text: "الدورات والخصومات", icon: <Discount />, path: "/courses" }, // تتضمن دُفعات الدورات Batches مثل وضع الـroles في المستخدمين
-  // { text: "الخصومات", icon: <Discount />, path: "/discounts" }, 
-  { text: "الطلاب وتسجيلاتهم", icon: <School />, path: "/students" },
-  // { text: "المدرسين", icon: <Person />, path: "/teachers" }, // ما له داعي لأن نفسه المستخدمين لهم صلاحية المدرسين
+  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users" },
+  { text: "الطلاب", icon: <School />, path: "/students" },
+  { text: "الدورات", icon: <Class />, path: "/courses" },
+  { text: "المعلمون", icon: <Person />, path: "/teachers" },
   { text: "المعاملات", icon: <Receipt />, path: "/transactions" },
-  { text: "الواردات وطرق الدفع", icon: <Payment />, path: "/payments" }, // تجمع كل الواردات والمصاريف والرواتب المسجلة في النظام
-  // { text: "المرتجعات", icon: <Undo />, path: "/refunds" }, // تابعة للواردات - إما نظهر الواردات بلون أحمر أو نخليها بقسم مخصص ونحذف الواردة المرتبطة بها من قسم الواردات
-  { text: "المصاريف", icon: <MoneyOff />, path: "/expenses" },
-  { text: "الرواتب", icon: <Paid />, path: "/payroll" },
+  { text: "المدفوعات", icon: <Payment />, path: "/payments" },
+  { text: "المصروفات", icon: <MoneyOff />, path: "/expenses" },
+  { text: "المبالغ المستردة", icon: <Undo />, path: "/refunds" },
+  { text: "الخصومات", icon: <Discount />, path: "/discounts" },
+  { text: "كشوف الرواتب", icon: <Paid />, path: "/payroll" },
   { text: "التحليلات", icon: <Equalizer />, path: "/analytics" },
 ]
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const { user, logout, hasPermission } = useAuth()
+  const { user, logout } = useAuth()
+  const { hasPermission } = usePermission()
   const { mode, toggleTheme } = useThemeMode()
   const navigate = useNavigate()
   const location = useLocation()
@@ -98,10 +102,8 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     navigate("/login")
   }
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    if (!item.permission) return true
-    return hasPermission(item.permission.resource, item.permission.action)
-  })
+  // Show all menu items for now - no permission filtering
+  const filteredMenuItems = menuItems
 
   const drawer = (
     <Box>
@@ -129,9 +131,9 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <AccountCircle />
         </Avatar>
         <Box sx={{ px: 2, py: 1, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-          <Typography variant="subtitle2">{user?.fullName}</Typography>
+          <Typography variant="subtitle2">{user?.name}</Typography>
           <Typography variant="caption" color="text.secondary">
-            {`(${user?.role?.nameAr})`}
+            {`(${user?.role?.name})`}
           </Typography>
         </Box>
       </Box>
@@ -223,9 +225,9 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
             style={{ marginTop: 5 }}
           >
             <Box sx={{ px: 2, py: 1 }}>
-              <Typography variant="subtitle2">{user?.fullName}</Typography>
+              <Typography variant="subtitle2">{user?.name}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {user?.role?.nameAr}
+                {user?.role?.name}
               </Typography>
             </Box>
             <Divider />

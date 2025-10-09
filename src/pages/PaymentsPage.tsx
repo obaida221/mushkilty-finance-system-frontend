@@ -237,7 +237,6 @@ const PaymentsPage = () => {
             pageSizeOptions={[5, 10, 25]}
             autoHeight
             disableRowSelectionOnClick
-            autoHeight
             sx={{
               border: "none",
               "& .MuiDataGrid-cell": { borderColor: "divider" },
