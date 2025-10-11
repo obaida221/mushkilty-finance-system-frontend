@@ -33,8 +33,6 @@ import {
   MenuItem,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
   VpnKey as KeyIcon,
   Refresh as RefreshIcon,
   Search as SearchIcon,
@@ -43,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import { usePermissions } from '../hooks/usePermissions';
 import { userManagementService } from '../services/userManagementService';
-import { Permission, CreatePermissionRequest } from '../types';
+import { Permission} from '../types';
 
 // Permission categories for better organization
 const PERMISSION_CATEGORIES = {
@@ -77,12 +75,7 @@ const PermissionManagementPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null);
   
-  // Form state
-  const [permissionForm, setPermissionForm] = useState<CreatePermissionRequest>({
-    name: '',
-    description: '',
-  });
-  
+
   // Snackbar
   const [snackbar, setSnackbar] = useState({ 
     open: false, 
@@ -118,47 +111,7 @@ const PermissionManagementPage: React.FC = () => {
     }
   };
 
-  // Permission operations
-  const handleCreatePermission = async () => {
-    try {
-      await userManagementService.createPermission(permissionForm);
-      setSnackbar({ open: true, message: 'تم إنشاء الصلاحية بنجاح', severity: 'success' });
-      setPermissionDialogOpen(false);
-      resetPermissionForm();
-      loadData();
-    } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || 'فشل في إنشاء الصلاحية', severity: 'error' });
-    }
-  };
 
-  // System setup
-  const handleSeedPermissions = async () => {
-    try {
-      setLoading(true);
-      const result = await userManagementService.seedPermissions();
-      setSnackbar({ 
-        open: true, 
-        message: `تم إنشاء ${result.created} صلاحية افتراضية بنجاح`, 
-        severity: 'success' 
-      });
-      loadData();
-    } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || 'فشل في إنشاء الصلاحيات الافتراضية', severity: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Form helpers
-  const resetPermissionForm = () => {
-    setPermissionForm({ name: '', description: '' });
-    setSelectedPermission(null);
-  };
-
-  const openCreatePermissionDialog = () => {
-    resetPermissionForm();
-    setPermissionDialogOpen(true);
-  };
 
   const openDeleteDialog = (permission: Permission) => {
     setSelectedPermission(permission);
@@ -182,7 +135,6 @@ const PermissionManagementPage: React.FC = () => {
       validate: 'تحقق',
       reports: 'تقارير',
       admin: 'إدارة',
-      seed: 'إعداد',
     };
     return actionMap[action] || action || 'غير محدد';
   };
@@ -198,15 +150,7 @@ const PermissionManagementPage: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Group permissions by category
-  const permissionsByCategory = filteredPermissions.reduce((acc, permission) => {
-    const category = permission.name.split(':')[0];
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(permission);
-    return acc;
-  }, {} as { [key: string]: Permission[] });
+
 
   // Get unique categories from permissions
   const availableCategories = [...new Set(permissions.map(p => p.name.split(':')[0]))];
@@ -245,26 +189,6 @@ const PermissionManagementPage: React.FC = () => {
           >
             تحديث
           </Button>
-          {userManagementPermissions.canCreatePermissions && (
-            <>
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<BuildIcon />}
-                onClick={handleSeedPermissions}
-                disabled={loading}
-              >
-                إنشاء الصلاحيات الافتراضية
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={openCreatePermissionDialog}
-              >
-                إضافة صلاحية
-              </Button>
-            </>
-          )}
         </Box>
       </Box>
 
@@ -390,7 +314,6 @@ const PermissionManagementPage: React.FC = () => {
                 <TableCell>الفئة</TableCell>
                 <TableCell>الإجراء</TableCell>
                 <TableCell>الوصف</TableCell>
-                <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -440,7 +363,6 @@ const PermissionManagementPage: React.FC = () => {
                               color="error"
                               onClick={() => openDeleteDialog(permission)}
                             >
-                              <DeleteIcon />
                             </IconButton>
                           </Tooltip>
                         )}
@@ -456,48 +378,7 @@ const PermissionManagementPage: React.FC = () => {
 
       {/* Permission Dialog */}
       <Dialog open={permissionDialogOpen} onClose={() => setPermissionDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>إضافة صلاحية جديدة</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField
-              label="اسم الصلاحية"
-              value={permissionForm.name}
-              onChange={(e) => setPermissionForm({ ...permissionForm, name: e.target.value })}
-              required
-              fullWidth
-              placeholder="مثال: users:read"
-              helperText="استخدم الصيغة: category:action (مثل users:create, roles:read)"
-            />
-            <TextField
-              label="الوصف"
-              value={permissionForm.description}
-              onChange={(e) => setPermissionForm({ ...permissionForm, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-              helperText="وصف مفصل للصلاحية وماذا تسمح بفعله"
-            />
-            <Alert severity="info">
-              <Typography variant="body2">
-                <strong>أمثلة على تنسيق الصلاحيات:</strong><br/>
-                • users:create - إنشاء مستخدمين جدد<br/>
-                • students:read - عرض بيانات الطلاب<br/>
-                • payments:delete - حذف المدفوعات<br/>
-                • system:admin - إدارة النظام
-              </Typography>
-            </Alert>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPermissionDialogOpen(false)}>إلغاء</Button>
-          <Button 
-            onClick={handleCreatePermission}
-            variant="contained"
-            disabled={!permissionForm.name.trim()}
-          >
-            إنشاء
-          </Button>
-        </DialogActions>
+
       </Dialog>
 
       {/* Delete Confirmation Dialog */}

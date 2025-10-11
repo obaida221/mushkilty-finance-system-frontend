@@ -9,7 +9,6 @@ import {
   UpdateUserRequest, 
   CreateRoleRequest, 
   UpdateRoleRequest,
-  CreatePermissionRequest,
   AssignPermissionsRequest,
   RolePermissionsResponse
 } from '../types';
@@ -204,25 +203,7 @@ export class UserManagementService {
     }
   }
 
-  /**
-   * Create a new permission
-   * Requires: permissions:create permission
-   */
-  async createPermission(permissionData: CreatePermissionRequest): Promise<Permission> {
-    try {
-      if (!permissionData.name?.trim()) {
-        throw new Error('اسم الصلاحية مطلوب');
-      }
-      
-      return await permissionsAPI.create(permissionData);
-    } catch (error) {
-      console.error('Failed to create permission:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('فشل في إنشاء الصلاحية');
-    }
-  }
+
 
   /**
    * Seed default permissions
