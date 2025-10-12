@@ -100,7 +100,10 @@ const UserManagementPage: React.FC = () => {
       setRoles(rolesData);
     } catch (error: any) {
       console.error('Failed to load data:', error);
-      setError(error.message || 'فشل في تحميل البيانات');
+      setError(
+        `فشل في تحميل البيانات: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`
+        // error.message || 'فشل في تحميل البيانات'
+      );
     } finally {
       setLoading(false);
     }
@@ -115,7 +118,12 @@ const UserManagementPage: React.FC = () => {
       resetUserForm();
       loadData();
     } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || 'فشل في إنشاء المستخدم', severity: 'error' });
+      setSnackbar({ 
+        open: true, 
+        message: `فشل في إنشاء المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`, 
+        severity: 'error' 
+      });
+      console.error('Create user error:', error ? error.response : 'non-object error' );
     }
   };
 
@@ -139,7 +147,11 @@ const UserManagementPage: React.FC = () => {
       resetUserForm();
       loadData();
     } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || 'فشل في تحديث المستخدم', severity: 'error' });
+      setSnackbar({
+        open: true, 
+        message: `فشل في تحديث المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`,
+        // error.message || 'فشل في تحديث المستخدم', 
+        severity: 'error' });
     }
   };
 
@@ -153,7 +165,10 @@ const UserManagementPage: React.FC = () => {
       setSelectedUser(null);
       loadData();
     } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || 'فشل في حذف المستخدم', severity: 'error' });
+      setSnackbar({ open: true, 
+        message: `فشل في حذف المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`,
+        // error.message || 'فشل في حذف المستخدم', 
+        severity: 'error' });
     }
   };
 
