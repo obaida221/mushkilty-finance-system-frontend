@@ -22,125 +22,261 @@ import {
   Grid,
   Card,
   CardContent,
+  Alert,
+  CircularProgress,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Edit, Delete, PersonAdd, School, TrendingUp, TrendingDown } from "@mui/icons-material"
-import type { Student, Course } from "../types"
-
-// Mock data
-const mockCourses: Course[] = [
-  { id: "1", name: "Programming", nameAr: "البرمجة", description: "دورة برمجة متقدمة", price: 500000, duration: 6, teacherId: "1", enrolledCount: 35, status: "active", createdAt: "2024-01-01" },
-  { id: "2", name: "Design", nameAr: "التصميم", description: "دورة تصميم جرافيك", price: 400000, duration: 4, teacherId: "2", enrolledCount: 25, status: "active", createdAt: "2024-01-15" },
-]
-
-const mockStudents: Student[] = [
-  { id: "1", fullName: "علي أحمد", email: "ali@example.com", phone: "07701234567", courseId: "1", enrollmentDate: "2024-01-15", status: "active", totalPaid: 300000, totalDue: 200000, discountId: null, createdAt: "2024-01-15" },
-  { id: "2", fullName: "سارة محمد", email: "sara@example.com", phone: "07709876543", courseId: "2", enrollmentDate: "2024-02-01", status: "active", totalPaid: 400000, totalDue: 0, discountId: null, createdAt: "2024-02-01" },
-  { id: "3", fullName: "حسن علي", email: "hassan@example.com", phone: "07705555555", courseId: "1", enrollmentDate: "2024-01-20", status: "active", totalPaid: 500000, totalDue: 0, discountId: null, createdAt: "2024-01-20" },
-]
+import { 
+  Search, 
+  Edit, 
+  Delete, 
+  PersonAdd, 
+  School, 
+  TrendingUp, 
+  TrendingDown,
+  Phone,
+  LocationOn,
+  CheckCircle,
+  Pending,
+  Cancel,
+  ContactPhone,
+  Quiz,
+} from "@mui/icons-material"
+import { useStudents } from '../hooks/useStudents'
+import { useEnrollments } from '../hooks/useEnrollments'
+import type { Student, CreateStudentDto } from "../types"
 
 const StudentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [students, setStudents] = useState<Student[]>(mockStudents)
-  const [courses] = useState<Course[]>(mockCourses)
-  const [editingStudentId, setEditingStudentId] = useState<string | null>(null)
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterCourseType, setFilterCourseType] = useState<string>("all")
 
-  const [studentForm, setStudentForm] = useState({
-    fullName: "",
-    email: "",
+  // Hooks
+  const { 
+    students, 
+    loading: studentsLoading, 
+    error: studentsError,
+    createStudent,
+    updateStudent,
+    deleteStudent,
+    getStudentsByStatus,
+    getStudentsByCourseType,
+    updateStudentStatus,
+  } = useStudents()
+
+  const { enrollments, getEnrollmentsByStudent } = useEnrollments()
+
+  const [studentForm, setStudentForm] = useState<CreateStudentDto>({
+    full_name: "",
+    age: undefined,
+    dob: "",
+    education_level: "",
+    gender: "",
     phone: "",
-    courseId: "",
+    city: "",
+    area: "",
+    course_type: undefined,
+    previous_course: "",
+    is_returning: false,
+    status: "pending",
   })
 
-  // فتح نافذة إضافة/تعديل الطالب
+  // Handle form submission
+  const handleSubmit = async () => {
+    try {
+      if (editingStudent) {
+        await updateStudent(editingStudent.id, studentForm)
+      } else {
+        await createStudent(studentForm)
+      }
+      handleCloseDialog()
+    } catch (error) {
+      console.error('Failed to save student:', error)
+    }
+  }
+
+  // Handle delete
+  const handleDelete = async (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا الطالب؟ سيتم حذف جميع التسجيلات المرتبطة به.")) {
+      try {
+        await deleteStudent(id)
+      } catch (error) {
+        console.error('Failed to delete student:', error)
+      }
+    }
+  }
+
+  // Handle status update
+  const handleUpdateStatus = async (id: number, newStatus: string) => {
+    try {
+      await updateStudentStatus(id, newStatus)
+    } catch (error) {
+      console.error('Failed to update status:', error)
+    }
+  }
+
+  // Dialog handlers
   const handleOpenDialog = () => {
-    setStudentForm({ fullName: "", email: "", phone: "", courseId: "" })
-    setEditingStudentId(null)
+    setStudentForm({
+      full_name: "",
+      age: undefined,
+      dob: "",
+      education_level: "",
+      gender: "",
+      phone: "",
+      city: "",
+      area: "",
+      course_type: undefined,
+      previous_course: "",
+      is_returning: false,
+      status: "pending",
+    })
+    setEditingStudent(null)
     setOpenDialog(true)
   }
 
-  // غلق النافذة
-  const handleCloseDialog = () => {
-    setOpenDialog(false)
-  }
-
-  // إضافة أو تعديل الطالب
-  const handleCreateOrEditStudent = () => {
-    if (editingStudentId) {
-      // تعديل الطالب
-      setStudents(students.map(s => s.id === editingStudentId ? { ...s, ...studentForm } : s))
-    } else {
-      // إضافة جديد
-      const newStudent: Student = {
-        id: (students.length + 1).toString(),
-        fullName: studentForm.fullName,
-        email: studentForm.email,
-        phone: studentForm.phone,
-        courseId: studentForm.courseId,
-        enrollmentDate: new Date().toISOString(),
-        status: "active",
-        totalPaid: 0,
-        totalDue: courses.find(c => c.id === studentForm.courseId)?.price || 0,
-        discountId: null,
-        createdAt: new Date().toISOString(),
-      }
-      setStudents([newStudent, ...students])
-    }
-    handleCloseDialog()
-  }
-
-  // حذف الطالب
-  const handleDeleteStudent = (id: string) => {
-    setStudents(students.filter(s => s.id !== id))
-  }
-
-  // فتح نافذة تعديل الطالب مع تعبئة البيانات
   const handleEditStudent = (student: Student) => {
     setStudentForm({
-      fullName: student.fullName,
-      email: student.email,
+      full_name: student.full_name,
+      age: student.age,
+      dob: student.dob ? student.dob.split('T')[0] : "",
+      education_level: student.education_level || "",
+      gender: student.gender || "",
       phone: student.phone,
-      courseId: student.courseId,
+      city: student.city || "",
+      area: student.area || "",
+      course_type: student.course_type,
+      previous_course: student.previous_course || "",
+      is_returning: student.is_returning,
+      status: student.status,
     })
-    setEditingStudentId(student.id)
+    setEditingStudent(student)
     setOpenDialog(true)
   }
 
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+    setEditingStudent(null)
+  }
+
+  // Data filtering
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         student.phone.includes(searchQuery) ||
+                         student.city?.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesStatus = filterStatus === "all" || student.status === filterStatus
+    const matchesCourseType = filterCourseType === "all" || student.course_type === filterCourseType
+    
+    return matchesSearch && matchesStatus && matchesCourseType
+  })
+
+  // Stats calculations
+  const totalStudents = students.length
+  const pendingStudents = getStudentsByStatus("pending").length
+  const acceptedStudents = getStudentsByStatus("accepted").length
+  const testedStudents = getStudentsByStatus("tested").length
+
+  // DataGrid columns
   const columns: GridColDef[] = [
-    { field: "fullName", headerName: "اسم الطالب", flex: 1, minWidth: 150 },
-    { field: "email", headerName: "البريد الإلكتروني", flex: 1, minWidth: 180 },
-    { field: "phone", headerName: "رقم الهاتف", width: 130 },
-    {
-      field: "courseId",
-      headerName: "الدورة",
-      flex: 1,
-      minWidth: 120,
-      renderCell: (params) => {
-        const course = courses.find(c => c.id === params.value)
-        return <Chip label={course?.nameAr || "غير مسجل"} size="small" color="primary" />
-      },
+    { 
+      field: "full_name", 
+      headerName: "اسم الطالب", 
+      flex: 1, 
+      minWidth: 150 
+    },
+    { 
+      field: "phone", 
+      headerName: "رقم الهاتف", 
+      width: 130,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Phone fontSize="small" color="action" />
+          {params.value}
+        </Box>
+      )
     },
     {
       field: "status",
       headerName: "الحالة",
-      width: 100,
+      width: 130,
       renderCell: (params) => {
-        const statusMap: Record<string, { label: string; color: "success" | "warning" | "default" }> = {
-          active: { label: "نشط", color: "success" },
-          inactive: { label: "غير نشط", color: "default" },
-          graduated: { label: "متخرج", color: "warning" },
+        const statusConfig = {
+          pending: { label: "قيد الانتظار", color: "default" as const, icon: <Pending fontSize="small" /> },
+          "contacted with": { label: "تم التواصل", color: "info" as const, icon: <ContactPhone fontSize="small" /> },
+          tested: { label: "تم الاختبار", color: "warning" as const, icon: <Quiz fontSize="small" /> },
+          accepted: { label: "مقبول", color: "success" as const, icon: <CheckCircle fontSize="small" /> },
+          rejected: { label: "مرفوض", color: "error" as const, icon: <Cancel fontSize="small" /> },
         }
-        const status = statusMap[params.value] || statusMap.active
-        return <Chip label={status.label} size="small" color={status.color} />
+        const config = statusConfig[params.value as keyof typeof statusConfig] || statusConfig.pending
+        return (
+          <Chip 
+            label={config.label} 
+            size="small" 
+            color={config.color}
+            icon={config.icon}
+          />
+        )
       },
     },
-    { field: "totalPaid", headerName: "المدفوع", width: 120, renderCell: (params) => `${params.value.toLocaleString()} د.ع` },
     {
-      field: "totalDue",
-      headerName: "المتبقي",
-      width: 120,
-      renderCell: (params) => <Typography color={params.value > 0 ? "error" : "success.main"}>{params.value.toLocaleString()} د.ع</Typography>,
+      field: "course_type",
+      headerName: "نوع الدورة",
+      width: 100,
+      renderCell: (params) => {
+        if (!params.value) return "-"
+        const typeLabels = {
+          online: "أونلاين",
+          onsite: "حضوري",
+          kids: "أطفال",
+          ielts: "آيلتس"
+        }
+        return <Chip label={typeLabels[params.value as keyof typeof typeLabels]} size="small" color="primary" />
+      },
+    },
+    {
+      field: "city",
+      headerName: "المدينة",
+      width: 100,
+      renderCell: (params) => params.value ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <LocationOn fontSize="small" color="action" />
+          {params.value}
+        </Box>
+      ) : "-",
+    },
+    {
+      field: "age",
+      headerName: "العمر",
+      width: 80,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => params.value || "-",
+    },
+    {
+      field: "enrollments",
+      headerName: "التسجيلات",
+      width: 100,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params) => {
+        const studentEnrollments = getEnrollmentsByStudent(params.row.id)
+        return (
+          <Chip 
+            label={studentEnrollments.length} 
+            size="small" 
+            color={studentEnrollments.length > 0 ? "success" : "default"}
+          />
+        )
+      },
+    },
+    {
+      field: "created_at",
+      headerName: "تاريخ التسجيل",
+      width: 130,
+      renderCell: (params) => new Date(params.value).toLocaleDateString('ar'),
     },
     {
       field: "actions",
@@ -149,10 +285,18 @@ const StudentsPage: React.FC = () => {
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton size="small" color="primary" onClick={() => handleEditStudent(params.row)}>
+          <IconButton 
+            size="small" 
+            color="primary" 
+            onClick={() => handleEditStudent(params.row)}
+          >
             <Edit fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => handleDeleteStudent(params.row.id)}>
+          <IconButton 
+            size="small" 
+            color="error" 
+            onClick={() => handleDelete(params.row.id)}
+          >
             <Delete fontSize="small" />
           </IconButton>
         </Box>
@@ -160,19 +304,17 @@ const StudentsPage: React.FC = () => {
     },
   ]
 
-  const filteredStudents = students.filter(
-    (student) =>
-      student.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.phone.includes(searchQuery),
-  )
-
-  const activeStudents = students.filter((s) => s.status === "active").length
-  const totalRevenue = students.reduce((sum, s) => sum + s.totalPaid, 0)
-  const totalDue = students.reduce((sum, s) => sum + s.totalDue, 0)
+  if (studentsLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   return (
     <Box>
+      {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           إدارة الطلاب
@@ -182,20 +324,55 @@ const StudentsPage: React.FC = () => {
         </Button>
       </Box>
 
+      {/* Error Alert */}
+      {studentsError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {studentsError}
+        </Alert>
+      )}
+
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {[{ label: "الطلاب النشطين", value: activeStudents, icon: <School sx={{ color: "white" }} />, color: "primary.main" },
-          { label: "إجمالي الإيرادات", value: totalRevenue, icon: <TrendingUp sx={{ color: "white" }} />, color: "success.main" },
-          { label: "المبالغ المستحقة", value: totalDue, icon: <TrendingDown sx={{ color: "white" }} />, color: "error.main" },
-          { label: "إجمالي الطلاب", value: students.length, icon: <School sx={{ color: "white" }} />, color: "info.main" }].map((card, idx) => (
+        {[
+          { 
+            label: "إجمالي الطلاب", 
+            value: totalStudents, 
+            icon: <School sx={{ color: "white" }} />, 
+            color: "primary.main" 
+          },
+          { 
+            label: "قيد الانتظار", 
+            value: pendingStudents, 
+            icon: <Pending sx={{ color: "white" }} />, 
+            color: "warning.main" 
+          },
+          { 
+            label: "تم اختبارهم", 
+            value: testedStudents, 
+            icon: <Quiz sx={{ color: "white" }} />, 
+            color: "info.main" 
+          },
+          { 
+            label: "المقبولين", 
+            value: acceptedStudents, 
+            icon: <CheckCircle sx={{ color: "white" }} />, 
+            color: "success.main" 
+          }
+        ].map((card, idx) => (
           <Grid item xs={12} sm={6} md={3} key={idx}>
             <Card>
               <CardContent>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Box sx={{ bgcolor: card.color, p: 1.5, borderRadius: 2 }}>{card.icon}</Box>
+                  <Box sx={{ bgcolor: card.color, p: 1.5, borderRadius: 2 }}>
+                    {card.icon}
+                  </Box>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">{card.label}</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{card.value.toLocaleString()}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {card.label}
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                      {card.value.toLocaleString()}
+                    </Typography>
                   </Box>
                 </Box>
               </CardContent>
@@ -204,48 +381,239 @@ const StudentsPage: React.FC = () => {
         ))}
       </Grid>
 
+      {/* Filters and Search */}
       <Paper>
         <Box sx={{ p: 3 }}>
-          <TextField
-            fullWidth
-            placeholder="البحث عن طالب..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
-            sx={{ mb: 3 }}
-          />
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                placeholder="البحث عن طالب..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>الحالة</InputLabel>
+                <Select
+                  value={filterStatus}
+                  label="الحالة"
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <MenuItem value="all">جميع الحالات</MenuItem>
+                  <MenuItem value="pending">قيد الانتظار</MenuItem>
+                  <MenuItem value="contacted with">تم التواصل</MenuItem>
+                  <MenuItem value="tested">تم الاختبار</MenuItem>
+                  <MenuItem value="accepted">مقبول</MenuItem>
+                  <MenuItem value="rejected">مرفوض</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>نوع الدورة</InputLabel>
+                <Select
+                  value={filterCourseType}
+                  label="نوع الدورة"
+                  onChange={(e) => setFilterCourseType(e.target.value)}
+                >
+                  <MenuItem value="all">جميع الأنواع</MenuItem>
+                  <MenuItem value="online">أونلاين</MenuItem>
+                  <MenuItem value="onsite">حضوري</MenuItem>
+                  <MenuItem value="kids">أطفال</MenuItem>
+                  <MenuItem value="ielts">آيلتس</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
+          {/* DataGrid */}
           <DataGrid
             rows={filteredStudents}
             columns={columns}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            initialState={{
+              pagination: { paginationModel: { pageSize: 10 } },
+            }}
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             autoHeight
-            sx={{ border: "none", "& .MuiDataGrid-cell": { borderColor: "divider" }, "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" } }}
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-cell": { borderColor: "divider" },
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "background.default",
+                borderColor: "divider",
+              },
+            }}
           />
         </Box>
       </Paper>
 
-      {/* Dialog Add/Edit Student */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingStudentId ? "تعديل بيانات الطالب" : "إضافة طالب جديد"}</DialogTitle>
+      {/* Create/Edit Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingStudent ? "تعديل بيانات الطالب" : "إضافة طالب جديد"}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-            <TextField fullWidth label="الاسم الكامل" value={studentForm.fullName} onChange={(e) => setStudentForm({ ...studentForm, fullName: e.target.value })} />
-            <TextField fullWidth label="البريد الإلكتروني" type="email" value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} />
-            <TextField fullWidth label="رقم الهاتف" value={studentForm.phone} onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })} />
-            <FormControl fullWidth>
-              <InputLabel>الدورة</InputLabel>
-              <Select value={studentForm.courseId} label="الدورة" onChange={(e) => setStudentForm({ ...studentForm, courseId: e.target.value })}>
-                {courses.map((course) => <MenuItem key={course.id} value={course.id}>{course.nameAr} - {course.price.toLocaleString()} د.ع</MenuItem>)}
-              </Select>
-            </FormControl>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField 
+                  fullWidth 
+                  label="الاسم الكامل" 
+                  value={studentForm.full_name} 
+                  onChange={(e) => setStudentForm({ ...studentForm, full_name: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField 
+                  fullWidth 
+                  label="رقم الهاتف" 
+                  value={studentForm.phone} 
+                  onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })}
+                  required
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <TextField 
+                  fullWidth 
+                  label="العمر" 
+                  type="number"
+                  value={studentForm.age || ""} 
+                  onChange={(e) => setStudentForm({ ...studentForm, age: Number(e.target.value) || undefined })}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField 
+                  fullWidth 
+                  label="تاريخ الميلاد"
+                  type="date"
+                  value={studentForm.dob} 
+                  onChange={(e) => setStudentForm({ ...studentForm, dob: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>الجنس</InputLabel>
+                  <Select
+                    value={studentForm.gender || ""}
+                    label="الجنس"
+                    onChange={(e) => setStudentForm({ ...studentForm, gender: e.target.value })}
+                  >
+                    <MenuItem value="">غير محدد</MenuItem>
+                    <MenuItem value="male">ذكر</MenuItem>
+                    <MenuItem value="female">أنثى</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField 
+                  fullWidth 
+                  label="المدينة" 
+                  value={studentForm.city} 
+                  onChange={(e) => setStudentForm({ ...studentForm, city: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField 
+                  fullWidth 
+                  label="المنطقة" 
+                  value={studentForm.area} 
+                  onChange={(e) => setStudentForm({ ...studentForm, area: e.target.value })}
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField 
+                  fullWidth 
+                  label="المستوى التعليمي" 
+                  value={studentForm.education_level} 
+                  onChange={(e) => setStudentForm({ ...studentForm, education_level: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>نوع الدورة</InputLabel>
+                  <Select
+                    value={studentForm.course_type || ""}
+                    label="نوع الدورة"
+                    onChange={(e) => setStudentForm({ ...studentForm, course_type: e.target.value as any })}
+                  >
+                    <MenuItem value="">غير محدد</MenuItem>
+                    <MenuItem value="online">أونلاين</MenuItem>
+                    <MenuItem value="onsite">حضوري</MenuItem>
+                    <MenuItem value="kids">أطفال</MenuItem>
+                    <MenuItem value="ielts">آيلتس</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>الحالة</InputLabel>
+                  <Select
+                    value={studentForm.status || "pending"}
+                    label="الحالة"
+                    onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value as any })}
+                  >
+                    <MenuItem value="pending">قيد الانتظار</MenuItem>
+                    <MenuItem value="contacted with">تم التواصل</MenuItem>
+                    <MenuItem value="tested">تم الاختبار</MenuItem>
+                    <MenuItem value="accepted">مقبول</MenuItem>
+                    <MenuItem value="rejected">مرفوض</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>طالب عائد؟</InputLabel>
+                  <Select
+                    value={studentForm.is_returning.toString()}
+                    label="طالب عائد؟"
+                    onChange={(e) => setStudentForm({ ...studentForm, is_returning: e.target.value === "true" })}
+                  >
+                    <MenuItem value="false">لا</MenuItem>
+                    <MenuItem value="true">نعم</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <TextField
+              fullWidth
+              label="الدورات السابقة"
+              multiline
+              rows={2}
+              value={studentForm.previous_course}
+              onChange={(e) => setStudentForm({ ...studentForm, previous_course: e.target.value })}
+            />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleCreateOrEditStudent} variant="contained">{editingStudentId ? "تعديل" : "إضافة"}</Button>
+          <Button onClick={handleSubmit} variant="contained">
+            {editingStudent ? "تعديل" : "إضافة"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

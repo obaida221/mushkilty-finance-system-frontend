@@ -17,6 +17,8 @@ import DashboardPage from "./pages/DashboardPage"
 import UsersPage from "./pages/UsersPage"
 import StudentsPage from "./pages/StudentsPage"
 import CoursesPage from "./pages/CoursesPage"
+import BatchesPage from "./pages/BatchesPage"
+import EnrollmentsPage from "./pages/EnrollmentsPage"
 import TeachersPage from "./pages/TeachersPage"
 import TransactionsPage from "./pages/TransactionsPage"
 import PaymentsPage from "./pages/PaymentsPage"
@@ -75,6 +77,8 @@ const AppContent: React.FC = () => {
                         <Route path="/permissions/manage" element={<PermissionManagementPage />} />
                         <Route path="/students" element={<StudentsPage />} />
                         <Route path="/courses" element={<CoursesPage />} />
+                        <Route path="/batches" element={<BatchesPage />} />
+                        <Route path="/enrollments" element={<EnrollmentsPage />} />
                         <Route path="/teachers" element={<TeachersPage />} />
                         <Route path="/transactions" element={<TransactionsPage />} />
                         <Route path="/payments" element={<PaymentsPage />} />

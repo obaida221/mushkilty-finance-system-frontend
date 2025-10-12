@@ -45,6 +45,7 @@ import {
   Paid,
   CurrencyExchange,
   AttachMoney,
+  PersonAdd,
 } from "@mui/icons-material"
 import { useAuth } from "../context/AuthContext"
 import { usePermission } from "../context/AuthContext"
@@ -64,6 +65,8 @@ const menuItems: DashboardMenuItem[] = [
   { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users" },
   { text: "الطلاب", icon: <School />, path: "/students" },
   { text: "الدورات", icon: <Class />, path: "/courses" },
+  { text: "المجموعات", icon: <AccountBalance />, path: "/batches" },
+  { text: "التسجيلات", icon: <PersonAdd />, path: "/enrollments" },
   { text: "المعلمون", icon: <Person />, path: "/teachers" },
   { text: "المعاملات", icon: <Receipt />, path: "/transactions" },
   { text: "المدفوعات", icon: <Payment />, path: "/payments" },
