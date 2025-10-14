@@ -19,33 +19,26 @@ import {
   Select,
   Chip,
   IconButton,
+  CircularProgress,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { Search, Add, MoneyOff, Edit, Delete } from "@mui/icons-material"
-import type { Expense } from "../types"
-
-// Mock data
-const mockExpenses: Expense[] = [
-  { id: "1", category: "utilities", description: "فواتير الكهرباء والماء", amount: 150000, transactionId: "2", date: "2024-03-14", createdBy: "1", createdAt: "2024-03-14T14:20:00" },
-  { id: "2", category: "rent", description: "إيجار المبنى - مارس 2024", amount: 500000, transactionId: "7", date: "2024-03-01", createdBy: "1", createdAt: "2024-03-01T10:00:00" },
-  { id: "3", category: "supplies", description: "قرطاسية ومستلزمات مكتبية", amount: 75000, transactionId: "8", date: "2024-03-10", createdBy: "2", createdAt: "2024-03-10T15:30:00" },
-]
+import { useExpenses, type Expense } from "../hooks/useExpenses"
 
 const ExpensesPage: React.FC = () => {
+  const { expenses, loading, error, createExpense, updateExpense, deleteExpense } = useExpenses()
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [expenses, setExpenses] = useState<Expense[]>(mockExpenses)
-
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [expenseForm, setExpenseForm] = useState({
     category: "",
-    description: "",
+    note: "",
     amount: 0,
   })
 
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
-      utilities: "مرافق",
+      utilities: "فواتير",
       rent: "إيجار",
       supplies: "مستلزمات",
       maintenance: "صيانة",
@@ -55,48 +48,54 @@ const ExpensesPage: React.FC = () => {
     return labels[category] || category
   }
 
-  // فتح صندوق الحوار للإضافة أو التعديل
   const handleOpenDialog = (expense?: Expense) => {
     if (expense) {
-      setEditingId(expense.id)
-      setExpenseForm({ category: expense.category, description: expense.description, amount: expense.amount })
+      setEditingExpense(expense)
+      setExpenseForm({ category: expense.category || "", note: expense.note || "", amount: expense.amount })
     } else {
-      setEditingId(null)
-      setExpenseForm({ category: "", description: "", amount: 0 })
+      setEditingExpense(null)
+      setExpenseForm({ category: "", note: "", amount: 0 })
     }
     setOpenDialog(true)
   }
 
   const handleCloseDialog = () => setOpenDialog(false)
 
-  // حفظ مصروف جديد أو تحديث الموجود
-  const handleSaveExpense = () => {
-    if (!expenseForm.category || !expenseForm.description || !expenseForm.amount) return
+  const handleSaveExpense = async () => {
+    if (!expenseForm.category || !expenseForm.note || !expenseForm.amount) return
 
-    if (editingId) {
-      setExpenses(prev => prev.map(exp => exp.id === editingId ? { ...exp, ...expenseForm } : exp))
-    } else {
-      const newExpense: Expense = {
-        id: (expenses.length + 1).toString(),
-        ...expenseForm,
-        date: new Date().toISOString().split("T")[0],
-        transactionId: null,
-        createdBy: "1",
-        createdAt: new Date().toISOString(),
+    try {
+      if (editingExpense) {
+        await updateExpense(editingExpense.id, {
+          category: expenseForm.category,
+          note: expenseForm.note,
+          amount: expenseForm.amount,
+        })
+      } else {
+        await createExpense({
+          category: expenseForm.category,
+          note: expenseForm.note,
+          amount: expenseForm.amount,
+        })
       }
-      setExpenses(prev => [...prev, newExpense])
+      handleCloseDialog()
+    } catch (err) {
+      console.error("Failed to save expense:", err)
     }
-    handleCloseDialog()
   }
 
-  // حذف مصروف
-  const handleDeleteExpense = (id: string) => setExpenses(prev => prev.filter(exp => exp.id !== id))
+  const handleDeleteExpense = async (id: number) => {
+    try {
+      await deleteExpense(id)
+    } catch (err) {
+      console.error("Failed to delete expense:", err)
+    }
+  }
 
-  // تعريف أعمدة الجدول
   const columns: GridColDef[] = [
     { field: "date", headerName: "التاريخ", width: 120 },
     { field: "category", headerName: "الفئة", width: 130, renderCell: (params) => <Chip label={getCategoryLabel(params.value)} size="small" color="secondary" /> },
-    { field: "description", headerName: "الوصف", flex: 2, minWidth: 250 },
+    { field: "note", headerName: "الوصف", flex: 2, minWidth: 250 },
     { field: "amount", headerName: "المبلغ", width: 150, renderCell: (params) => <Typography sx={{ fontWeight: 600, color: "error.main" }}>{params.value.toLocaleString()} د.ع</Typography> },
     {
       field: "actions",
@@ -112,11 +111,10 @@ const ExpensesPage: React.FC = () => {
     },
   ]
 
-  // تصفية الجدول بناءً على البحث
   const filteredExpenses = expenses.filter(exp =>
-    exp.description.includes(searchQuery) || getCategoryLabel(exp.category).includes(searchQuery)
+    (exp.note?.includes(searchQuery) || false) || getCategoryLabel(exp.category || "").includes(searchQuery)
+    
   )
-
   return (
     <Box>
       {/* Header */}
@@ -125,7 +123,11 @@ const ExpensesPage: React.FC = () => {
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة مصروف</Button>
       </Box>
 
-      {/* Search & Table */}
+      {/* Loading/Error */}
+      {loading && <CircularProgress />}
+      {error && <Typography color="error">{error}</Typography>}
+
+      {/* Table */}
       <Paper>
         <Box sx={{ p: 3 }}>
           <TextField
@@ -139,6 +141,7 @@ const ExpensesPage: React.FC = () => {
           <DataGrid
             rows={filteredExpenses}
             columns={columns}
+            getRowId={(row) => row.id}
             pageSizeOptions={[5, 10, 25]}
             initialState={{
               pagination: { paginationModel: { pageSize: 10 } },
@@ -159,7 +162,7 @@ const ExpensesPage: React.FC = () => {
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <MoneyOff /> {editingId ? "تعديل مصروف" : "إضافة مصروف جديد"}
+            <MoneyOff /> {editingExpense ? "تعديل مصروف" : "إضافة مصروف جديد"}
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -171,7 +174,7 @@ const ExpensesPage: React.FC = () => {
                 label="الفئة"
                 onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
               >
-                <MenuItem value="utilities">مرافق</MenuItem>
+                <MenuItem value="utilities">فواتير</MenuItem>
                 <MenuItem value="rent">إيجار</MenuItem>
                 <MenuItem value="supplies">مستلزمات</MenuItem>
                 <MenuItem value="maintenance">صيانة</MenuItem>
@@ -184,8 +187,8 @@ const ExpensesPage: React.FC = () => {
               label="الوصف"
               multiline
               rows={3}
-              value={expenseForm.description}
-              onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+              value={expenseForm.note}
+              onChange={(e) => setExpenseForm({ ...expenseForm, note: e.target.value })}
             />
             <TextField
               fullWidth
@@ -198,7 +201,7 @@ const ExpensesPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleSaveExpense} variant="contained">{editingId ? "تحديث" : "إضافة"}</Button>
+          <Button onClick={handleSaveExpense} variant="contained">{editingExpense ? "تحديث" : "إضافة"}</Button>
         </DialogActions>
       </Dialog>
     </Box>
