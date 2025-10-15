@@ -22,6 +22,7 @@ import EnrollmentsPage from "./pages/EnrollmentsPage"
 import TeachersPage from "./pages/TeachersPage"
 import TransactionsPage from "./pages/TransactionsPage"
 import PaymentsPage from "./pages/PaymentsPage"
+import PaymentMethodsPage from "./pages/PaymentMethodsPage"
 import ExpensesPage from "./pages/ExpensesPage"
 import RefundsPage from "./pages/RefundsPage"
 import DiscountsPage from "./pages/DiscountsPage"
@@ -81,6 +82,7 @@ const AppContent: React.FC = () => {
                         <Route path="/enrollments" element={<EnrollmentsPage />} />
                         <Route path="/teachers" element={<TeachersPage />} />
                         <Route path="/transactions" element={<TransactionsPage />} />
+                        <Route path="/payment-methods" element={<PaymentMethodsPage />} />
                         <Route path="/payments" element={<PaymentsPage />} />
                         <Route path="/expenses" element={<ExpensesPage />} />
                         <Route path="/refunds" element={<RefundsPage />} />

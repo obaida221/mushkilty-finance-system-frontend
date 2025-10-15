@@ -54,7 +54,7 @@ export const useBatches = (): UseBatchesReturn => {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to create batch',
+        error: error instanceof Error ? "fail" : 'Failed to create batch',
         loading: false,
       }))
       throw error

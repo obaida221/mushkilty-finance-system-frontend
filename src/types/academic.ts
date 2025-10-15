@@ -53,6 +53,7 @@ export interface CreateBatchDto {
   capacity?: number
   status?: "open" | "closed" | "full"
   actual_price?: number
+  currency?: "USD" | "IQD"
 }
 
 // Enrollment Types (based on API documentation)
