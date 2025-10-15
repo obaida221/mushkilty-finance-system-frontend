@@ -19,83 +19,97 @@ import {
   Select,
   Chip,
   Grid,
+  CircularProgress,
+  Alert,
+  Snackbar,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, AccountBalance } from "@mui/icons-material"
+import { Search, Add, AccountBalance, Edit, Delete } from "@mui/icons-material"
+import { usePayrolls } from "../hooks/usePayrolls"
 import type { Payroll } from "../types"
-
-// Mock data
-const mockPayrolls: Payroll[] = [
-  {
-    id: "1",
-    teacherId: "1",
-    amount: 1000000,
-    bonus: 100000,
-    deductions: 50000,
-    netAmount: 1050000,
-    month: "مارس",
-    year: 2024,
-    transactionId: "3",
-    status: "paid",
-    paidDate: "2024-03-01",
-    createdAt: "2024-03-01T09:00:00",
-  },
-  {
-    id: "2",
-    teacherId: "2",
-    amount: 900000,
-    bonus: 0,
-    deductions: 0,
-    netAmount: 900000,
-    month: "مارس",
-    year: 2024,
-    transactionId: "9",
-    status: "paid",
-    paidDate: "2024-03-01",
-    createdAt: "2024-03-01T09:15:00",
-  },
-  {
-    id: "3",
-    teacherId: "3",
-    amount: 850000,
-    bonus: 50000,
-    deductions: 0,
-    netAmount: 900000,
-    month: "أبريل",
-    year: 2024,
-    transactionId: null,
-    status: "pending",
-    paidDate: null,
-    createdAt: "2024-04-01T08:00:00",
-  },
-]
 
 const PayrollPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [payrolls] = useState<Payroll[]>(mockPayrolls)
+  const [editingPayroll, setEditingPayroll] = useState<Payroll | null>(null)
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" })
+
+  const { payrolls, loading, error, createPayroll, updatePayroll, deletePayroll } = usePayrolls()
 
   const [payrollForm, setPayrollForm] = useState({
     teacherId: "",
+    month: "",
+    year: new Date().getFullYear(),
     amount: "",
     bonus: "",
     deductions: "",
-    month: "",
   })
 
-  const handleOpenDialog = () => {
-    setPayrollForm({ teacherId: "", amount: "", bonus: "", deductions: "", month: "" })
+  const handleOpenDialog = (payroll?: Payroll) => {
+    if (payroll) {
+      setEditingPayroll(payroll)
+      setPayrollForm({
+        teacherId: payroll.teacherId,
+        month: payroll.month,
+        year: payroll.year,
+        amount: payroll.amount.toString(),
+        bonus: payroll.bonus.toString(),
+        deductions: payroll.deductions.toString(),
+      })
+    } else {
+      setEditingPayroll(null)
+      setPayrollForm({ teacherId: "", month: "", year: new Date().getFullYear(), amount: "", bonus: "", deductions: "" })
+    }
     setOpenDialog(true)
   }
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false)
+  const handleCloseDialog = () => setOpenDialog(false)
+
+  const handleSnackbar = (message: string, severity: "success" | "error") => {
+    setSnackbar({ open: true, message, severity })
   }
 
-  const handleCreatePayroll = () => {
-    console.log("Creating payroll:", payrollForm)
-    handleCloseDialog()
+  const handleSavePayroll = async () => {
+    if (!payrollForm.teacherId || !payrollForm.month || !payrollForm.amount) {
+      handleSnackbar("أدخل جميع البيانات المطلوبة", "error")
+      return
+    }
+
+    try {
+      const payload = {
+        ...payrollForm,
+        amount: Number(payrollForm.amount),
+        bonus: Number(payrollForm.bonus),
+        deductions: Number(payrollForm.deductions),
+      }
+
+      if (editingPayroll) {
+        await updatePayroll(editingPayroll.id, payload)
+        handleSnackbar("تم تحديث الراتب بنجاح", "success")
+      } else {
+        await createPayroll(payload)
+        handleSnackbar("تم إضافة الراتب بنجاح", "success")
+      }
+      handleCloseDialog()
+    } catch (err) {
+      console.error(err)
+      handleSnackbar("حدث خطأ أثناء الحفظ", "error")
+    }
   }
+
+  const handleDelete = async (id: number) => {
+    if (confirm("هل أنت متأكد من حذف هذا الراتب؟")) {
+      try {
+        await deletePayroll(id)
+        handleSnackbar("تم حذف الراتب بنجاح", "success")
+      } catch (err) {
+        console.error(err)
+        handleSnackbar("حدث خطأ أثناء الحذف", "error")
+      }
+    }
+  }
+
+  const filteredPayrolls = payrolls.filter((p) => p.month.includes(searchQuery))
 
   const columns: GridColDef[] = [
     {
@@ -103,42 +117,36 @@ const PayrollPage: React.FC = () => {
       headerName: "المدرس",
       flex: 1,
       minWidth: 150,
-      renderCell: () => <Typography>د. محمد أحمد</Typography>, // In production, fetch teacher name
+      renderCell: () => <Typography>د. محمد أحمد</Typography>, // يمكن تعديلها لجلب الاسم من relation
     },
-    {
-      field: "month",
-      headerName: "الشهر",
-      width: 100,
-    },
-    {
-      field: "year",
-      headerName: "السنة",
-      width: 80,
-    },
+    { field: "month", headerName: "الشهر", width: 100 },
+    { field: "year", headerName: "السنة", width: 80 },
     {
       field: "amount",
       headerName: "الراتب الأساسي",
       width: 140,
-      renderCell: (params) => `${params.value.toLocaleString()} د.ع`,
+      renderCell: (params) => `${Number(params.value).toLocaleString()} د.ع`,
     },
     {
       field: "bonus",
       headerName: "المكافآت",
       width: 120,
-      renderCell: (params) => (params.value > 0 ? `+${params.value.toLocaleString()} د.ع` : "-"),
+      renderCell: (params) => (Number(params.value) > 0 ? `+${Number(params.value).toLocaleString()} د.ع` : "-"),
     },
     {
       field: "deductions",
       headerName: "الخصومات",
       width: 120,
-      renderCell: (params) => (params.value > 0 ? `-${params.value.toLocaleString()} د.ع` : "-"),
+      renderCell: (params) => (Number(params.value) > 0 ? `-${Number(params.value).toLocaleString()} د.ع` : "-"),
     },
     {
       field: "netAmount",
       headerName: "الصافي",
       width: 140,
       renderCell: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "success.main" }}>{params.value.toLocaleString()} د.ع</Typography>
+        <Typography sx={{ fontWeight: 600, color: "success.main" }}>
+          {Number(params.row.amount + params.row.bonus - params.row.deductions).toLocaleString()} د.ع
+        </Typography>
       ),
     },
     {
@@ -153,9 +161,21 @@ const PayrollPage: React.FC = () => {
         />
       ),
     },
+    {
+      field: "actions",
+      headerName: "إجراءات",
+      width: 120,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <Button size="small" onClick={() => handleOpenDialog(params.row)} startIcon={<Edit />} />
+          <Button size="small" color="error" onClick={() => handleDelete(params.row.id)} startIcon={<Delete />} />
+        </Box>
+      ),
+    },
   ]
 
-  const filteredPayrolls = payrolls.filter((payroll) => payroll.month.includes(searchQuery))
+  if (loading) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>
 
   return (
     <Box>
@@ -163,10 +183,12 @@ const PayrollPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           إدارة الرواتب
         </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
           إضافة راتب
         </Button>
       </Box>
+
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       <Paper>
         <Box sx={{ p: 3 }}>
@@ -188,34 +210,26 @@ const PayrollPage: React.FC = () => {
           <DataGrid
             rows={filteredPayrolls}
             columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 },
-              },
-            }}
+            getRowId={(row) => row.id}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             autoHeight
             sx={{
               border: "none",
-              "& .MuiDataGrid-cell": {
-                borderColor: "divider",
-              },
-              "& .MuiDataGrid-columnHeaders": {
-                bgcolor: "background.default",
-                borderColor: "divider",
-              },
+              "& .MuiDataGrid-cell": { borderColor: "divider" },
+              "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
             }}
           />
         </Box>
       </Paper>
 
-      {/* Create Payroll Dialog */}
+      {/* Payroll Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <AccountBalance />
-            إضافة راتب جديد
+            {editingPayroll ? "تحديث الراتب" : "إضافة راتب جديد"}
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -286,11 +300,19 @@ const PayrollPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleCreatePayroll} variant="contained">
-            إضافة
+          <Button onClick={handleSavePayroll} variant="contained">
+            {editingPayroll ? "تحديث" : "إضافة"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Box>
   )
 }

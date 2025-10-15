@@ -3,28 +3,27 @@
 import { useState, useEffect } from "react"
 import {
   Box, Typography, Paper, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, MenuItem, FormControl, InputLabel, Select, Chip, Grid, Card, CardContent, IconButton, CircularProgress, Alert
+  InputAdornment, MenuItem, FormControl, InputLabel, Select, Chip, Grid, Card, CardContent, IconButton, CircularProgress, Alert, Snackbar
 } from "@mui/material"
 import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { Search, Add, Payment as PaymentIcon, Edit, Delete } from "@mui/icons-material"
 import { usePayments } from "../hooks/usePayments"
 import { useEnrollments } from "../hooks/useEnrollments"
 
-// Fixed payment methods
 const paymentMethods = [
-  { id: "cash", description: "نقداً" },
-  { id: "card", description: "بطاقة" },
-  { id: "bank", description: "تحويل بنكي" },
+  { id: 1, description: "نقداً" },
+  { id: 2, description: "بطاقة" },
+  { id: 3, description: "تحويل بنكي" },
 ]
 
 const PaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
-  const [editingPayment, setEditingPayment] = useState(null)
-  const [selectedStudentId, setSelectedStudentId] = useState("")
-  const [filteredEnrollments, setFilteredEnrollments] = useState([])
+  const [editingPayment, setEditingPayment] = useState<any>(null)
+  const [selectedStudentId, setSelectedStudentId] = useState<number | "">("")
+  const [filteredEnrollments, setFilteredEnrollments] = useState<any[]>([])
+  const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: "success" | "error"}>({open: false, message: "", severity: "success"})
 
-  // Hooks
   const { payments, loading: paymentsLoading, error: paymentsError, createPayment, updatePayment, deletePayment } = usePayments()
   const { enrollments, loading: enrollmentsLoading } = useEnrollments()
 
@@ -41,19 +40,23 @@ const PaymentsPage = () => {
 
   useEffect(() => {
     if (selectedStudentId) {
-      const filtered = enrollments.filter(e => e.id === selectedStudentId)
+      const filtered = enrollments.filter(e => e.student?.id === selectedStudentId)
       setFilteredEnrollments(filtered)
+      if (!filtered.some(e => e.id === paymentForm.enrollmentId)) {
+        setPaymentForm(prev => ({ ...prev, enrollmentId: "" }))
+      }
     } else {
       setFilteredEnrollments([])
+      setPaymentForm(prev => ({ ...prev, enrollmentId: "" }))
     }
   }, [selectedStudentId, enrollments])
 
-  const handleOpenDialog = (payment?) => {
+  const handleOpenDialog = (payment?: any) => {
     if (payment) {
       setEditingPayment(payment)
       setPaymentForm({
-        source: payment.enrollmentId ? "student" : "external",
-        enrollmentId: payment.enrollmentId || "",
+        source: payment.enrollment ? "student" : "external",
+        enrollmentId: payment.enrollment?.id || "",
         payer: payment.payer || "",
         payment_method_id: payment.payment_method_id,
         amount: payment.amount.toString(),
@@ -61,7 +64,7 @@ const PaymentsPage = () => {
         type: payment.type,
         note: payment.note,
       })
-      if (payment.enrollmentId) setSelectedStudentId(payment.enrollmentId)
+      if (payment.enrollment?.student?.id) setSelectedStudentId(payment.enrollment.student.id)
     } else {
       setEditingPayment(null)
       setPaymentForm({
@@ -81,32 +84,56 @@ const PaymentsPage = () => {
 
   const handleCloseDialog = () => setOpenDialog(false)
 
+  const handleSnackbar = (message: string, severity: "success" | "error") => {
+    setSnackbar({ open: true, message, severity })
+  }
+
   const handleSavePayment = async () => {
+    if (paymentForm.source === "student" && !paymentForm.enrollmentId) {
+      handleSnackbar("اختر الطالب والدورة", "error")
+      return
+    }
+    if (!paymentForm.payment_method_id || !paymentForm.amount || Number(paymentForm.amount) <= 0) {
+      handleSnackbar("أدخل جميع البيانات بشكل صحيح", "error")
+      return
+    }
     try {
+      const payload = {
+        ...paymentForm,
+        enrollmentId: paymentForm.enrollmentId ? Number(paymentForm.enrollmentId) : null,
+        payment_method_id: Number(paymentForm.payment_method_id),
+        amount: Number(paymentForm.amount),
+      }
+
       if (editingPayment) {
-        await updatePayment(editingPayment.id, paymentForm)
+        await updatePayment(editingPayment.id, payload)
+        handleSnackbar("تم تحديث الدفعة بنجاح", "success")
       } else {
-        await createPayment(paymentForm)
+        await createPayment(payload)
+        handleSnackbar("تم تسجيل الدفعة بنجاح", "success")
       }
       handleCloseDialog()
     } catch (err) {
-      console.error("Error saving payment:", err)
+      console.error(err)
+      handleSnackbar("حدث خطأ أثناء الحفظ", "error")
     }
   }
 
-  const handleDeletePayment = async (id) => {
+  const handleDeletePayment = async (id: number) => {
     if (confirm("هل أنت متأكد من حذف هذه الدفعة؟")) {
       try {
         await deletePayment(id)
+        handleSnackbar("تم حذف الدفعة بنجاح", "success")
       } catch (err) {
-        console.error("Error deleting payment:", err)
+        console.error(err)
+        handleSnackbar("حدث خطأ أثناء الحذف", "error")
       }
     }
   }
 
   const filtered = payments.filter(p =>
-    (p.note || "").includes(searchQuery) ||
-    (p.payer || "").includes(searchQuery)
+    (p.note || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.payer || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const total = payments.reduce((sum, p) => sum + Number(p.amount), 0)
@@ -119,9 +146,8 @@ const PaymentsPage = () => {
       flex: 1,
       renderCell: (params) => {
         const row = params.row
-        if (row.enrollmentId) {
-          const enrollment = enrollments.find(e => e.id === row.enrollmentId)
-          return <Typography>{enrollment?.student_name || "—"}</Typography>
+        if (row.enrollment) {
+          return <Typography>{row.enrollment.student?.name || "—"}</Typography>
         } else {
           return <Typography color="text.secondary">{row.payer}</Typography>
         }
@@ -181,7 +207,6 @@ const PaymentsPage = () => {
 
       {paymentsError && <Alert severity="error" sx={{ mb: 3 }}>{paymentsError}</Alert>}
 
-      {/* Stats */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={4}>
           <Card>
@@ -200,7 +225,6 @@ const PaymentsPage = () => {
         </Grid>
       </Grid>
 
-      {/* Search and DataGrid */}
       <Paper>
         <Box sx={{ p: 3 }}>
           <TextField
@@ -218,13 +242,13 @@ const PaymentsPage = () => {
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[5, 10, 25]}
             autoHeight
+            getRowId={(row) => row.id}
             disableRowSelectionOnClick
             sx={{ border: "none", "& .MuiDataGrid-cell": { borderColor: "divider" }, "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" } }}
           />
         </Box>
       </Paper>
 
-      {/* Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingPayment ? "تعديل الدفعة" : "تسجيل دفعة جديدة"}</DialogTitle>
         <DialogContent>
@@ -245,9 +269,9 @@ const PaymentsPage = () => {
               <>
                 <FormControl fullWidth>
                   <InputLabel>الطالب</InputLabel>
-                  <Select value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)}>
+                  <Select value={selectedStudentId} onChange={(e) => setSelectedStudentId(Number(e.target.value))}>
                     {enrollments.map((s) => (
-                      <MenuItem key={s.id} value={s.id}>{s.student_name}</MenuItem>
+                      <MenuItem key={s.id} value={s.student?.id}>{s.student?.name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -257,7 +281,7 @@ const PaymentsPage = () => {
                     <InputLabel>الدورة</InputLabel>
                     <Select
                       value={paymentForm.enrollmentId}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, enrollmentId: e.target.value })}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, enrollmentId: Number(e.target.value) })}
                     >
                       {filteredEnrollments.map((e) => (
                         <MenuItem key={e.id} value={e.id}>{e.batch_name}</MenuItem>
@@ -279,7 +303,7 @@ const PaymentsPage = () => {
               <InputLabel>طريقة الدفع</InputLabel>
               <Select
                 value={paymentForm.payment_method_id}
-                onChange={(e) => setPaymentForm({ ...paymentForm, payment_method_id: e.target.value })}
+                onChange={(e) => setPaymentForm({ ...paymentForm, payment_method_id: Number(e.target.value) })}
               >
                 {paymentMethods.map((m) => (
                   <MenuItem key={m.id} value={m.id}>{m.description}</MenuItem>
@@ -321,6 +345,14 @@ const PaymentsPage = () => {
           <Button variant="contained" onClick={handleSavePayment}>{editingPayment ? "تحديث" : "تسجيل"}</Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Box>
   )
 }
