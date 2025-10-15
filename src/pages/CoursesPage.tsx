@@ -88,8 +88,17 @@ const CoursesPage: React.FC = () => {
   const { batches, getBatchesByCourse } = useBatches()
   const { enrollments } = useEnrollments()
 
+  const getCurrentUserId = (): number => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      return user.id;
+    }
+    return 0;
+  };
+  
   const [courseForm, setCourseForm] = useState<CreateCourseDto>({
-    user_id: 0,
+    user_id: getCurrentUserId(),
     name: "",
     project_type: undefined,
     description: "",
@@ -128,7 +137,7 @@ const CoursesPage: React.FC = () => {
   // Dialog handlers
   const handleOpenDialog = () => {
     setCourseForm({
-      user_id: 0,
+      user_id: getCurrentUserId(),
       name: "",
       project_type: undefined,
       description: "",
@@ -217,20 +226,20 @@ const CoursesPage: React.FC = () => {
     },
     {
       field: "user_id",
-      headerName: "المدرس",
+      headerName: "أُضيفت بواسطة",
       width: 150,
       renderCell: (params) => {
-        const teacher = params.row.user
-        return teacher ? (
-          <Chip label={teacher.name} size="small" color="secondary" />
+        const user = params.row.user
+        return user ? (
+          <Chip label={user.name} size="small" color="secondary" />
         ) : (
-          <Chip label="غير محدد" size="small" />
+          <Chip label="حدث خطأ/حدّث الصفحة" size="small" />
         )
       },
     },
     {
       field: "batches",
-      headerName: "المجموعات",
+      headerName: "الدُفعات",
       width: 100,
       align: "center",
       headerAlign: "center",
@@ -486,16 +495,18 @@ const CoursesPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-            <TextField
-              fullWidth
-              label="اسم الدورة"
-              value={courseForm.name}
-              onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
-              required
-            />
 
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={8}>
+                <TextField
+                  fullWidth
+                  label="اسم الدورة"
+                  value={courseForm.name}
+                  onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
                   <InputLabel>نوع الدورة</InputLabel>
                   <Select
@@ -510,16 +521,6 @@ const CoursesPage: React.FC = () => {
                     <MenuItem value="ielts">آيلتس</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="معرف المدرس"
-                  type="number"
-                  value={courseForm.user_id || ""}
-                  onChange={(e) => setCourseForm({ ...courseForm, user_id: Number(e.target.value) || 0 })}
-                  required
-                />
               </Grid>
             </Grid>
 
