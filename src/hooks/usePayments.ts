@@ -1,83 +1,153 @@
-import { useState, useEffect } from "react"
-import axios from "axios"
+// src/hooks/usePayments.ts
+import { useState, useEffect, useCallback } from "react";
+import { paymentsAPI } from "../api";
+import type { Payment } from "../types/financial";
 
-export const usePayments = () => {
-  const [payments, setPayments] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export type CreatePaymentDto = {
+  studentId: string;
+  amount: number;
+  paymentMethod: "cash" | "card" | "bank_transfer" | "online";
+  transactionId: string;
+  date: string;
+  notes: string;
+};
 
-  const fetchPayments = async () => {
-    setLoading(true)
-    setError(null)
+interface UsePaymentsState {
+  payments: Payment[];
+  loading: boolean;
+  error: string | null;
+}
+
+interface UsePaymentsReturn extends UsePaymentsState {
+  fetchPayments: () => Promise<void>;
+  createPayment: (data: CreatePaymentDto) => Promise<Payment>;
+  updatePayment: (id: string, data: Partial<CreatePaymentDto>) => Promise<Payment>;
+  deletePayment: (id: string) => Promise<void>;
+  getPaymentById: (id: string) => Promise<Payment>;
+  getPaymentsByStudent: (studentId: string) => Payment[];
+  refreshPayments: () => void;
+}
+
+export const usePayments = (): UsePaymentsReturn => {
+  const [state, setState] = useState<UsePaymentsState>({
+    payments: [],
+    loading: false,
+    error: null,
+  });
+
+  // Fetch all payments
+  const fetchPayments = useCallback(async () => {
     try {
-      const res = await axios.get("/payments") // تأكد من مسار الباك
-      setPayments(res.data)
-    } catch (err: any) {
-      console.error(err)
-      setError(err.response?.data?.message || "حدث خطأ أثناء جلب الدفعات")
-    } finally {
-      setLoading(false)
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const res = await paymentsAPI.getAll(); // افترض أن API يعيد Payment[]
+      setState(prev => ({ ...prev, payments: res.data, loading: false }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "Failed to fetch payments",
+        loading: false,
+      }));
     }
-  }
+  }, []);
+
+  // Create payment
+  const createPayment = useCallback(async (data: CreatePaymentDto): Promise<Payment> => {
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const res = await paymentsAPI.create(data);
+      const newPayment = res.data;
+      setState(prev => ({
+        ...prev,
+        payments: [newPayment, ...prev.payments],
+        loading: false,
+      }));
+      return newPayment;
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "Failed to create payment",
+        loading: false,
+      }));
+      throw error;
+    }
+  }, []);
+
+  // Update payment
+  const updatePayment = useCallback(async (id: string, data: Partial<CreatePaymentDto>): Promise<Payment> => {
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const res = await paymentsAPI.update(id, data);
+      const updatedPayment = res.data;
+      setState(prev => ({
+        ...prev,
+        payments: prev.payments.map(p => (p.id === id ? updatedPayment : p)),
+        loading: false,
+      }));
+      return updatedPayment;
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "Failed to update payment",
+        loading: false,
+      }));
+      throw error;
+    }
+  }, []);
+
+  // Delete payment
+  const deletePayment = useCallback(async (id: string): Promise<void> => {
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      await paymentsAPI.delete(id);
+      setState(prev => ({
+        ...prev,
+        payments: prev.payments.filter(p => p.id !== id),
+        loading: false,
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "Failed to delete payment",
+        loading: false,
+      }));
+      throw error;
+    }
+  }, []);
+
+  // Get payment by ID
+  const getPaymentById = useCallback(async (id: string): Promise<Payment> => {
+    try {
+      const res = await paymentsAPI.getById(id);
+      return res.data;
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "Failed to fetch payment");
+    }
+  }, []);
+
+  // Get payments by student
+  const getPaymentsByStudent = useCallback((studentId: string): Payment[] => {
+    return state.payments.filter(p => p.studentId === studentId);
+  }, [state.payments]);
+
+  // Refresh payments
+  const refreshPayments = useCallback(() => {
+    fetchPayments();
+  }, [fetchPayments]);
 
   useEffect(() => {
-    fetchPayments()
-  }, [])
-
-  const createPayment = async (payload: any) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await axios.post("/payments", payload)
-      setPayments(prev => [res.data, ...prev])
-      return res.data
-    } catch (err: any) {
-      console.error(err)
-      setError(err.response?.data?.message || "حدث خطأ أثناء تسجيل الدفعة")
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updatePayment = async (id: number, payload: any) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await axios.put(`/payments/${id}`, payload)
-      setPayments(prev => prev.map(p => (p.id === id ? res.data : p)))
-      return res.data
-    } catch (err: any) {
-      console.error(err)
-      setError(err.response?.data?.message || "حدث خطأ أثناء تحديث الدفعة")
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const deletePayment = async (id: number) => {
-    setLoading(true)
-    setError(null)
-    try {
-      await axios.delete(`/payments/${id}`)
-      setPayments(prev => prev.filter(p => p.id !== id))
-    } catch (err: any) {
-      console.error(err)
-      setError(err.response?.data?.message || "حدث خطأ أثناء حذف الدفعة")
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
+    fetchPayments();
+  }, [fetchPayments]);
 
   return {
-    payments,
-    loading,
-    error,
+    ...state,
     fetchPayments,
     createPayment,
     updatePayment,
     deletePayment,
-  }
-}
+    getPaymentById,
+    getPaymentsByStudent,
+    refreshPayments,
+  };
+};
+
+export default usePayments;
