@@ -24,6 +24,12 @@ import {
   CardContent,
   Alert,
   CircularProgress,
+  TableContainer,
+  Table,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableHead,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { 
@@ -32,8 +38,6 @@ import {
   Delete, 
   Add, 
   Group, 
-  Event, 
-  LocationOn,
   School,
   CheckCircle,
   Cancel,
@@ -42,14 +46,19 @@ import {
 import { useBatches } from '../hooks/useBatches'
 import { useCourses } from '../hooks/useCourses'
 import { useEnrollments } from '../hooks/useEnrollments'
-import type { Batch, CreateBatchDto } from "../types"
+import { useUsers } from '../hooks/useUsers'
+import type { Batch, CreateBatchDto, User } from "../types"
 
 const BatchesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
+  const [openCourseDialog, setOpenCourseDialog] = useState(false)
+  const [openTrainerDialog, setOpenTrainerDialog] = useState(false)
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCourse, setFilterCourse] = useState<string>("all")
+  const [trainerSearch, setTrainerSearch] = useState<string>("")
+  const [courseSearch, setCourseSearch] = useState<string>("")
 
   // Hooks
   const { 
@@ -64,6 +73,7 @@ const BatchesPage: React.FC = () => {
 
   const { courses, loading: coursesLoading } = useCourses()
   const { enrollments, getEnrollmentsByBatch } = useEnrollments()
+  const { users, loading: usersLoading } = useUsers()
 
   const [batchForm, setBatchForm] = useState<CreateBatchDto>({
     course_id: 0,
@@ -75,9 +85,10 @@ const BatchesPage: React.FC = () => {
     start_date: "",
     end_date: "",
     schedule: "",
-    capacity: undefined,
+    capacity: 0,
     status: "open",
-    actual_price: undefined,
+    actual_price: 0,
+    currency: "IQD",
   })
 
   // Handle form submission
@@ -96,7 +107,7 @@ const BatchesPage: React.FC = () => {
 
   // Handle delete
   const handleDelete = async (id: number) => {
-    if (window.confirm("هل أنت متأكد من حذف هذه المجموعة؟ سيتم حذف جميع التسجيلات المرتبطة بها.")) {
+    if (window.confirm("هل أنت متأكد من حذف هذه الدُفعة؟ سيتم حذف جميع التسجيلات المرتبطة بها.")) {
       try {
         await deleteBatch(id)
       } catch (error) {
@@ -121,6 +132,8 @@ const BatchesPage: React.FC = () => {
       status: "open",
       actual_price: undefined,
     })
+    setCourseSearch("")
+    setTrainerSearch("")
     setEditingBatch(null)
     setOpenDialog(true)
   }
@@ -128,7 +141,7 @@ const BatchesPage: React.FC = () => {
   const handleEditBatch = (batch: Batch) => {
     setBatchForm({
       course_id: batch.course_id,
-      trainer_id: batch.trainer_id,
+      trainer_id: batch.trainer_id || 0,
       name: batch.name,
       description: batch.description || "",
       level: batch.level,
@@ -139,7 +152,7 @@ const BatchesPage: React.FC = () => {
       capacity: batch.capacity,
       status: batch.status,
       actual_price: batch.actual_price,
-    })
+    })    
     setEditingBatch(batch)
     setOpenDialog(true)
   }
@@ -147,6 +160,38 @@ const BatchesPage: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false)
     setEditingBatch(null)
+    setCourseSearch("")
+    setTrainerSearch("")
+  }
+
+  // Course dialog handlers
+  const handleOpenCourseDialog = () => {
+    setCourseSearch("")
+    setOpenCourseDialog(true)
+  }
+
+  const handleCloseCourseDialog = () => {
+    setOpenCourseDialog(false)
+  }
+
+  // Trainer dialog handlers
+  const handleOpenTrainerDialog = () => {
+    setTrainerSearch("")
+    setOpenTrainerDialog(true)
+  }
+
+  const handleCloseTrainerDialog = () => {
+    setOpenTrainerDialog(false)
+  }
+
+  // Handle trainer selection
+  const handleTrainerSelect = (trainerId: number) => {
+    setBatchForm({ ...batchForm, trainer_id: trainerId })
+  }
+
+  // Handle course selection
+  const handleCourseSelect = (courseId: number) => {
+    setBatchForm({ ...batchForm, course_id: courseId })
   }
 
   // Data filtering
@@ -161,6 +206,18 @@ const BatchesPage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesCourse
   })
 
+  // Filter courses based on search input
+  const filteredCourses = courses.filter(course => 
+    course.name.toLowerCase().includes(courseSearch.toLowerCase()) || 
+    course.project_type?.toLowerCase().includes(courseSearch.toLowerCase())
+  )
+
+  // Filter users based on search input
+  const filteredUsers = users.filter((user: User) => 
+    user.name.toLowerCase().includes(trainerSearch.toLowerCase())  || 
+    user.email.toLowerCase().includes(trainerSearch.toLowerCase())
+  )
+
   // Stats calculations
   const totalBatches = batches.length
   const activeBatches = getBatchesByStatus("open").length
@@ -171,7 +228,7 @@ const BatchesPage: React.FC = () => {
   const columns: GridColDef[] = [
     { 
       field: "name", 
-      headerName: "اسم المجموعة", 
+      headerName: "اسم الدُفعة", 
       flex: 1, 
       minWidth: 200 
     },
@@ -240,6 +297,12 @@ const BatchesPage: React.FC = () => {
       renderCell: (params) => params.value ? new Date(params.value).toLocaleDateString('ar') : "-",
     },
     {
+      field: "end_date",
+      headerName: "تاريخ النهاية",
+      width: 130,
+      renderCell: (params) => params.value ? new Date(params.value).toLocaleDateString('ar') : "-",
+    },
+    {
       field: "location",
       headerName: "الموقع",
       width: 120,
@@ -271,7 +334,7 @@ const BatchesPage: React.FC = () => {
     },
   ]
 
-  if (batchesLoading || coursesLoading) {
+  if (batchesLoading || coursesLoading || usersLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
@@ -284,10 +347,10 @@ const BatchesPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          إدارة المجموعات
+          إدارة الدُفعات
         </Typography>
         <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
-          إضافة مجموعة
+          إضافة دُفعة
         </Button>
       </Box>
 
@@ -302,13 +365,13 @@ const BatchesPage: React.FC = () => {
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {[
           { 
-            label: "إجمالي المجموعات", 
+            label: "إجمالي الدُفعات", 
             value: totalBatches, 
             icon: <Group sx={{ color: "white" }} />, 
             color: "primary.main" 
           },
           { 
-            label: "المجموعات النشطة", 
+            label: "الدُفعات النشطة", 
             value: activeBatches, 
             icon: <CheckCircle sx={{ color: "white" }} />, 
             color: "success.main" 
@@ -355,7 +418,7 @@ const BatchesPage: React.FC = () => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="البحث في المجموعات..."
+                placeholder="البحث في الدُفعات..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
@@ -426,34 +489,37 @@ const BatchesPage: React.FC = () => {
       {/* Create/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editingBatch ? "تعديل المجموعة" : "إضافة مجموعة جديدة"}
+          {editingBatch ? "تعديل الدُفعة" : "إضافة دُفعة جديدة"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="اسم المجموعة"
+                  label="اسم الدُفعة"
                   value={batchForm.name}
                   onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })}
                   required
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <FormControl fullWidth required>
-                  <InputLabel>الدورة</InputLabel>
-                  <Select
-                    value={batchForm.course_id || ""}
+                  {/* <InputLabel>الدورة</InputLabel> */}
+                  <TextField
+                    value={batchForm.course_id ? courses.find(c => c.id === batchForm.course_id)?.name || "" : ""}
                     label="الدورة"
-                    onChange={(e) => setBatchForm({ ...batchForm, course_id: Number(e.target.value) })}
-                  >
-                    {courses.map((course) => (
-                      <MenuItem key={course.id} value={course.id}>
-                        {course.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                    onClick={handleOpenCourseDialog}
+                  />
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth required>
+                  <TextField
+                    value={batchForm.trainer_id ? users.find(u => u.id === batchForm.trainer_id)?.name || "" : ""}
+                    label="المدرب المسؤول"
+                    onClick={handleOpenTrainerDialog}
+                  />
                 </FormControl>
               </Grid>
             </Grid>
@@ -519,6 +585,7 @@ const BatchesPage: React.FC = () => {
                   value={batchForm.start_date}
                   onChange={(e) => setBatchForm({ ...batchForm, start_date: e.target.value })}
                   InputLabelProps={{ shrink: true }}
+                  required
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -529,6 +596,7 @@ const BatchesPage: React.FC = () => {
                   value={batchForm.end_date}
                   onChange={(e) => setBatchForm({ ...batchForm, end_date: e.target.value })}
                   InputLabelProps={{ shrink: true }}
+                  required
                 />
               </Grid>
             </Grid>
@@ -542,7 +610,7 @@ const BatchesPage: React.FC = () => {
                   onChange={(e) => setBatchForm({ ...batchForm, location: e.target.value })}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={10} md={4}>
                 <TextField
                   fullWidth
                   label="السعر الفعلي"
@@ -550,6 +618,17 @@ const BatchesPage: React.FC = () => {
                   value={batchForm.actual_price || ""}
                   onChange={(e) => setBatchForm({ ...batchForm, actual_price: Number(e.target.value) || undefined })}
                 />
+              </Grid>
+              <Grid item xs={2} md={2}>
+                <Select
+                  fullWidth
+                  label="العملة"
+                  value={batchForm.currency || "IQD"}
+                  onChange={(e) => setBatchForm({ ...batchForm, currency: e.target.value || "IQD" as any })}
+                >
+                <MenuItem value="IQD"> IQD </MenuItem>
+                <MenuItem value="USD"> USD </MenuItem>
+                </Select>
               </Grid>
             </Grid>
 
@@ -567,6 +646,114 @@ const BatchesPage: React.FC = () => {
           <Button onClick={handleSubmit} variant="contained">
             {editingBatch ? "تحديث" : "إضافة"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Course Selection Dialog */}
+      <Dialog open={openCourseDialog} onClose={handleCloseCourseDialog} maxWidth="lg">
+        <DialogTitle>اختيار الدورة</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              placeholder="البحث في الدورات..."
+              value={courseSearch}
+              onChange={(e) => setCourseSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box sx={{ height: 400 }}>
+              <TableContainer>
+                <Table>
+                  <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableRow>
+                      <TableCell>اسم الدورة</TableCell>
+                      <TableCell>النوع</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredCourses.map((course) => (
+                      <TableRow key={course.id} onClick={() => {
+                        handleCourseSelect(course.id);
+                        handleCloseCourseDialog();
+                      }}
+                      sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f5f5' } }}>
+                        <TableCell>{course.name}</TableCell>
+                        <TableCell>{course.project_type}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {filteredCourses.length === 0 && (
+                <Box sx={{ textAlign: 'center', mt: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    ما من دورات مطابقة للبحث.
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCourseDialog}>إلغاء</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Trainer Selection Dialog */}
+      <Dialog open={openTrainerDialog} onClose={handleCloseTrainerDialog} maxWidth="lg">
+        <DialogTitle>اختيار المدرب المسؤول</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              placeholder="البحث في المدربين..."
+              value={trainerSearch}
+              onChange={(e) => setTrainerSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Group />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box sx={{ height: 400, overflow: "auto" }}>
+              {filteredUsers.map((user) => (
+                <Box 
+                  key={user.id} 
+                  sx={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    padding: 1, 
+                    borderBottom: "1px solid #e0e0e0",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "#f5f5f5" }
+                  }}
+                  onClick={() => {
+                    handleTrainerSelect(user.id);
+                    handleCloseTrainerDialog();
+                  }}
+                >
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="body1">{user.name}</Typography>
+                    {/* <Typography variant="body2" color="text.secondary">{user.role}</Typography> */}
+                    <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+                  </Box>
+                  {/* <Select color="primary" /> */}
+                  <Button variant="outlined" size="small">اختيار</Button>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTrainerDialog}>إلغاء</Button>
         </DialogActions>
       </Dialog>
     </Box>

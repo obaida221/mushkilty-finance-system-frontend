@@ -233,7 +233,7 @@ const CoursesPage: React.FC = () => {
         return user ? (
           <Chip label={user.name} size="small" color="secondary" />
         ) : (
-          <Chip label="حدث خطأ/حدّث الصفحة" size="small" />
+          <Chip label="غير محدد" size="small" />
         )
       },
     },
@@ -497,7 +497,7 @@ const CoursesPage: React.FC = () => {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} md={8}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="اسم الدورة"
@@ -506,21 +506,15 @@ const CoursesPage: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>نوع الدورة</InputLabel>
-                  <Select
-                    value={courseForm.project_type || ""}
-                    label="نوع الدورة"
-                    onChange={(e) => setCourseForm({ ...courseForm, project_type: e.target.value as any })}
-                  >
-                    <MenuItem value="">غير محدد</MenuItem>
-                    <MenuItem value="online">أونلاين</MenuItem>
-                    <MenuItem value="onsite">حضوري</MenuItem>
-                    <MenuItem value="kids">أطفال</MenuItem>
-                    <MenuItem value="ielts">آيلتس</MenuItem>
-                  </Select>
-                </FormControl>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="معرف المدرس"
+                  type="number"
+                  value={courseForm.user_id || ""}
+                  onChange={(e) => setCourseForm({ ...courseForm, user_id: Number(e.target.value) || 0 })}
+                  required
+                />
               </Grid>
             </Grid>
 
