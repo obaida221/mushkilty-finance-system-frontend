@@ -178,12 +178,15 @@ const PaymentsPage = () => {
       return matchesSearch && matchesCurrency && matchesType;
     });
   // الإحصائيات
-  const totalAmount = payments.reduce((sum: number, payment: Payment) => sum + payment.amount, 0);
-  const iqdAmount = payments.filter(p => p.currency === "IQD").reduce((sum, p) => sum + p.amount, 0);
-  const usdAmount = payments.filter(p => p.currency === "USD").reduce((sum, p) => sum + p.amount, 0);
+ const totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const iqdAmount = payments
+    .filter(p => p.currency === "IQD")
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const usdAmount = payments
+    .filter(p => p.currency === "USD")
+    .reduce((sum, p) => sum + Number(p.amount), 0);
   const fullPayments = payments.filter(p => p.type === "full").length;
   const installmentPayments = payments.filter(p => p.type === "installment").length;
-
   const columns: GridColDef[] = [
     { 
       field: "id", 
