@@ -67,7 +67,6 @@ const menuItems: DashboardMenuItem[] = [
   { text: "الدورات", icon: <Class />, path: "/courses" },
   { text: "دُفعات الدورات", icon: <AccountBalance />, path: "/batches" },
   { text: "التسجيلات", icon: <PersonAdd />, path: "/enrollments" },
-  { text: "المعلمون", icon: <Person />, path: "/teachers" },
   { text: "المعاملات", icon: <Receipt />, path: "/transactions" },
   { text: "المدفوعات", icon: <Payment />, path: "/payments" },
   { text: "وسائل الدفع", icon: <CurrencyExchange />, path: "/payment-methods" },

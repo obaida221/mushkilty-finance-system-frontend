@@ -383,21 +383,7 @@ const CoursesPage: React.FC = () => {
         ))}
       </Grid>
 
-      {/* Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={tabValue}
-          onChange={(_, newValue) => setTabValue(newValue)}
-          aria-label="course tabs"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab label="جميع الدورات" />
-          <Tab label="الدورات الأونلاين" />
-          <Tab label="الدورات الحضورية" />
-          <Tab label="دورات الأطفال" />
-          <Tab label="دورات الآيلتس" />
-        </Tabs>
-      </Paper>
+
 
       {/* Content */}
       <Paper>
