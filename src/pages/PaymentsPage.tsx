@@ -6,26 +6,26 @@ import {
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { Search, Add, Payment as PaymentIcon, Edit, Delete, Visibility } from "@mui/icons-material";
-import { usePayments } from "../hooks/usePayments";
+import { usePayments, CreatePaymentDto } from "../hooks/usePayments";
 import { useEnrollments } from "../hooks/useEnrollments";
 
 type PaymentFormType = {
   source: "student" | "external";
-  enrollmentId: string;
-  payer: string;
-  payment_method_id: "cash" | "card" | "bank_transfer" | "online" | "";
+  enrollmentId?: string;
+  payer?: string;
+  payment_method_id?: string;
   amount: string;
-  type: "full" | "installment";
-  note: string;
+  type?: "full" | "installment";
+  note?: string;
 };
 
 const PaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<null | any>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>(undefined);
   const [filteredEnrollments, setFilteredEnrollments] = useState<any[]>([]);
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
 
   const { payments, loading: paymentsLoading, error: paymentsError, createPayment, updatePayment, deletePayment } = usePayments();
   const { enrollments, loading: enrollmentsLoading } = useEnrollments();
@@ -43,30 +43,30 @@ const PaymentsPage = () => {
   // Filter enrollments based on selected student
   useEffect(() => {
     if (selectedStudentId) {
-      const filtered = enrollments.filter((e: any) => e.student?.id === selectedStudentId);
+      const filtered = enrollments.filter((e: any) => e.student?.id === Number(selectedStudentId));
       setFilteredEnrollments(filtered);
-      if (!filtered.some((e: any) => e.id === paymentForm.enrollmentId)) {
+      if (!filtered.some((e: any) => e.id === Number(paymentForm.enrollmentId))) {
         setPaymentForm(prev => ({ ...prev, enrollmentId: "" }));
       }
     } else {
       setFilteredEnrollments([]);
       setPaymentForm(prev => ({ ...prev, enrollmentId: "" }));
     }
-  }, [selectedStudentId, enrollments]);
+  }, [selectedStudentId, enrollments, paymentForm.enrollmentId]);
 
   const handleOpenDialog = (payment?: any) => {
     if (payment) {
       setEditingPayment(payment);
       setPaymentForm({
-        source: payment.student ? "student" : "external",
-        enrollmentId: payment.enrollmentId || "",
+        source: payment.user ? "student" : "external",
+        enrollmentId: payment.enrollment_id?.toString() || "",
         payer: payment.payer || "",
-        payment_method_id: payment.paymentMethod || "",
+        payment_method_id: payment.payment_method_id?.toString() || "",
         amount: payment.amount?.toString() || "",
         type: payment.type || "full",
         note: payment.note || "",
       });
-      if (payment.student?.id) setSelectedStudentId(payment.student.id);
+      if (payment.user?.id) setSelectedStudentId(payment.user.id.toString());
     } else {
       setEditingPayment(null);
       setPaymentForm({
@@ -78,7 +78,7 @@ const PaymentsPage = () => {
         type: "full",
         note: "",
       });
-      setSelectedStudentId("");
+      setSelectedStudentId(undefined);
     }
     setOpenDialog(true);
   };
@@ -98,16 +98,18 @@ const PaymentsPage = () => {
       handleSnackbar("أدخل جميع البيانات بشكل صحيح", "error");
       return;
     }
-    try {
-      const payload = {
-        studentId: selectedStudentId,
-        amount: Number(paymentForm.amount),
-        paymentMethod: paymentForm.payment_method_id,
-        transactionId: "temp", // ضع transactionId صالح هنا إذا كان موجودًا
-        date: new Date().toISOString(),
-        notes: paymentForm.note,
-      };
 
+      const payload: CreatePaymentDto = {
+        user_id: Number(selectedStudentId),        
+        enrollment_id: paymentForm.enrollmentId ? Number(paymentForm.enrollmentId) : undefined,
+        payment_method_id: Number(paymentForm.payment_method_id), 
+        payer: paymentForm.source === "external" ? paymentForm.payer : undefined,
+        amount: Number(paymentForm.amount),
+        currency: "IQD", 
+        type: paymentForm.type,
+        note: paymentForm.note || undefined,
+      };
+    try {
       if (editingPayment) {
         await updatePayment(editingPayment.id, payload);
         handleSnackbar("تم تحديث الدفعة بنجاح", "success");
@@ -122,7 +124,7 @@ const PaymentsPage = () => {
     }
   };
 
-  const handleDeletePayment = async (id: string) => {
+  const handleDeletePayment = async (id: number) => {
     if (window.confirm("هل أنت متأكد من حذف هذه الدفعة؟")) {
       try {
         await deletePayment(id);
@@ -142,14 +144,14 @@ const PaymentsPage = () => {
   const total = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
   const columns: GridColDef[] = [
-    { field: "date", headerName: "التاريخ", width: 150 },
+    { field: "paid_at", headerName: "التاريخ", width: 150 },
     {
       field: "source",
       headerName: "المصدر",
       flex: 1,
       renderCell: (params) =>
-        params.row.student
-          ? <Typography>{params.row.student.fullName}</Typography>
+        params.row.user
+          ? <Typography>{params.row.user.name}</Typography>
           : <Typography color="text.secondary">{params.row.payer || "—"}</Typography>
     },
     {
@@ -169,16 +171,16 @@ const PaymentsPage = () => {
       ),
     },
     {
-      field: "paymentMethod",
+      field: "payment_method",
       headerName: "طريقة الدفع",
       width: 150,
       renderCell: (params) => (
-      <Chip
-        label={typeof params.row.paymentMethod === 'string' ? params.row.paymentMethod : params.row.paymentMethod?.name || '—'}
-        size="small"
-        color="primary"
-      />
-    ),
+        <Chip
+          label={params.row.payment_method?.name || "—"}
+          size="small"
+          color="primary"
+        />
+      ),
     },
     { field: "type", headerName: "النوع", width: 120 },
     { field: "note", headerName: "ملاحظات", flex: 1 },
@@ -218,11 +220,7 @@ const PaymentsPage = () => {
         </Button>
       </Box>
 
-      {paymentsError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {paymentsError}
-        </Alert>
-      )}
+      {paymentsError && <Alert severity="error" sx={{ mb: 3 }}>{paymentsError}</Alert>}
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={4}>
@@ -259,7 +257,7 @@ const PaymentsPage = () => {
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             pageSizeOptions={[5, 10, 25]}
             autoHeight
-            getRowId={(row) => row.id} // حل مشكلة Duplicate key
+            getRowId={(row) => row.id}
             disableRowSelectionOnClick
             sx={{
               border: "none",
@@ -284,55 +282,66 @@ const PaymentsPage = () => {
                 <MenuItem value="student">طالب</MenuItem>
                 <MenuItem value="external">جهة خارجية</MenuItem>
               </Select>
-            </FormControl>
+    </FormControl>
 
-            {paymentForm.source === "student" ? (
-              <>
-                <FormControl fullWidth>
-                  <InputLabel>الطالب</InputLabel>
-                  <Select value={selectedStudentId} onChange={(e) => setSelectedStudentId(String(e.target.value))}>
-                    {enrollments.map((s: any, idx) => (
-                      <MenuItem key={`${s.student?.id}-${idx}`} value={s.student?.id}>
-                        {s.student?.fullName || '—'}
-                      </MenuItem>
-                    ))}
-
-                  </Select>
-                </FormControl>
-
-                {selectedStudentId && (
-                  <FormControl fullWidth>
-                    <InputLabel>الدورة</InputLabel>
-                    <Select
-                      value={paymentForm.enrollmentId}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, enrollmentId: String(e.target.value) })}
-                    >
-                      {filteredEnrollments.map((e: any) => (
-                        <MenuItem key={e.id} value={e.id}>{e.batch_name}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </>
+    {paymentForm.source === "student" ? (
+      <>
+        <FormControl fullWidth>
+          <InputLabel>الطالب</InputLabel>
+          <Select
+            value={selectedStudentId || ""}
+            onChange={(e) => setSelectedStudentId(e.target.value)}
+          >
+            {enrollments?.length ? (
+              enrollments.map((enrollment: any) => {
+                const studentId = enrollment.student?.id?.toString() || "";
+                const studentName = enrollment.student?.fullName || "—";
+                return (
+                  <MenuItem key={`${studentId}-${enrollment.id}`} value={studentId}>
+                    {studentName}
+                  </MenuItem>
+                );
+              })
             ) : (
-              <TextField
-                fullWidth
-                label="اسم الجهة الدافعة"
-                value={paymentForm.payer}
-                onChange={(e) => setPaymentForm({ ...paymentForm, payer: e.target.value })}
-              />
+              <MenuItem disabled>لا يوجد طلاب</MenuItem>
             )}
+
+          </Select>
+        </FormControl>
+
+    {selectedStudentId && (
+      <FormControl fullWidth>
+        <InputLabel>الدورة</InputLabel>
+        <Select
+          value={paymentForm.enrollmentId}
+          onChange={(e) => setPaymentForm({ ...paymentForm, enrollmentId: String(e.target.value) })}
+        >
+          {filteredEnrollments.map((e: any) => (
+            <MenuItem key={e.id} value={e.id}>{e.batch_name}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    )}
+  </>
+) : (
+  <TextField
+    fullWidth
+    label="اسم الجهة الدافعة"
+    value={paymentForm.payer}
+    onChange={(e) => setPaymentForm({ ...paymentForm, payer: e.target.value })}
+  />
+)}
 
             <FormControl fullWidth>
               <InputLabel>طريقة الدفع</InputLabel>
               <Select
-                value={paymentForm.payment_method_id}
+                value={paymentForm.payment_method_id || ""}
                 onChange={(e) => setPaymentForm({ ...paymentForm, payment_method_id: e.target.value as any })}
               >
-                <MenuItem value="cash">نقد</MenuItem>
-                <MenuItem value="card">بطاقة</MenuItem>
-                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                <MenuItem value="online">أونلاين</MenuItem>
+                <MenuItem value="1">نقد</MenuItem>
+                <MenuItem value="2">بطاقة</MenuItem>
+                <MenuItem value="3">تحويل بنكي</MenuItem>
+                <MenuItem value="4">أونلاين</MenuItem>
               </Select>
             </FormControl>
 

@@ -1,15 +1,18 @@
-// src/hooks/usePayments.ts
 import { useState, useEffect, useCallback } from "react";
 import { paymentsAPI } from "../api";
-import type { Payment } from "../types/financial";
+import type { Payment } from "../types/payment";
 
 export type CreatePaymentDto = {
-  studentId: string;
+  user_id: number;
+  enrollment_id?: number | null;
+  payment_method_id: number;
+  payer?: string | null;
   amount: number;
-  paymentMethod: "cash" | "card" | "bank_transfer" | "online";
-  transactionId: string;
-  date: string;
-  notes: string;
+  currency?: "IQD" | "USD";
+  type?: "full" | "installment";
+  paid_at?: string;
+  note?: string | null;
+  payment_proof?: string;
 };
 
 interface UsePaymentsState {
@@ -21,10 +24,10 @@ interface UsePaymentsState {
 interface UsePaymentsReturn extends UsePaymentsState {
   fetchPayments: () => Promise<void>;
   createPayment: (data: CreatePaymentDto) => Promise<Payment>;
-  updatePayment: (id: string, data: Partial<CreatePaymentDto>) => Promise<Payment>;
-  deletePayment: (id: string) => Promise<void>;
-  getPaymentById: (id: string) => Promise<Payment>;
-  getPaymentsByStudent: (studentId: string) => Payment[];
+  updatePayment: (id: number, data: Partial<CreatePaymentDto>) => Promise<Payment>;
+  deletePayment: (id: number) => Promise<void>;
+  getPaymentById: (id: number) => Promise<Payment>;
+  getPaymentsByStudent: (studentId: number) => Payment[];
   refreshPayments: () => void;
 }
 
@@ -39,7 +42,7 @@ export const usePayments = (): UsePaymentsReturn => {
   const fetchPayments = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const res = await paymentsAPI.getAll(); // افترض أن API يعيد Payment[]
+      const res = await paymentsAPI.getAll();
       setState(prev => ({ ...prev, payments: res.data, loading: false }));
     } catch (error) {
       setState(prev => ({
@@ -73,7 +76,7 @@ export const usePayments = (): UsePaymentsReturn => {
   }, []);
 
   // Update payment
-  const updatePayment = useCallback(async (id: string, data: Partial<CreatePaymentDto>): Promise<Payment> => {
+  const updatePayment = useCallback(async (id: number, data: Partial<CreatePaymentDto>): Promise<Payment> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       const res = await paymentsAPI.update(id, data);
@@ -95,7 +98,7 @@ export const usePayments = (): UsePaymentsReturn => {
   }, []);
 
   // Delete payment
-  const deletePayment = useCallback(async (id: string): Promise<void> => {
+  const deletePayment = useCallback(async (id: number): Promise<void> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       await paymentsAPI.delete(id);
@@ -115,7 +118,7 @@ export const usePayments = (): UsePaymentsReturn => {
   }, []);
 
   // Get payment by ID
-  const getPaymentById = useCallback(async (id: string): Promise<Payment> => {
+  const getPaymentById = useCallback(async (id: number): Promise<Payment> => {
     try {
       const res = await paymentsAPI.getById(id);
       return res.data;
@@ -124,9 +127,9 @@ export const usePayments = (): UsePaymentsReturn => {
     }
   }, []);
 
-  // Get payments by student
-  const getPaymentsByStudent = useCallback((studentId: string): Payment[] => {
-    return state.payments.filter(p => p.studentId === studentId);
+  // Get payments by student (enrollment_id)
+  const getPaymentsByStudent = useCallback((studentId: number): Payment[] => {
+    return state.payments.filter(p => p.enrollment_id === studentId);
   }, [state.payments]);
 
   // Refresh payments
