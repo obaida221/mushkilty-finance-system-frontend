@@ -11,42 +11,67 @@ export interface Transaction {
 }
 
 // Payment Types
+export type PaymentType = 'installment' | 'full';
+export type Currency = 'USD' | 'IQD';
+
+export interface PaymentMethod {
+  id: number;
+  name: string;
+}
+
 export interface Payment {
-  id: string
-  studentId: string
-  student?: {
-    id: string
-    fullName: string
-    email: string
-    phone: string
-    courseId: string | null
-    enrollmentDate: string | null
-    status: "active" | "inactive" | "graduated"
-    totalPaid: number
-    totalDue: number
-    discountId: string | null
-    createdAt: string
-  }
-  amount: number
-  paymentMethod: "cash" | "card" | "bank_transfer" | "online"
-  transactionId: string
-  transaction?: Transaction
-  date: string
-  notes: string
-  createdAt: string
+  id: number;
+  payment_method_id: number;
+  user_id: number;
+  enrollment_id?: number | null;
+  payer?: string | null;
+  note?: string | null;
+  amount: number;
+  currency: Currency;
+  type?: PaymentType | null;
+  paid_at: string; // ISO date string
+  payment_proof?: string | null;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  paymentMethod?: PaymentMethod;
+  enrollment?: {
+    id: number;
+    batch_name?: string;
+    student?: {
+      id: number;
+      name?: string;
+      fullName?: string;
+      email?: string;
+      phone?: string;
+    };
+  };
+  user?: {
+    id: number;
+    name: string;
+  };
+  refunds?: Refund[];
 }
 
 // Expense Types
 export interface Expense {
-  id: string
-  category: string
-  description: string
-  amount: number
-  transactionId: string
-  transaction?: Transaction
-  date: string
-  createdBy: string
-  createdAt: string
+  id: number;
+  user_id: number;
+  beneficiary: string;
+  description?: string | null;
+  amount: number;
+  currency: Currency;
+  expense_date: string; // ISO date string
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  user?: {
+    id: number;
+    name: string;
+    email?: string;
+  };
 }
 
 // Refund Types

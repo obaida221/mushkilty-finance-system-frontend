@@ -61,20 +61,20 @@ interface DashboardMenuItem {
 }
 
 const menuItems: DashboardMenuItem[] = [
-  { text: "لوحة التحكم", icon: <Dashboard />, path: "/" },
-  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users" },
-  { text: "الطلاب", icon: <School />, path: "/students" },
-  { text: "الدورات", icon: <Class />, path: "/courses" },
-  { text: "دُفعات الدورات", icon: <AccountBalance />, path: "/batches" },
-  { text: "التسجيلات", icon: <PersonAdd />, path: "/enrollments" },
-  { text: "المعاملات", icon: <Receipt />, path: "/transactions" },
-  { text: "المدفوعات", icon: <Payment />, path: "/payments" },
-  { text: "وسائل الدفع", icon: <CurrencyExchange />, path: "/payment-methods" },
-  { text: "المصروفات", icon: <MoneyOff />, path: "/expenses" },
-  { text: "المبالغ المستردة", icon: <Undo />, path: "/refunds" },
-  { text: "الخصومات", icon: <Discount />, path: "/discounts" },
-  { text: "كشوف الرواتب", icon: <Paid />, path: "/payroll" },
-  { text: "التحليلات", icon: <Equalizer />, path: "/analytics" },
+  { text: "لوحة التحكم", icon: <Dashboard />, path: "/", permission: "dashboard:read" },
+  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permission: "users:read" },
+  { text: "الطلاب", icon: <School />, path: "/students", permission: "students:read" },
+  { text: "الدورات", icon: <Class />, path: "/courses", permission: "courses:read" },
+  { text: "دُفعات الدورات", icon: <AccountBalance />, path: "/batches", permission: "batches:read" },
+  { text: "التسجيلات", icon: <PersonAdd />, path: "/enrollments", permission: "enrollments:read" },
+  { text: "المعاملات", icon: <Receipt />, path: "/transactions", permission: "transactions:read" },
+  { text: "المدفوعات", icon: <Payment />, path: "/payments", permission: "payments:read" },
+  { text: "وسائل الدفع", icon: <CurrencyExchange />, path: "/payment-methods", permission: "payment-methods:read" },
+  { text: "المصروفات", icon: <MoneyOff />, path: "/expenses", permission: "expenses:read" },
+  { text: "المبالغ المستردة", icon: <Undo />, path: "/refunds", permission: "refunds:read" },
+  { text: "الخصومات", icon: <Discount />, path: "/discounts", permission: "discount-codes:read" },
+  { text: "كشوف الرواتب", icon: <Paid />, path: "/payroll", permission: "payroll:read" },
+  { text: "التحليلات", icon: <Equalizer />, path: "/analytics", permission: "analytics:read" },
 ]
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -105,8 +105,13 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     navigate("/login")
   }
 
-  // Show all menu items for now - no permission filtering
-  const filteredMenuItems = menuItems
+  // Filter menu items based on user permissions
+  const filteredMenuItems = menuItems.filter((item) => {
+    // If item has no permission requirement, show it
+    if (!item.permission) return true
+    // Otherwise, check if user has the required permission
+    return hasPermission(item.permission)
+  })
 
   const drawer = (
     <Box>
