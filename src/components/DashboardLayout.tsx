@@ -73,7 +73,7 @@ const menuItems: DashboardMenuItem[] = [
   { text: "المصروفات", icon: <MoneyOff />, path: "/expenses", permission: "expenses:read" },
   { text: "المبالغ المستردة", icon: <Undo />, path: "/refunds", permission: "refunds:read" },
   { text: "الخصومات", icon: <Discount />, path: "/discounts", permission: "discount-codes:read" },
-  { text: "كشوف الرواتب", icon: <Paid />, path: "/payroll", permission: "payroll:read" },
+  { text: "كشوف الرواتب", icon: <Paid />, path: "/payroll", permission: "payrolls:read" },
   { text: "التحليلات", icon: <Equalizer />, path: "/analytics", permission: "analytics:read" },
 ]
 

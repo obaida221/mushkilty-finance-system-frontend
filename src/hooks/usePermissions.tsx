@@ -131,12 +131,12 @@ export const usePermissions = () => {
     canDeleteRefunds: hasPermission('refunds:delete'),
     canViewRefundReports: hasPermission('refunds:reports'),
     
-    // Payroll
-    canViewPayroll: hasPermission('payroll:read'),
-    canCreatePayroll: hasPermission('payroll:create'),
-    canUpdatePayroll: hasPermission('payroll:update'),
-    canDeletePayroll: hasPermission('payroll:delete'),
-    canViewPayrollReports: hasPermission('payroll:reports'),
+    // Payrolls
+    canViewPayroll: hasPermission('payrolls:read'),
+    canCreatePayroll: hasPermission('payrolls:create'),
+    canUpdatePayroll: hasPermission('payrolls:update'),
+    canDeletePayroll: hasPermission('payrolls:delete'),
+    canViewPayrollReports: hasPermission('payrolls:reports'),
   };
 
   return {

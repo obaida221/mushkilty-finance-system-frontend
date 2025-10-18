@@ -12,7 +12,7 @@ import {
 import { usePayments } from "../hooks/usePayments";
 import { usePaymentMethods } from "../hooks/usePaymentMethods";
 import type { Payment } from "../types/payment";
-import type { CreatePaymentDto } from "../hooks/usePayments";
+import type { CreatePaymentDto, PaymentStatus } from "../hooks/usePayments";
 
 type PaymentFormType = {
   user_id: number;
@@ -22,6 +22,7 @@ type PaymentFormType = {
   amount: number;
   currency: "IQD" | "USD";
   type?: "full" | "installment";
+  status?: PaymentStatus;
   note?: string;
   paid_at: string;
 };
@@ -30,6 +31,7 @@ const PaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [snackbar, setSnackbar] = useState<{ 
@@ -62,6 +64,7 @@ const PaymentsPage = () => {
     amount: 0,
     currency: "IQD",
     type: "full",
+    status: "completed",
     note: "",
     paid_at: new Date().toISOString().split('T')[0] 
   });
@@ -91,6 +94,7 @@ const PaymentsPage = () => {
         amount: payment.amount,
         currency: payment.currency as "IQD" | "USD",
         type: payment.type as "full" | "installment" || "full",
+        status: payment.status || "completed",
         note: payment.note || "",
         paid_at: payment.paid_at.split('T')[0]
       });
@@ -104,6 +108,7 @@ const PaymentsPage = () => {
         amount: 0,
         currency: "IQD",
         type: "full",
+        status: "completed",
         note: "",
         paid_at: new Date().toISOString().split('T')[0]
       });
@@ -132,6 +137,7 @@ const PaymentsPage = () => {
         amount: paymentForm.amount,
         currency: paymentForm.currency,
         type: paymentForm.type,
+        status: paymentForm.status,
         note: paymentForm.note || null,
         paid_at: paymentForm.paid_at
       };
@@ -174,8 +180,9 @@ const PaymentsPage = () => {
 
       const matchesCurrency = currencyFilter === "all" || payment.currency === currencyFilter;
       const matchesType = typeFilter === "all" || payment.type === typeFilter;
+      const matchesStatus = statusFilter === "all" || (payment.status || "completed") === statusFilter;
 
-      return matchesSearch && matchesCurrency && matchesType;
+      return matchesSearch && matchesCurrency && matchesType && matchesStatus;
     });
   // الإحصائيات
  const totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
@@ -185,8 +192,7 @@ const PaymentsPage = () => {
   const usdAmount = payments
     .filter(p => p.currency === "USD")
     .reduce((sum, p) => sum + Number(p.amount), 0);
-  const fullPayments = payments.filter(p => p.type === "full").length;
-  const installmentPayments = payments.filter(p => p.type === "installment").length;
+  
   const columns: GridColDef[] = [
     { 
       field: "id", 
@@ -269,6 +275,27 @@ const PaymentsPage = () => {
           color={params.value === "full" ? "success" : "warning"}
         />
       )
+    },
+    {
+      field: "status",
+      headerName: "الحالة",
+      width: 120,
+      renderCell: (params) => {
+        const status = params.value || "completed";
+        const statusConfig = {
+          completed: { label: "مكتملة", color: "success" as const },
+          pending: { label: "معلقة", color: "warning" as const },
+          returned: { label: "مرتجعة", color: "error" as const },
+        };
+        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.completed;
+        return (
+          <Chip
+            label={config.label}
+            size="small"
+            color={config.color}
+          />
+        );
+      }
     },
     { 
       field: "note", 
@@ -461,6 +488,21 @@ const PaymentsPage = () => {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <InputLabel>الحالة</InputLabel>
+              <Select
+                value={statusFilter}
+                label="الحالة"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="all">جميع الحالات</MenuItem>
+                <MenuItem value="completed">مكتملة</MenuItem>
+                <MenuItem value="pending">معلقة</MenuItem>
+                <MenuItem value="returned">مرتجعة</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
           <Grid item xs={12} md={2}>
             <Typography variant="body2" color="text.secondary" align="center">
               {filteredPayments.length} من {payments.length} دفعة
@@ -502,6 +544,13 @@ const PaymentsPage = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+            {/* Info about automatic status change on refund */}
+            <Alert severity="info" sx={{ mb: 1 }}>
+              <Typography variant="body2">
+                <strong>ملاحظة:</strong> عند إنشاء مرتجع لدفعة، سيتم تغيير حالتها تلقائياً إلى "مرتجعة"
+              </Typography>
+            </Alert>
+            
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <TextField
@@ -563,6 +612,20 @@ const PaymentsPage = () => {
                   >
                     <MenuItem value="full">دفعة كاملة</MenuItem>
                     <MenuItem value="installment">قسط</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>حالة الدفعة</InputLabel>
+                  <Select
+                    value={paymentForm.status}
+                    label="حالة الدفعة"
+                    onChange={(e) => setPaymentForm({ ...paymentForm, status: e.target.value as PaymentStatus })}
+                  >
+                    <MenuItem value="completed">مكتملة</MenuItem>
+                    <MenuItem value="pending">معلقة</MenuItem>
+                    <MenuItem value="returned">مرتجعة</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>

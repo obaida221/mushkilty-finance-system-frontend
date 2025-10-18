@@ -1,56 +1,99 @@
-import { useState, useEffect } from "react"
-import axios from "axios"
+import { useState, useEffect } from 'react';
+import { payrollsAPI } from '../api';
+import type { Payroll } from '../types/financial';
+
+export interface CreatePayrollDto {
+  user_id: number;
+  amount: number;
+  currency?: 'USD' | 'IQD';
+  period_start: string; // YYYY-MM-DD
+  period_end: string;   // YYYY-MM-DD
+  paid_at?: string;     // ISO date string
+  note?: string;
+}
+
+export interface UpdatePayrollDto {
+  user_id?: number;
+  amount?: number;
+  currency?: 'USD' | 'IQD';
+  period_start?: string;
+  period_end?: string;
+  paid_at?: string;
+  note?: string;
+}
 
 export const usePayrolls = () => {
-  const [payrolls, setPayrolls] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPayrolls = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const res = await axios.get("/payrolls");
-      setPayrolls(res.data);
+      setLoading(true);
+      setError(null);
+      const response = await payrollsAPI.getAll();
+      setPayrolls(response.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || "فشل في جلب الرواتب");
+      console.error('Failed to fetch payrolls:', err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to load payrolls');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const createPayroll = async (data: any) => {
-    try {
-      const res = await axios.post("/payrolls", data);
-      setPayrolls(prev => [...prev, res.data]);
-      return res.data;
-    } catch (err: any) {
-      throw err;
-    }
-  };
-
-  const updatePayroll = async (id: number, data: any) => {
-    try {
-      const res = await axios.put(`/payrolls/${id}`, data);
-      setPayrolls(prev => prev.map(p => p.id === id ? res.data : p));
-      return res.data;
-    } catch (err: any) {
-      throw err;
-    }
-  };
-
-  const deletePayroll = async (id: number) => {
-    try {
-      await axios.delete(`/payrolls/${id}`);
-      setPayrolls(prev => prev.filter(p => p.id !== id));
-    } catch (err: any) {
-      throw err;
     }
   };
 
   useEffect(() => {
     fetchPayrolls();
   }, []);
+
+  const createPayroll = async (data: CreatePayrollDto): Promise<Payroll> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await payrollsAPI.create(data);
+      await fetchPayrolls(); // Refresh the list
+      return response.data;
+    } catch (err: any) {
+      console.error('Failed to create payroll:', err);
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to create payroll';
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePayroll = async (id: number, data: UpdatePayrollDto): Promise<Payroll> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await payrollsAPI.update(id, data);
+      await fetchPayrolls(); // Refresh the list
+      return response.data;
+    } catch (err: any) {
+      console.error('Failed to update payroll:', err);
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to update payroll';
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePayroll = async (id: number): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await payrollsAPI.delete(id);
+      await fetchPayrolls(); // Refresh the list
+    } catch (err: any) {
+      console.error('Failed to delete payroll:', err);
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to delete payroll';
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return {
     payrolls,

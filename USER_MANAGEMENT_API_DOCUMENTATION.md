@@ -536,7 +536,7 @@ Authorization: Bearer <jwt_token>
 - **Payments**: `payments:create`, `payments:read`, `payments:update`, `payments:delete`, `payments:search`, `payments:reports`
 - **Refunds**: `refunds:create`, `refunds:read`, `refunds:update`, `refunds:delete`, `refunds:search`, `refunds:reports`
 - **Expenses**: `expenses:create`, `expenses:read`, `expenses:update`, `expenses:delete`, `expenses:search`, `expenses:reports`
-- **Payroll**: `payroll:create`, `payroll:read`, `payroll:update`, `payroll:delete`, `payroll:search`, `payroll:reports`
+- **Payrolls**: `payrolls:create`, `payrolls:read`, `payrolls:update`, `payrolls:delete`, `payrolls:search`, `payrolls:reports`
 - **System**: `bootstrap:seed`, `system:admin`
 
 ---

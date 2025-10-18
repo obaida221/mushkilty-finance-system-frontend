@@ -22,9 +22,11 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  Card,
+  CardContent,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, AccountBalance, Edit, Delete } from "@mui/icons-material"
+import { Search, Add, AccountBalance, Edit, Delete, CheckCircle, Schedule } from "@mui/icons-material"
 import { usePayrolls } from "../hooks/usePayrolls"
 import type { Payroll } from "../types"
 
@@ -32,33 +34,48 @@ const PayrollPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
   const [editingPayroll, setEditingPayroll] = useState<Payroll | null>(null)
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" })
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">("all")
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ 
+    open: false, 
+    message: "", 
+    severity: "success" 
+  })
 
   const { payrolls, loading, error, createPayroll, updatePayroll, deletePayroll } = usePayrolls()
 
   const [payrollForm, setPayrollForm] = useState({
-    teacherId: "",
-    month: "",
-    year: new Date().getFullYear(),
+    user_id: "",
     amount: "",
-    bonus: "",
-    deductions: "",
+    currency: "IQD" as "IQD" | "USD",
+    period_start: "",
+    period_end: "",
+    paid_at: "",
+    note: "",
   })
 
   const handleOpenDialog = (payroll?: Payroll) => {
     if (payroll) {
       setEditingPayroll(payroll)
       setPayrollForm({
-        teacherId: payroll.teacherId,
-        month: payroll.month,
-        year: payroll.year,
+        user_id: payroll.user_id.toString(),
         amount: payroll.amount.toString(),
-        bonus: payroll.bonus.toString(),
-        deductions: payroll.deductions.toString(),
+        currency: payroll.currency,
+        period_start: payroll.period_start,
+        period_end: payroll.period_end,
+        paid_at: payroll.paid_at || "",
+        note: payroll.note || "",
       })
     } else {
       setEditingPayroll(null)
-      setPayrollForm({ teacherId: "", month: "", year: new Date().getFullYear(), amount: "", bonus: "", deductions: "" })
+      setPayrollForm({ 
+        user_id: "", 
+        amount: "", 
+        currency: "IQD", 
+        period_start: "", 
+        period_end: "", 
+        paid_at: "", 
+        note: "" 
+      })
     }
     setOpenDialog(true)
   }
@@ -70,17 +87,20 @@ const PayrollPage: React.FC = () => {
   }
 
   const handleSavePayroll = async () => {
-    if (!payrollForm.teacherId || !payrollForm.month || !payrollForm.amount) {
+    if (!payrollForm.user_id || !payrollForm.amount || !payrollForm.period_start || !payrollForm.period_end) {
       handleSnackbar("أدخل جميع البيانات المطلوبة", "error")
       return
     }
 
     try {
       const payload = {
-        ...payrollForm,
+        user_id: Number(payrollForm.user_id),
         amount: Number(payrollForm.amount),
-        bonus: Number(payrollForm.bonus),
-        deductions: Number(payrollForm.deductions),
+        currency: payrollForm.currency,
+        period_start: payrollForm.period_start,
+        period_end: payrollForm.period_end,
+        paid_at: payrollForm.paid_at || undefined,
+        note: payrollForm.note || undefined,
       }
 
       if (editingPayroll) {
@@ -109,65 +129,118 @@ const PayrollPage: React.FC = () => {
     }
   }
 
-  const filteredPayrolls = payrolls.filter((p) => p.month.includes(searchQuery))
+  const handleMarkAsPaid = async (payroll: Payroll) => {
+    try {
+      await updatePayroll(payroll.id, { 
+        paid_at: new Date().toISOString() 
+      })
+      handleSnackbar("تم تحديد الراتب كمدفوع", "success")
+    } catch (err) {
+      console.error(err)
+      handleSnackbar("حدث خطأ أثناء تحديث الحالة", "error")
+    }
+  }
+
+  // Filter by search and status
+  const filteredPayrolls = payrolls.filter((p) => {
+    const matchesSearch = p.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         p.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         p.note?.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesStatus = statusFilter === "all" ? true :
+                         statusFilter === "paid" ? p.paid_at !== null :
+                         p.paid_at === null
+    
+    return matchesSearch && matchesStatus
+  })
+
+  // Calculate statistics
+  const totalIQD = payrolls.filter(p => p.currency === "IQD").reduce((sum, p) => sum + p.amount, 0)
+  const totalUSD = payrolls.filter(p => p.currency === "USD").reduce((sum, p) => sum + p.amount, 0)
+  const unpaidCount = payrolls.filter(p => !p.paid_at).length
+  const paidCount = payrolls.filter(p => p.paid_at).length
 
   const columns: GridColDef[] = [
     {
-      field: "teacherId",
-      headerName: "المدرس",
+      field: "period",
+      headerName: "الفترة",
       flex: 1,
-      minWidth: 150,
-      renderCell: () => <Typography>د. محمد أحمد</Typography>, // يمكن تعديلها لجلب الاسم من relation
-    },
-    { field: "month", headerName: "الشهر", width: 100 },
-    { field: "year", headerName: "السنة", width: 80 },
-    {
-      field: "amount",
-      headerName: "الراتب الأساسي",
-      width: 140,
-      renderCell: (params) => `${Number(params.value).toLocaleString()} د.ع`,
-    },
-    {
-      field: "bonus",
-      headerName: "المكافآت",
-      width: 120,
-      renderCell: (params) => (Number(params.value) > 0 ? `+${Number(params.value).toLocaleString()} د.ع` : "-"),
-    },
-    {
-      field: "deductions",
-      headerName: "الخصومات",
-      width: 120,
-      renderCell: (params) => (Number(params.value) > 0 ? `-${Number(params.value).toLocaleString()} د.ع` : "-"),
-    },
-    {
-      field: "netAmount",
-      headerName: "الصافي",
-      width: 140,
+      minWidth: 180,
       renderCell: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "success.main" }}>
-          {Number(params.row.amount + params.row.bonus - params.row.deductions).toLocaleString()} د.ع
+        <Typography>
+          {params.row.period_start} → {params.row.period_end}
         </Typography>
       ),
     },
     {
-      field: "status",
+      field: "user",
+      headerName: "الموظف",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => (
+        <Typography>
+          {params.row.user?.full_name || params.row.user?.username || `User #${params.row.user_id}`}
+        </Typography>
+      ),
+    },
+    {
+      field: "amount",
+      headerName: "المبلغ",
+      width: 140,
+      renderCell: (params) => (
+        <Typography sx={{ fontWeight: 600 }}>
+          {Number(params.value).toLocaleString()} {params.row.currency === "IQD" ? "د.ع" : "$"}
+        </Typography>
+      ),
+    },
+    {
+      field: "paid_at",
       headerName: "الحالة",
-      width: 100,
+      width: 120,
       renderCell: (params) => (
         <Chip
-          label={params.value === "paid" ? "مدفوع" : "معلق"}
+          label={params.value ? "مدفوع" : "معلق"}
           size="small"
-          color={params.value === "paid" ? "success" : "warning"}
+          color={params.value ? "success" : "warning"}
+          icon={params.value ? <CheckCircle /> : <Schedule />}
         />
       ),
     },
     {
+      field: "paid_date",
+      headerName: "تاريخ الدفع",
+      width: 140,
+      renderCell: (params) => (
+        <Typography>
+          {params.row.paid_at ? new Date(params.row.paid_at).toLocaleDateString("ar-IQ") : "-"}
+        </Typography>
+      ),
+    },
+    {
+      field: "note",
+      headerName: "ملاحظات",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => <Typography>{params.value || "-"}</Typography>,
+    },
+    {
       field: "actions",
       headerName: "إجراءات",
-      width: 120,
+      width: 200,
       sortable: false,
       renderCell: (params) => (
-        <Box>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          {!params.row.paid_at && (
+            <Button 
+              size="small" 
+              variant="outlined"
+              color="success"
+              onClick={() => handleMarkAsPaid(params.row)}
+              startIcon={<CheckCircle />}
+            >
+              دفع
+            </Button>
+          )}
           <Button size="small" onClick={() => handleOpenDialog(params.row)} startIcon={<Edit />} />
           <Button size="small" color="error" onClick={() => handleDelete(params.row.id)} startIcon={<Delete />} />
         </Box>
@@ -190,22 +263,87 @@ const PayrollPage: React.FC = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
+      {/* Statistics Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                إجمالي IQD
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.main" }}>
+                {totalIQD.toLocaleString()} د.ع
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                إجمالي USD
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "success.main" }}>
+                ${totalUSD.toLocaleString()}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                غير مدفوعة
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "warning.main" }}>
+                {unpaidCount}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                مدفوعة
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "success.main" }}>
+                {paidCount}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       <Paper>
         <Box sx={{ p: 3 }}>
-          <TextField
-            fullWidth
-            placeholder="البحث في الرواتب..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ mb: 3 }}
-          />
+          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+            <TextField
+              fullWidth
+              placeholder="البحث في الرواتب..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>الحالة</InputLabel>
+              <Select
+                value={statusFilter}
+                label="الحالة"
+                onChange={(e) => setStatusFilter(e.target.value as "all" | "paid" | "unpaid")}
+              >
+                <MenuItem value="all">الكل</MenuItem>
+                <MenuItem value="paid">مدفوع</MenuItem>
+                <MenuItem value="unpaid">معلق</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
 
           <DataGrid
             rows={filteredPayrolls}
@@ -225,7 +363,7 @@ const PayrollPage: React.FC = () => {
       </Paper>
 
       {/* Payroll Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <AccountBalance />
@@ -234,68 +372,81 @@ const PayrollPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-            <FormControl fullWidth>
-              <InputLabel>المدرس</InputLabel>
-              <Select
-                value={payrollForm.teacherId}
-                label="المدرس"
-                onChange={(e) => setPayrollForm({ ...payrollForm, teacherId: e.target.value })}
-              >
-                <MenuItem value="1">د. محمد أحمد</MenuItem>
-                <MenuItem value="2">د. فاطمة علي</MenuItem>
-                <MenuItem value="3">د. حسن محمود</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>الشهر</InputLabel>
-              <Select
-                value={payrollForm.month}
-                label="الشهر"
-                onChange={(e) => setPayrollForm({ ...payrollForm, month: e.target.value })}
-              >
-                <MenuItem value="يناير">يناير</MenuItem>
-                <MenuItem value="فبراير">فبراير</MenuItem>
-                <MenuItem value="مارس">مارس</MenuItem>
-                <MenuItem value="أبريل">أبريل</MenuItem>
-                <MenuItem value="مايو">مايو</MenuItem>
-                <MenuItem value="يونيو">يونيو</MenuItem>
-                <MenuItem value="يوليو">يوليو</MenuItem>
-                <MenuItem value="أغسطس">أغسطس</MenuItem>
-                <MenuItem value="سبتمبر">سبتمبر</MenuItem>
-                <MenuItem value="أكتوبر">أكتوبر</MenuItem>
-                <MenuItem value="نوفمبر">نوفمبر</MenuItem>
-                <MenuItem value="ديسمبر">ديسمبر</MenuItem>
-              </Select>
-            </FormControl>
+            <TextField
+              fullWidth
+              label="معرف المستخدم (User ID)"
+              type="number"
+              value={payrollForm.user_id}
+              onChange={(e) => setPayrollForm({ ...payrollForm, user_id: e.target.value })}
+              helperText="أدخل معرف الموظف/المعلم"
+            />
+            
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="الراتب الأساسي"
+                  label="بداية الفترة"
+                  type="date"
+                  value={payrollForm.period_start}
+                  onChange={(e) => setPayrollForm({ ...payrollForm, period_start: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="نهاية الفترة"
+                  type="date"
+                  value={payrollForm.period_end}
+                  onChange={(e) => setPayrollForm({ ...payrollForm, period_end: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="المبلغ"
                   type="number"
                   value={payrollForm.amount}
                   onChange={(e) => setPayrollForm({ ...payrollForm, amount: e.target.value })}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="المكافآت"
-                  type="number"
-                  value={payrollForm.bonus}
-                  onChange={(e) => setPayrollForm({ ...payrollForm, bonus: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="الخصومات"
-                  type="number"
-                  value={payrollForm.deductions}
-                  onChange={(e) => setPayrollForm({ ...payrollForm, deductions: e.target.value })}
-                />
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>العملة</InputLabel>
+                  <Select
+                    value={payrollForm.currency}
+                    label="العملة"
+                    onChange={(e) => setPayrollForm({ ...payrollForm, currency: e.target.value as "IQD" | "USD" })}
+                  >
+                    <MenuItem value="IQD">دينار عراقي (IQD)</MenuItem>
+                    <MenuItem value="USD">دولار ($)</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
+
+            <TextField
+              fullWidth
+              label="تاريخ الدفع (اختياري)"
+              type="datetime-local"
+              value={payrollForm.paid_at}
+              onChange={(e) => setPayrollForm({ ...payrollForm, paid_at: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              helperText="اترك فارغاً إذا لم يتم الدفع بعد"
+            />
+
+            <TextField
+              fullWidth
+              label="ملاحظات (اختياري)"
+              multiline
+              rows={3}
+              value={payrollForm.note}
+              onChange={(e) => setPayrollForm({ ...payrollForm, note: e.target.value })}
+            />
           </Box>
         </DialogContent>
         <DialogActions>

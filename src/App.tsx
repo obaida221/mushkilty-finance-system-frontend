@@ -186,7 +186,7 @@ const AppContent: React.FC = () => {
                         <Route 
                           path="/payroll" 
                           element={
-                            <ProtectedRoute requiredPermission="payroll:read">
+                            <ProtectedRoute requiredPermission="payrolls:read">
                               <PayrollPage />
                             </ProtectedRoute>
                           } 

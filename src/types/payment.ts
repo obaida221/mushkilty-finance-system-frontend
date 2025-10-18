@@ -1,3 +1,5 @@
+export type PaymentStatus = 'completed' | 'returned' | 'pending';
+
 export interface Payment {
   id: number;
   user_id: number;
@@ -8,6 +10,7 @@ export interface Payment {
   amount: number;
   currency: string;
   type?: string | null;
+  status?: PaymentStatus;
 
   note?: string | null;
   paid_at: string;
@@ -39,6 +42,7 @@ export interface PaymentFormData {
   amount: number;
   currency: string;
   type?: string | null;
+  status?: PaymentStatus;
   note?: string | null;
   paid_at: string;
 }

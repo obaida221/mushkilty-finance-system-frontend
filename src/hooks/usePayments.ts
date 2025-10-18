@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { paymentsAPI } from "../api";
 import type { Payment } from "../types/payment";
 
+export type PaymentStatus = 'completed' | 'returned' | 'pending';
+
 export type CreatePaymentDto = {
   user_id: number;
   enrollment_id?: number | null;
@@ -10,6 +12,7 @@ export type CreatePaymentDto = {
   amount: number;
   currency?: "IQD" | "USD";
   type?: "full" | "installment";
+  status?: PaymentStatus;
   paid_at?: string;
   note?: string | null;
   payment_proof?: string;

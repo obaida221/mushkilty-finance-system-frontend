@@ -12,6 +12,7 @@ export interface Transaction {
 
 // Payment Types
 export type PaymentType = 'installment' | 'full';
+export type PaymentStatus = 'completed' | 'returned' | 'pending';
 export type Currency = 'USD' | 'IQD';
 
 export interface PaymentMethod {
@@ -29,6 +30,7 @@ export interface Payment {
   amount: number;
   currency: Currency;
   type?: PaymentType | null;
+  status?: PaymentStatus;
   paid_at: string; // ISO date string
   payment_proof?: string | null;
   created_at: string;
@@ -76,28 +78,33 @@ export interface Expense {
 
 // Refund Types
 export interface Refund {
-  id: string
-  studentId: string
-  student?: {
-    id: string
-    fullName: string
-    email: string
-    phone: string
-    courseId: string | null
-    enrollmentDate: string | null
-    status: "active" | "inactive" | "graduated"
-    totalPaid: number
-    totalDue: number
-    discountId: string | null
-    createdAt: string
-  }
-  amount: number
-  reason: string
-  transactionId: string
-  transaction?: Transaction
-  date: string
-  approvedBy: string
-  createdAt: string
+  id: number;
+  payment_id: number;
+  reason?: string | null;
+  refunded_at?: string | null; // ISO date string
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  payment?: {
+    id: number;
+    amount: number;
+    currency: Currency;
+    type?: PaymentType | null;
+    paid_at: string;
+    payer?: string | null;
+    enrollment?: {
+      id: number;
+      batch_name?: string;
+      student?: {
+        id: number;
+        name?: string;
+        fullName?: string;
+        phone?: string;
+        email?: string;
+      };
+    } | null;
+  };
 }
 
 // Discount Types
@@ -117,27 +124,22 @@ export interface Discount {
 
 // Payroll Types
 export interface Payroll {
-  id: string
-  teacherId: string
-  teacher?: {
-    id: string
-    fullName: string
-    email: string
-    phone: string
-    specialization: string
-    salary: number
-    status: "active" | "inactive"
-    createdAt: string
-  }
-  amount: number
-  bonus: number
-  deductions: number
-  netAmount: number
-  month: string
-  year: number
-  transactionId: string
-  transaction?: Transaction
-  status: "pending" | "paid"
-  paidDate: string | null
-  createdAt: string
+  id: number;
+  user_id: number;
+  amount: number;
+  currency: Currency;
+  period_start: string; // Date in YYYY-MM-DD format
+  period_end: string;   // Date in YYYY-MM-DD format
+  paid_at: string | null; // ISO date string or null if unpaid
+  note?: string | null;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+    full_name: string;
+  };
 }
