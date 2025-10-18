@@ -162,7 +162,7 @@ const PaymentsPage = () => {
     }
   };
 
-      // فلترة الواردات
+      // فلترة الدفعات
     const filteredPayments = payments.filter((payment: Payment) => {
       const matchesSearch =
         (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
@@ -322,7 +322,7 @@ const PaymentsPage = () => {
       {/* الرأس */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PaymentIcon /> إدارة الواردات
+          <PaymentIcon /> إدارة الدفعات
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button 
@@ -355,7 +355,7 @@ const PaymentsPage = () => {
                   <PaymentIcon sx={{ color: "white" }} />
                 </Box>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">إجمالي الواردات</Typography>
+                  <Typography variant="body2" color="text.secondary">إجمالي الدفعات</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>{payments.length}</Typography>
                 </Box>
               </Box>
@@ -421,7 +421,7 @@ const PaymentsPage = () => {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="بحث في الواردات..."
+              placeholder="بحث في الدفعات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{ 
@@ -469,7 +469,7 @@ const PaymentsPage = () => {
         </Grid>
       </Paper>
 
-      {/* جدول الواردات */}
+      {/* جدول الدفعات */}
       <Paper>
         <Box sx={{ p: 2 }}>
           <DataGrid
