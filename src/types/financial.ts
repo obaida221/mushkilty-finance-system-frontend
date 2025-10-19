@@ -138,8 +138,8 @@ export interface Payroll {
   // Relations
   user?: {
     id: number;
-    username: string;
+    name: string;
     email: string;
-    full_name: string;
+    role_id: number;
   };
 }

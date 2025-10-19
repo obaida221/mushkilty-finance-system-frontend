@@ -192,7 +192,7 @@ const EnrollmentsPage: React.FC = () => {
     },
     {
       field: "batch_id",
-      headerName: "المجموعة",
+      headerName: "الدفعة",
       flex: 1,
       minWidth: 150,
       renderCell: (params) => {
@@ -386,10 +386,10 @@ const EnrollmentsPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} md={3}>
               <FormControl fullWidth>
-                <InputLabel>المجموعة</InputLabel>
+                <InputLabel>الدفعة</InputLabel>
                 <Select
                   value={filterBatch}
-                  label="المجموعة"
+                  label="الدفعة"
                   onChange={(e) => setFilterBatch(e.target.value)}
                 >
                   <MenuItem value="all">جميع المجموعات</MenuItem>
@@ -451,10 +451,10 @@ const EnrollmentsPage: React.FC = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>المجموعة</InputLabel>
+                  <InputLabel>الدفعة</InputLabel>
                   <Select
                     value={enrollmentForm.batch_id || ""}
-                    label="المجموعة"
+                    label="الدفعة"
                     onChange={(e) => setEnrollmentForm({ ...enrollmentForm, batch_id: Number(e.target.value) })}
                   >
                     {batches.map((batch) => (

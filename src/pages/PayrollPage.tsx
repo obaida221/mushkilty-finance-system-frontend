@@ -143,14 +143,13 @@ const PayrollPage: React.FC = () => {
 
   // Filter by search and status
   const filteredPayrolls = payrolls.filter((p) => {
-    const matchesSearch = p.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         p.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = p.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         p.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          p.note?.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === "all" ? true :
                          statusFilter === "paid" ? p.paid_at !== null :
                          p.paid_at === null
-    
     return matchesSearch && matchesStatus
   })
 
@@ -179,7 +178,7 @@ const PayrollPage: React.FC = () => {
       minWidth: 150,
       renderCell: (params) => (
         <Typography>
-          {params.row.user?.full_name || params.row.user?.username || `User #${params.row.user_id}`}
+          {params.row.user?.name || params.row.user?.email || `User #${params.row.user_id}`}
         </Typography>
       ),
     },
