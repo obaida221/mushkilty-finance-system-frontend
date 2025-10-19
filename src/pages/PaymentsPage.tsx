@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import {
   Box, Typography, Paper, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, MenuItem, FormControl, InputLabel, Select, Chip, Grid, Card, CardContent, 
-  IconButton, CircularProgress, Alert, Snackbar, Tooltip
+  InputAdornment, MenuItem, FormControl, InputLabel, Select, Chip, Grid, Card, CardContent,
+  IconButton, CircularProgress, Alert, Snackbar, Tooltip, Autocomplete
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { 
-  Search, Add, Payment as PaymentIcon, Edit, Delete, Visibility, 
+import {
+  Search, Add, Payment as PaymentIcon, Edit, Delete, Visibility,
   Refresh, Person, CreditCard
 } from "@mui/icons-material";
 import { usePayments } from "../hooks/usePayments";
 import { usePaymentMethods } from "../hooks/usePaymentMethods";
+import { useStudents } from "../hooks/useStudents";
+import { useEnrollments } from "../hooks/useEnrollments";
+import { useBatches } from "../hooks/useBatches";
 import type { Payment } from "../types/payment";
 import type { CreatePaymentDto, PaymentStatus } from "../hooks/usePayments";
 
@@ -25,6 +28,7 @@ type PaymentFormType = {
   status?: PaymentStatus;
   note?: string;
   paid_at: string;
+  payment_source: "student_enrollment" | "external";
 };
 
 const PaymentsPage = () => {
@@ -36,30 +40,35 @@ const PaymentsPage = () => {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [snackbar, setSnackbar] = useState<{ 
-    open: boolean; 
-    message: string; 
-    severity: "success" | "error" 
-  }>({ 
-    open: false, 
-    message: "", 
-    severity: "success" 
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error"
+  }>({
+    open: false,
+    message: "",
+    severity: "success"
   });
 
-  const { 
-    payments, 
-    loading: paymentsLoading, 
-    error: paymentsError, 
-    createPayment, 
-    updatePayment, 
+  const [paymentSourceFilter, setPaymentSourceFilter] = useState("all");
+
+  const {
+    payments,
+    loading: paymentsLoading,
+    error: paymentsError,
+    createPayment,
+    updatePayment,
     deletePayment,
-    refreshPayments 
+    refreshPayments
   } = usePayments();
 
   const { paymentMethods } = usePaymentMethods();
+  const { students } = useStudents();
+  const { enrollments } = useEnrollments();
+  const { batches } = useBatches();
 
   const [paymentForm, setPaymentForm] = useState<PaymentFormType>({
-    user_id: 0, 
+    user_id: 0,
     enrollment_id: null,
     payment_method_id: 0,
     payer: "",
@@ -68,8 +77,11 @@ const PaymentsPage = () => {
     type: "full",
     status: "completed",
     note: "",
-    paid_at: new Date().toISOString().split('T')[0] 
+    paid_at: new Date().toISOString().split('T')[0],
+    payment_source: "student_enrollment"
   });
+
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
   const getCurrentUserId = (): number => {
     const userData = localStorage.getItem('user');
@@ -98,8 +110,18 @@ const PaymentsPage = () => {
         type: payment.type as "full" | "installment" || "full",
         status: payment.status || "completed",
         note: payment.note || "",
-        paid_at: payment.paid_at.split('T')[0]
+        paid_at: payment.paid_at.split('T')[0],
+        payment_source: payment.enrollment_id ? "student_enrollment" : "external"
       });
+
+      // If there's an enrollment, set the student
+      if (payment.enrollment_id) {
+        const enrollment = enrollments.find(e => e.id === payment.enrollment_id);
+        if (enrollment) {
+          const student = students.find(s => s.id === enrollment.student_id);
+          setSelectedStudent(student || null);
+        }
+      }
     } else {
       setEditingPayment(null);
       setPaymentForm({
@@ -112,8 +134,10 @@ const PaymentsPage = () => {
         type: "full",
         status: "completed",
         note: "",
-        paid_at: new Date().toISOString().split('T')[0]
+        paid_at: new Date().toISOString().split('T')[0],
+        payment_source: "student_enrollment"
       });
+      setSelectedStudent(null);
     }
     setOpenDialog(true);
   };
@@ -130,13 +154,94 @@ const PaymentsPage = () => {
       return;
     }
 
+    // Validate based on payment source
+    if (paymentForm.payment_source === "student_enrollment" && !paymentForm.enrollment_id) {
+      handleSnackbar("يرجى اختيار تسجيل الطالب", "error");
+      return;
+    }
+
+    if (paymentForm.payment_source === "external" && !paymentForm.payer) {
+      handleSnackbar("يرجى إدخال اسم الدافع", "error");
+      return;
+    }
+
+    // Check payment type compatibility with existing payments
+    if (paymentForm.payment_source === "student_enrollment" && paymentForm.enrollment_id) {
+      const existingPayments = payments.filter(p => 
+        p.enrollment_id === paymentForm.enrollment_id && 
+        p.status !== 'returned'
+      );
+
+      // Check if there are existing installments when trying to add a full payment
+      if (paymentForm.type === "full" && 
+          existingPayments.some(p => p.type === "installment")) {
+        handleSnackbar(
+          "لا يمكن إضافة دفعة كاملة لتسجيل لديه أقساط مسجلة بالفعل",
+          "error"
+        );
+        return;
+      }
+
+      // Check if there's an existing full payment when trying to add an installment
+      if (paymentForm.type === "installment" && 
+          existingPayments.some(p => p.type === "full")) {
+        handleSnackbar(
+          "لا يمكن إضافة قسط لتسجيل تم دفعه بالكامل",
+          "error"
+        );
+        return;
+      }
+    }
+
+    // For installment payments, check if total exceeds enrollment price
+    if (paymentForm.payment_source === "student_enrollment" && 
+        paymentForm.enrollment_id && 
+        paymentForm.type === "installment") {
+
+      const enrollment = enrollments.find(e => e.id === paymentForm.enrollment_id);
+      if (enrollment) {
+        // Calculate previous payments for this enrollment (excluding returned payments)
+        let previousPayments = payments
+          .filter(p => p.enrollment_id === paymentForm.enrollment_id && p.status !== 'returned')
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+        // If editing a payment, exclude it from previous payments calculation
+        if (editingPayment && editingPayment.enrollment_id === paymentForm.enrollment_id) {
+          const editingPaymentAmount = Number(editingPayment.amount || 0);
+          // If the payment being edited is not returned, subtract it from previous payments
+          if (editingPayment.status !== 'returned') {
+            previousPayments -= editingPaymentAmount;
+          }
+        }
+
+        const totalAfterPayment = previousPayments + paymentForm.amount;
+        const enrollmentPrice = Number(enrollment.total_price || 0);
+
+        if (totalAfterPayment > enrollmentPrice) {
+          handleSnackbar(
+            `المبلغ المدفوع سيتجاوز السعر الإجمالي. المبلغ المدفوع حالياً: ${previousPayments} ${enrollment.currency}. المبلغ المتبقي: ${enrollmentPrice - previousPayments} ${enrollment.currency}`,
+            "error"
+          );
+          return;
+        }
+
+        // If this is the final payment, show a success message
+        if (totalAfterPayment === enrollmentPrice && previousPayments > 0) {
+          handleSnackbar(
+            `سيتم إكمال دفع المبلغ المتبقي للتسجيل بعد هذا القسط`,
+            "success"
+          );
+        }
+      }
+    }
+
     try {
       const payload: CreatePaymentDto = {
         user_id: paymentForm.user_id,
         enrollment_id: paymentForm.enrollment_id,
         payment_method_id: paymentForm.payment_method_id,
         payer: paymentForm.payer || null,
-        amount: paymentForm.amount,
+        amount: Number(paymentForm.amount),
         currency: paymentForm.currency,
         type: paymentForm.type,
         status: paymentForm.status,
@@ -152,13 +257,15 @@ const PaymentsPage = () => {
         handleSnackbar("تم تسجيل الواردة بنجاح", "success");
       }
       handleCloseDialog();
+      // Refresh payments to ensure UI is updated
+      refreshPayments();
     } catch (err: any) {
       console.error(err);
       handleSnackbar(err.response?.data?.message || "حدث خطأ أثناء الحفظ", "error");
     }
   };
 
-  // دوال الحذف الجديدة - مشابهة لصفحة الخصومات
+  // دوال الحذف
   const openDeleteDialog = (payment: Payment) => {
     setSelectedPayment(payment);
     setDeleteDialogOpen(true);
@@ -185,7 +292,6 @@ const PaymentsPage = () => {
 
   // فلترة الواردات
   const filteredPayments = payments.filter((payment: Payment) => {
-    // console.log('Filtering payment:', payment);
     const matchesSearch =
       (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (payment.note?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
@@ -197,8 +303,11 @@ const PaymentsPage = () => {
     const matchesCurrency = currencyFilter === "all" || payment.currency === currencyFilter;
     const matchesType = typeFilter === "all" || payment.type === typeFilter;
     const matchesStatus = statusFilter === "all" || (payment.status || "completed") === statusFilter;
+    const matchesPaymentSource = paymentSourceFilter === "all" || 
+      (paymentSourceFilter === "external" && !payment.enrollment_id) ||
+      (paymentSourceFilter === "student_enrollment" && payment.enrollment_id);
 
-    return matchesSearch && matchesCurrency && matchesType && matchesStatus;
+    return matchesSearch && matchesCurrency && matchesType && matchesStatus && matchesPaymentSource;
   });
 
   // الإحصائيات
@@ -209,46 +318,46 @@ const PaymentsPage = () => {
   const usdAmount = payments
     .filter(p => p.currency === "USD")
     .reduce((sum, p) => sum + Number(p.amount), 0);
-  
+
   const columns: GridColDef[] = [
-    { 
-      field: "id", 
-      headerName: "ID", 
-      width: 80 
+    {
+      field: "id",
+      headerName: "ID",
+      width: 50
     },
-    { 
-      field: "paid_at", 
-      headerName: "تاريخ الدفع", 
-      width: 120,
+    {
+      field: "paid_at",
+      headerName: "تاريخ الدفع",
+      width: 100,
       valueGetter: (params) => new Date(params.value).toLocaleDateString('ar-EG')
     },
     {
       field: "user",
       headerName: "المستلم",
-      flex: 1,
+      width: 200,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Person fontSize="small" color="action" />
-            <Typography color={params.row.user?.name ? "text.primary" : "text.secondary"}>
-              {params.row.user?.name || "—"}
-            </Typography>
+          <Typography color={params.row.user?.name ? "text.primary" : "text.secondary"}>
+            {params.row.user?.name || "—"}
+          </Typography>
         </Box>
       )
     },
     {
       field: "payer",
       headerName: "الدافع",
-      flex: 1,
+      width: 150,
       renderCell: (params) => (
         <Typography color={params.value ? "text.primary" : "text.secondary"}>
-          {params.value || "—"}
+          {params.value || params.row.enrollment.student.full_name || "—"}
         </Typography>
       )
     },
     {
       field: "paymentMethod",
       headerName: "طريقة الدفع",
-      width: 150,
+      width: 100,
       renderCell: (params) => (
         <Chip
           label={params.row.paymentMethod?.name || "غير معروف"}
@@ -268,23 +377,10 @@ const PaymentsPage = () => {
         </Typography>
       ),
     },
-    // {
-    //   field: "currency",
-    //   headerName: "العملة",
-    //   width: 100,
-    //   renderCell: (params) => (
-    //     <Chip
-    //       label={params.value}
-    //       size="small"
-    //       color={params.value === "IQD" ? "primary" : "secondary"}
-    //       variant="filled"
-    //     />
-    //   )
-    // },
     {
       field: "type",
       headerName: "النوع",
-      width: 120,
+      width: 100,
       renderCell: (params) => (
         <Chip
           label={params.value === "full" ? "كاملة" : "قسط"}
@@ -296,7 +392,7 @@ const PaymentsPage = () => {
     {
       field: "status",
       headerName: "الحالة",
-      width: 120,
+      width: 100,
       renderCell: (params) => {
         const status = params.value || "completed";
         const statusConfig = {
@@ -314,10 +410,10 @@ const PaymentsPage = () => {
         );
       }
     },
-    { 
-      field: "note", 
-      headerName: "ملاحظات", 
-      flex: 1,
+    {
+      field: "note",
+      headerName: "ملاحظات",
+      width: 120,
       renderCell: (params) => (
         <Typography variant="body2" color={params.value ? "text.primary" : "text.secondary"}>
           {params.value || "لا توجد ملاحظات"}
@@ -327,7 +423,7 @@ const PaymentsPage = () => {
     {
       field: "actions",
       headerName: "إجراءات",
-      width: 140,
+      width: 100,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -369,9 +465,9 @@ const PaymentsPage = () => {
           <PaymentIcon /> إدارة الواردات
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<Refresh />} 
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
             onClick={refreshPayments}
             disabled={paymentsLoading}
           >
@@ -462,22 +558,22 @@ const PaymentsPage = () => {
       {/* البحث والفلترة */}
       <Paper sx={{ mb: 3, p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6} md={6}>
             <TextField
               fullWidth
               placeholder="بحث في الواردات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{ 
+              InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     <Search />
                   </InputAdornment>
-                ) 
+                )
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.5}>
             <FormControl fullWidth>
               <InputLabel>العملة</InputLabel>
               <Select
@@ -491,7 +587,21 @@ const PaymentsPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3.5}>
+            <FormControl fullWidth>
+              <InputLabel>مصدر الدفع</InputLabel>
+              <Select
+                value={paymentSourceFilter}
+                label="مصدر الدفع"
+                onChange={(e) => setPaymentSourceFilter(e.target.value)}
+              >
+                <MenuItem value="all">جميع المصادر</MenuItem>
+                <MenuItem value="external">جهة خارجية</MenuItem>
+                <MenuItem value="student_enrollment">تسجيل طالب</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
             <FormControl fullWidth>
               <InputLabel>نوع الدفع</InputLabel>
               <Select
@@ -505,7 +615,7 @@ const PaymentsPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <FormControl fullWidth>
               <InputLabel>الحالة</InputLabel>
               <Select
@@ -534,8 +644,8 @@ const PaymentsPage = () => {
           <DataGrid
             rows={filteredPayments}
             columns={columns}
-            initialState={{ 
-              pagination: { paginationModel: { pageSize: 10 } } 
+            initialState={{
+              pagination: { paginationModel: { pageSize: 10 } }
             }}
             pageSizeOptions={[5, 10, 25, 50]}
             autoHeight
@@ -545,9 +655,9 @@ const PaymentsPage = () => {
             sx={{
               border: "none",
               "& .MuiDataGrid-cell": { borderColor: "divider" },
-              "& .MuiDataGrid-columnHeaders": { 
-                bgcolor: "background.default", 
-                borderColor: "divider" 
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "background.default",
+                borderColor: "divider"
               }
             }}
           />
@@ -567,16 +677,127 @@ const PaymentsPage = () => {
                 <strong>ملاحظة:</strong> عند إنشاء مرتجع لواردة، سيتم تغيير حالتها تلقائياً إلى "مرتجعة"
               </Typography>
             </Alert>
-            
+
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="اسم الدافع (اختياري)"
-                  value={paymentForm.payer}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, payer: e.target.value })}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>جهة الدفع</InputLabel>
+                  <Select
+                    value={paymentForm.payment_source || "student_enrollment"}
+                    label="جهة الدفع"
+                    onChange={(e) => {
+                      const value = e.target.value as "student_enrollment" | "external";
+                      setPaymentForm({
+                        ...paymentForm,
+                        payment_source: value,
+                        enrollment_id: null,
+                        payer: value === "external" ? paymentForm.payer || "" : "",
+                        amount: value === "student_enrollment" ? 0 : paymentForm.amount
+                      });
+                      if (value === "external") {
+                        setSelectedStudent(null);
+                      }
+                    }}
+                  >
+                    <MenuItem value="student_enrollment">تسجيل طالب</MenuItem>
+                    <MenuItem value="external">جهة خارجية</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
+
+              {paymentForm.payment_source === "student_enrollment" && (
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    options={students}
+                    getOptionLabel={(option: any) => `${option.full_name} - ${option.phone}`}
+                    value={students.find(s => s.id === (selectedStudent?.id || 0)) || null}
+                    onChange={(_, newValue: any) => {
+                      setSelectedStudent(newValue);
+                      setPaymentForm({
+                        ...paymentForm,
+                        enrollment_id: null,
+                        amount: 0
+                      });
+                    }}
+                    renderInput={(params: any) => (
+                      <TextField {...params} label="اختر الطالب" required />
+                    )}
+                  />
+                </Grid>
+              )}
+
+              {paymentForm.payment_source === "external" && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="اسم الدافع"
+                    value={paymentForm.payer || ""}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, payer: e.target.value })}
+                  />
+                </Grid>
+              )}
+            </Grid>
+
+            {paymentForm.payment_source === "student_enrollment" && selectedStudent && (
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Autocomplete
+                    options={enrollments.filter(e => {
+                      // Filter by student and status
+                      if (e.student_id !== selectedStudent.id || 
+                          e.status === 'completed' || 
+                          e.status === 'dropped') {
+                        return false;
+                      }
+
+                      // Check if enrollment is fully paid (excluding returned payments)
+                      const totalPaid = payments
+                        .filter(p => p.enrollment_id === e.id && p.status !== 'returned')
+                        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+                      const enrollmentPrice = Number(e.total_price || 0);
+
+                      // Show enrollment if there's any remaining amount
+                      return totalPaid < enrollmentPrice;
+                    })}
+                    getOptionLabel={(option: any) => {
+                      const batch = batches.find(b => b.id === option.batch_id);
+                      const totalPaid = payments
+                        .filter(p => p.enrollment_id === option.id && p.status !== 'returned')
+                        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+                      const remaining = Number(option.total_price || 0) - totalPaid;
+
+                      return `${batch?.name || 'غير محدد'} - ${option.status} - ${option.total_price} ${option.currency} (متبقي: ${remaining} ${option.currency})`;
+                    }}
+                    value={enrollments.find(e => e.id === paymentForm.enrollment_id) || null}
+                    onChange={(_, enrollmentValue: any) => {
+                      // Always use enrollment currency
+                      // For full payments, use enrollment total price
+                      // For installments, allow manual input
+                      if (paymentForm.type === "full") {
+                        setPaymentForm({
+                          ...paymentForm,
+                          enrollment_id: enrollmentValue ? enrollmentValue.id : null,
+                          amount: enrollmentValue ? Number(enrollmentValue.total_price) || +enrollmentValue.total_price : 0,
+                          currency: enrollmentValue ? enrollmentValue.currency : paymentForm.currency
+                        });
+                      } else {
+                        setPaymentForm({
+                          ...paymentForm,
+                          enrollment_id: enrollmentValue ? enrollmentValue.id : null,
+                          currency: enrollmentValue ? enrollmentValue.currency : paymentForm.currency
+                        });
+                      }
+                    }}
+                    renderInput={(params: any) => (
+                      <TextField {...params} label="اختر التسجيل" required />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+            )}
+
+            <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>طريقة الدفع *</InputLabel>
@@ -596,29 +817,57 @@ const PaymentsPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="المبلغ *"
-                  type="number"
-                  value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
-                  InputProps={{ inputProps: { min: 0 } }}
-                />
+                {paymentForm.payment_source === "student_enrollment" && paymentForm.enrollment_id && paymentForm.type === "full" ? (
+                  <TextField
+                    fullWidth
+                    label="المبلغ"
+                    value={`${paymentForm.amount.toLocaleString()} ${paymentForm.currency}`}
+                    disabled
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PaymentIcon />
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                ) : (
+                  <TextField
+                    fullWidth
+                    label="المبلغ *"
+                    type="number"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
+                    InputProps={{ 
+                      inputProps: { min: 0 },
+                      endAdornment: paymentForm.payment_source === "student_enrollment" && paymentForm.enrollment_id ? (
+                        <InputAdornment position="end">
+                          {paymentForm.currency}
+                        </InputAdornment>
+                      ) : null
+                    }}
+                  />
+                )}
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>العملة *</InputLabel>
-                  <Select
-                    value={paymentForm.currency}
-                    label="العملة *"
-                    onChange={(e) => setPaymentForm({ ...paymentForm, currency: e.target.value as "IQD" | "USD" })}
-                  >
-                    <MenuItem value="IQD">دينار عراقي (IQD)</MenuItem>
-                    <MenuItem value="USD">دولار أمريكي (USD)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+
+              {paymentForm.payment_source === "external" && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>العملة *</InputLabel>
+                    <Select
+                      value={paymentForm.currency}
+                      label="العملة *"
+                      onChange={(e) => setPaymentForm({ ...paymentForm, currency: e.target.value as "IQD" | "USD" })}
+                    >
+                      <MenuItem value="IQD">دينار عراقي (IQD)</MenuItem>
+                      <MenuItem value="USD">دولار أمريكي (USD)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>نوع الواردة</InputLabel>
@@ -632,6 +881,7 @@ const PaymentsPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>حالة الواردة</InputLabel>
@@ -646,6 +896,7 @@ const PaymentsPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -656,13 +907,14 @@ const PaymentsPage = () => {
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="ملاحظات (اختياري)"
                   multiline
                   rows={3}
-                  value={paymentForm.note}
+                  value={paymentForm.note || ""}
                   onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
                 />
               </Grid>
@@ -671,17 +923,19 @@ const PaymentsPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleSavePayment}
-            disabled={!paymentForm.payment_method_id || paymentForm.amount <= 0}
+            disabled={!paymentForm.payment_method_id || paymentForm.amount <= 0 ||
+              (paymentForm.payment_source === "student_enrollment" && !paymentForm.enrollment_id) ||
+              (paymentForm.payment_source === "external" && !paymentForm.payer)}
           >
             {editingPayment ? "تحديث" : "حفظ"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* حوار الحذف - مشابه لصفحة الخصومات */}
+      {/* حوار الحذف */}
       <Dialog open={deleteDialogOpen} onClose={closeDeleteDialog} maxWidth="sm" fullWidth>
         <DialogTitle>تأكيد الحذف</DialogTitle>
         <DialogContent>
@@ -703,8 +957,8 @@ const PaymentsPage = () => {
         autoHideDuration={6000}
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       >
-        <Alert 
-          severity={snackbar.severity} 
+        <Alert
+          severity={snackbar.severity}
           sx={{ width: "100%" }}
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         >
