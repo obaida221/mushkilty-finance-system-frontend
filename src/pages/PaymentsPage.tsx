@@ -34,6 +34,8 @@ const PaymentsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [snackbar, setSnackbar] = useState<{ 
     open: boolean; 
     message: string; 
@@ -156,36 +158,50 @@ const PaymentsPage = () => {
     }
   };
 
-  const handleDeletePayment = async (id: number) => {
-    if (window.confirm("هل أنت متأكد من حذف هذه الدفعة؟")) {
-      try {
-        await deletePayment(id);
-        handleSnackbar("تم حذف الدفعة بنجاح", "success");
-      } catch (err: any) {
-        console.error(err);
-        handleSnackbar(err.response?.data?.message || "حدث خطأ أثناء الحذف", "error");
-      }
+  // دوال الحذف الجديدة - مشابهة لصفحة الخصومات
+  const openDeleteDialog = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeletePayment = async () => {
+    if (!selectedPayment) return;
+
+    try {
+      await deletePayment(selectedPayment.id);
+      handleSnackbar("تم حذف الدفعة بنجاح", "success");
+      setDeleteDialogOpen(false);
+      setSelectedPayment(null);
+    } catch (err: any) {
+      console.error(err);
+      handleSnackbar(err.response?.data?.message || "حدث خطأ أثناء الحذف", "error");
     }
   };
 
-      // فلترة الدفعات
-    const filteredPayments = payments.filter((payment: Payment) => {
-      const matchesSearch =
-        (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-        (payment.note?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-        (payment.user?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-        (payment.payment_method?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-        payment.amount.toString().includes(searchQuery) ||
-        payment.id.toString().includes(searchQuery);
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setSelectedPayment(null);
+  };
 
-      const matchesCurrency = currencyFilter === "all" || payment.currency === currencyFilter;
-      const matchesType = typeFilter === "all" || payment.type === typeFilter;
-      const matchesStatus = statusFilter === "all" || (payment.status || "completed") === statusFilter;
+  // فلترة الدفعات
+  const filteredPayments = payments.filter((payment: Payment) => {
+    const matchesSearch =
+      (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (payment.note?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (payment.user?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (payment.payment_method?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      payment.amount.toString().includes(searchQuery) ||
+      payment.id.toString().includes(searchQuery);
 
-      return matchesSearch && matchesCurrency && matchesType && matchesStatus;
-    });
+    const matchesCurrency = currencyFilter === "all" || payment.currency === currencyFilter;
+    const matchesType = typeFilter === "all" || payment.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || (payment.status || "completed") === statusFilter;
+
+    return matchesSearch && matchesCurrency && matchesType && matchesStatus;
+  });
+
   // الإحصائيات
- const totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
   const iqdAmount = payments
     .filter(p => p.currency === "IQD")
     .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -320,7 +336,7 @@ const PaymentsPage = () => {
             </IconButton>
           </Tooltip>
           <Tooltip title="حذف">
-            <IconButton size="small" color="error" onClick={() => handleDeletePayment(params.row.id)}>
+            <IconButton size="small" color="error" onClick={() => openDeleteDialog(params.row)}>
               <Delete fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -660,6 +676,22 @@ const PaymentsPage = () => {
             disabled={!paymentForm.payment_method_id || paymentForm.amount <= 0}
           >
             {editingPayment ? "تحديث" : "حفظ"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* حوار الحذف - مشابه لصفحة الخصومات */}
+      <Dialog open={deleteDialogOpen} onClose={closeDeleteDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>تأكيد الحذف</DialogTitle>
+        <DialogContent>
+          <Typography>
+            هل أنت متأكد من حذف الدفعة الخاصة بـ "{selectedPayment?.payer || selectedPayment?.user?.name}" بقيمة {selectedPayment?.amount.toLocaleString()} {selectedPayment?.currency}؟
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={handleDeletePayment}>
+            حذف
           </Button>
         </DialogActions>
       </Dialog>
