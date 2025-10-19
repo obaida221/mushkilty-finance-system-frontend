@@ -24,8 +24,8 @@ import {
   CardContent,
   Alert,
   CircularProgress,
-  Tab,
-  Tabs,
+  // Tab,
+  // Tabs,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { 
@@ -34,8 +34,8 @@ import {
   Delete, 
   Add, 
   Class, 
-  Person, 
-  School,
+  // Person, 
+  // School,
   Group,
   OnlinePrediction,
   LocationOn,
@@ -208,9 +208,9 @@ const CoursesPage: React.FC = () => {
         if (!params.value) return "-"
         const typeConfig = {
           online: { label: "أونلاين", color: "primary" as const, icon: <OnlinePrediction fontSize="small" /> },
-          onsite: { label: "حضوري", color: "secondary" as const, icon: <LocationOn fontSize="small" /> },
-          kids: { label: "أطفال", color: "warning" as const, icon: <ChildCare fontSize="small" /> },
-          ielts: { label: "آيلتس", color: "info" as const, icon: <Quiz fontSize="small" /> },
+          onsite: { label: "حضوري", color: "success" as const, icon: <LocationOn fontSize="small" /> },
+          kids: { label: "أطفال", color: "info" as const, icon: <ChildCare fontSize="small" /> },
+          ielts: { label: "آيلتس", color: "secondary" as const, icon: <Quiz fontSize="small" /> },
         }
         const config = typeConfig[params.value as keyof typeof typeConfig]
         if (!config) return <Chip label={params.value} size="small" />
@@ -492,15 +492,21 @@ const CoursesPage: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="معرف المدرس"
-                  type="number"
-                  value={courseForm.user_id || ""}
-                  onChange={(e) => setCourseForm({ ...courseForm, user_id: Number(e.target.value) || 0 })}
-                  required
-                />
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>نوع الدورة</InputLabel>
+                    <Select
+                      value={courseForm.project_type || ""}
+                      label="نوع الدورة"
+                      onChange={(e) => setCourseForm({ ...courseForm, project_type: e.target.value as any })}
+                    >
+                      <MenuItem value="">غير محدد</MenuItem>
+                      <MenuItem value="online">أونلاين</MenuItem>
+                      <MenuItem value="onsite">حضوري</MenuItem>
+                      <MenuItem value="kids">أطفال</MenuItem>
+                      <MenuItem value="ielts">آيلتس</MenuItem>
+                    </Select>
+                  </FormControl>
               </Grid>
             </Grid>
 

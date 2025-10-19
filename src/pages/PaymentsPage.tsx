@@ -146,10 +146,10 @@ const PaymentsPage = () => {
 
       if (editingPayment) {
         await updatePayment(editingPayment.id, payload);
-        handleSnackbar("تم تحديث الدفعة بنجاح", "success");
+        handleSnackbar("تم تحديث الواردة بنجاح", "success");
       } else {
         await createPayment(payload);
-        handleSnackbar("تم تسجيل الدفعة بنجاح", "success");
+        handleSnackbar("تم تسجيل الواردة بنجاح", "success");
       }
       handleCloseDialog();
     } catch (err: any) {
@@ -169,7 +169,7 @@ const PaymentsPage = () => {
 
     try {
       await deletePayment(selectedPayment.id);
-      handleSnackbar("تم حذف الدفعة بنجاح", "success");
+      handleSnackbar("تم حذف الواردة بنجاح", "success");
       setDeleteDialogOpen(false);
       setSelectedPayment(null);
     } catch (err: any) {
@@ -183,7 +183,7 @@ const PaymentsPage = () => {
     setSelectedPayment(null);
   };
 
-  // فلترة الدفعات
+  // فلترة الواردات
   const filteredPayments = payments.filter((payment: Payment) => {
     // console.log('Filtering payment:', payment);
     const matchesSearch =
@@ -366,7 +366,7 @@ const PaymentsPage = () => {
       {/* الرأس */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PaymentIcon /> إدارة الدفعات
+          <PaymentIcon /> إدارة الواردات
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button 
@@ -378,7 +378,7 @@ const PaymentsPage = () => {
             تحديث
           </Button>
           <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
-            دفعة جديدة
+            واردة جديدة
           </Button>
         </Box>
       </Box>
@@ -399,7 +399,7 @@ const PaymentsPage = () => {
                   <PaymentIcon sx={{ color: "white" }} />
                 </Box>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">إجمالي الدفعات</Typography>
+                  <Typography variant="body2" color="text.secondary">إجمالي الواردات</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>{payments.length}</Typography>
                 </Box>
               </Box>
@@ -465,7 +465,7 @@ const PaymentsPage = () => {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="بحث في الدفعات..."
+              placeholder="بحث في الواردات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{ 
@@ -500,7 +500,7 @@ const PaymentsPage = () => {
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
                 <MenuItem value="all">جميع الأنواع</MenuItem>
-                <MenuItem value="full">دفعة كاملة</MenuItem>
+                <MenuItem value="full">واردة كاملة</MenuItem>
                 <MenuItem value="installment">قسط</MenuItem>
               </Select>
             </FormControl>
@@ -522,13 +522,13 @@ const PaymentsPage = () => {
           </Grid>
           <Grid item xs={12} md={2}>
             <Typography variant="body2" color="text.secondary" align="center">
-              {filteredPayments.length} من {payments.length} دفعة
+              {filteredPayments.length} من {payments.length} واردة
             </Typography>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* جدول الدفعات */}
+      {/* جدول الواردات */}
       <Paper>
         <Box sx={{ p: 2 }}>
           <DataGrid
@@ -554,17 +554,17 @@ const PaymentsPage = () => {
         </Box>
       </Paper>
 
-      {/* نافذة إضافة/تعديل الدفعة */}
+      {/* نافذة إضافة/تعديل الواردة */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editingPayment ? "تعديل الدفعة" : "إضافة دفعة جديدة"}
+          {editingPayment ? "تعديل الواردة" : "إضافة واردة جديدة"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             {/* Info about automatic status change on refund */}
             <Alert severity="info" sx={{ mb: 1 }}>
               <Typography variant="body2">
-                <strong>ملاحظة:</strong> عند إنشاء مرتجع لدفعة، سيتم تغيير حالتها تلقائياً إلى "مرتجعة"
+                <strong>ملاحظة:</strong> عند إنشاء مرتجع لواردة، سيتم تغيير حالتها تلقائياً إلى "مرتجعة"
               </Typography>
             </Alert>
             
@@ -621,23 +621,23 @@ const PaymentsPage = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>نوع الدفعة</InputLabel>
+                  <InputLabel>نوع الواردة</InputLabel>
                   <Select
                     value={paymentForm.type}
-                    label="نوع الدفعة"
+                    label="نوع الواردة"
                     onChange={(e) => setPaymentForm({ ...paymentForm, type: e.target.value as "full" | "installment" })}
                   >
-                    <MenuItem value="full">دفعة كاملة</MenuItem>
+                    <MenuItem value="full">واردة كاملة</MenuItem>
                     <MenuItem value="installment">قسط</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>حالة الدفعة</InputLabel>
+                  <InputLabel>حالة الواردة</InputLabel>
                   <Select
                     value={paymentForm.status}
-                    label="حالة الدفعة"
+                    label="حالة الواردة"
                     onChange={(e) => setPaymentForm({ ...paymentForm, status: e.target.value as PaymentStatus })}
                   >
                     <MenuItem value="completed">مكتملة</MenuItem>
@@ -686,7 +686,7 @@ const PaymentsPage = () => {
         <DialogTitle>تأكيد الحذف</DialogTitle>
         <DialogContent>
           <Typography>
-            هل أنت متأكد من حذف الدفعة الخاصة بـ "{selectedPayment?.payer || selectedPayment?.user?.name}" بقيمة {selectedPayment?.amount.toLocaleString()} {selectedPayment?.currency}؟
+            هل أنت متأكد من حذف الواردة الخاصة بـ "{selectedPayment?.payer || selectedPayment?.user?.name}" بقيمة {selectedPayment?.amount.toLocaleString()} {selectedPayment?.currency}؟
           </Typography>
         </DialogContent>
         <DialogActions>
