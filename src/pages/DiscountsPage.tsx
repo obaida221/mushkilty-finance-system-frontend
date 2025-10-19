@@ -145,7 +145,6 @@ const DiscountsPage: React.FC = () => {
 
   const openEditDialog = (discount: DiscountCode) => {
     setSelectedDiscount(discount)
-    console.log('Selected Discount:', discount)
     setDiscountType(discount.percent ? "percentage" : discount.amount ? "fixed" : "")
     setDiscountForm({
       code: discount.code,
@@ -169,7 +168,6 @@ const DiscountsPage: React.FC = () => {
 
   const openDetailsDialog = (discount: DiscountCode) => {
     setSelectedDetailsDiscount(discount)
-    console.log('Selected Details Discount:', discount)
     setDetailsDialogOpen(true)
   }
 

@@ -21,7 +21,7 @@ export interface Payment {
     email: string;
   };
 
-  payment_method: {
+  paymentMethod: {
     id: number;
     name: string;
     method_number?: string | null;

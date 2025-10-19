@@ -59,7 +59,7 @@ const PaymentsPage = () => {
   const { paymentMethods } = usePaymentMethods();
 
   const [paymentForm, setPaymentForm] = useState<PaymentFormType>({
-    user_id: 1, 
+    user_id: 0, 
     enrollment_id: null,
     payment_method_id: 0,
     payer: "",
@@ -185,11 +185,12 @@ const PaymentsPage = () => {
 
   // فلترة الدفعات
   const filteredPayments = payments.filter((payment: Payment) => {
+    // console.log('Filtering payment:', payment);
     const matchesSearch =
       (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (payment.note?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (payment.user?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-      (payment.payment_method?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (payment.paymentMethod?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       payment.amount.toString().includes(searchQuery) ||
       payment.id.toString().includes(searchQuery);
 
@@ -223,7 +224,7 @@ const PaymentsPage = () => {
     },
     {
       field: "user",
-      headerName: "المستخدم",
+      headerName: "المستلم",
       flex: 1,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -245,12 +246,12 @@ const PaymentsPage = () => {
       )
     },
     {
-      field: "payment_method",
+      field: "paymentMethod",
       headerName: "طريقة الدفع",
       width: 150,
       renderCell: (params) => (
         <Chip
-          label={params.row.payment_method?.name || "غير معروف"}
+          label={params.row.paymentMethod?.name || "غير معروف"}
           size="small"
           color="primary"
           variant="outlined"
@@ -267,19 +268,19 @@ const PaymentsPage = () => {
         </Typography>
       ),
     },
-    {
-      field: "currency",
-      headerName: "العملة",
-      width: 100,
-      renderCell: (params) => (
-        <Chip
-          label={params.value}
-          size="small"
-          color={params.value === "IQD" ? "primary" : "secondary"}
-          variant="filled"
-        />
-      )
-    },
+    // {
+    //   field: "currency",
+    //   headerName: "العملة",
+    //   width: 100,
+    //   renderCell: (params) => (
+    //     <Chip
+    //       label={params.value}
+    //       size="small"
+    //       color={params.value === "IQD" ? "primary" : "secondary"}
+    //       variant="filled"
+    //     />
+    //   )
+    // },
     {
       field: "type",
       headerName: "النوع",
