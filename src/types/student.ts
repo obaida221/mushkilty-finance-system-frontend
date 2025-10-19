@@ -21,7 +21,7 @@ export interface Student {
 export interface CreateStudentDto {
   full_name: string // Required
   age?: number
-  dob?: string // ISO date string
+  dob?: string | null // ISO date string
   education_level?: string
   gender?: string
   phone: string // Required

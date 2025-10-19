@@ -26,16 +26,18 @@ const DiscountsPage: React.FC = () => {
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountCode | null>(null)
   const [selectedDetailsDiscount, setSelectedDetailsDiscount] = useState<DiscountCode | null>(null)
 
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed" | "">("")
+
   const [discountForm, setDiscountForm] = useState<DiscountFormData>({
     code: "",
     name: "",
     purpose: "",
-    amount: undefined,
-    currency: "IQD",
-    percent: undefined,
+    amount: null,
+    currency: null,
+    percent: null,
     usage_limit: undefined,
-    valid_from: "",
-    valid_to: "",
+    valid_from: null,
+    valid_to: null,
     active: true,
   })
 
@@ -120,16 +122,17 @@ const DiscountsPage: React.FC = () => {
 
   // دوال المساعدة
   const resetForm = () => {
+    setDiscountType("")
     setDiscountForm({
       code: "",
       name: "",
       purpose: "",
-      amount: undefined,
-      currency: "IQD",
-      percent: undefined,
+      amount: null,
+      currency: null,
+      percent: null,
       usage_limit: undefined,
-      valid_from: "",
-      valid_to: "",
+      valid_from: null,
+      valid_to: null,
       active: true,
     })
     setSelectedDiscount(null)
@@ -142,6 +145,8 @@ const DiscountsPage: React.FC = () => {
 
   const openEditDialog = (discount: DiscountCode) => {
     setSelectedDiscount(discount)
+    console.log('Selected Discount:', discount)
+    setDiscountType(discount.percent ? "percentage" : discount.amount ? "fixed" : "")
     setDiscountForm({
       code: discount.code,
       name: discount.name,
@@ -164,6 +169,7 @@ const DiscountsPage: React.FC = () => {
 
   const openDetailsDialog = (discount: DiscountCode) => {
     setSelectedDetailsDiscount(discount)
+    console.log('Selected Details Discount:', discount)
     setDetailsDialogOpen(true)
   }
 
@@ -204,7 +210,7 @@ const DiscountsPage: React.FC = () => {
         if (discount.percent) {
           return `${discount.percent}%`
         } else if (discount.amount) {
-          return `${discount.amount.toLocaleString()} ${discount.currency}`
+          return `${discount.amount.toLocaleString()}${discount.currency === "USD" ? "$" : discount.currency} `
         }
         return "غير محدد"
       }
@@ -453,13 +459,14 @@ const DiscountsPage: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>نوع الخصم</InputLabel>
                   <Select
-                    value={discountForm.percent ? "percentage" : discountForm.amount ? "fixed" : ""}
+                    value={ discountType }
                     label="نوع الخصم"
                     onChange={(e) => {
+                      setDiscountType(e.target.value as "percentage" | "fixed")
                       if (e.target.value === "percentage") {
-                        setDiscountForm({ ...discountForm, percent: 0, amount: undefined })
+                        setDiscountForm({ ...discountForm, percent: 0, amount: null })
                       } else if (e.target.value === "fixed") {
-                        setDiscountForm({ ...discountForm, amount: 0, percent: undefined })
+                        setDiscountForm({ ...discountForm, amount: 0, percent: null })
                       }
                     }}
                   >
@@ -468,22 +475,25 @@ const DiscountsPage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>العملة</InputLabel>
-                  <Select
-                    value={discountForm.currency}
-                    label="العملة"
-                    onChange={(e) => setDiscountForm({ ...discountForm, currency: e.target.value })}
-                  >
-                    <MenuItem value="IQD">دينار عراقي</MenuItem>
-                    <MenuItem value="USD">دولار أمريكي</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+
+              {discountType === "fixed" && (
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>العملة</InputLabel>
+                    <Select
+                      value={discountForm.currency}
+                      label="العملة"
+                      onChange={(e) => setDiscountForm({ ...discountForm, currency: e.target.value })}
+                    >
+                      <MenuItem value="IQD">دينار عراقي</MenuItem>
+                      <MenuItem value="USD">دولار أمريكي</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
             </Grid>
 
-            {discountForm.percent !== undefined && (
+            {discountForm.percent !== null && (
               <TextField 
                 fullWidth 
                 label="النسبة المئوية" 
@@ -493,7 +503,7 @@ const DiscountsPage: React.FC = () => {
               />
             )}
 
-            {discountForm.amount !== undefined && (
+            {discountForm.amount !== null && (
               <TextField 
                 fullWidth 
                 label="المبلغ" 
@@ -526,23 +536,33 @@ const DiscountsPage: React.FC = () => {
               </Grid>
             </Grid>
 
-            <TextField 
-              fullWidth 
-              label="الحد الأقصى للاستخدام (اتركه فارغاً لعدد غير محدود)" 
-              type="number" 
-              value={discountForm.usage_limit || ''} 
-              onChange={(e) => setDiscountForm({ ...discountForm, usage_limit: e.target.value ? Number(e.target.value) : undefined })} 
-            />
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography>الحالة:</Typography>
-              <Chip
-                label={discountForm.active ? "نشط" : "غير نشط"}
-                color={discountForm.active ? "success" : "default"}
-                onClick={() => setDiscountForm({ ...discountForm, active: !discountForm.active })}
-                clickable
-              />
-            </Box>
+            <Grid container spacing={2} sx={{display: "flex", alignItems:"center" }}>
+
+              <Grid item xs={2} sm={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography>الحالة:</Typography>
+                  <Chip
+                    label={discountForm.active ? "نشط" : "غير نشط"}
+                    color={discountForm.active ? "success" : "default"}
+                    onClick={() => setDiscountForm({ ...discountForm, active: !discountForm.active })}
+                    clickable
+                    sx={{ fontSize: "1rem", fontWeight: "medium" }}
+                  />
+                </Box>
+              </Grid>
+
+              <Grid item xs={10} sm={10}>
+                <TextField 
+                  fullWidth 
+                  label="الحد الأقصى للاستخدام (اتركه فارغًا لعدد غير محدود)" 
+                  type="number" 
+                  value={discountForm.usage_limit || ''} 
+                  onChange={(e) => setDiscountForm({ ...discountForm, usage_limit: e.target.value ? Number(e.target.value) : undefined })} 
+                />
+              </Grid>
+
+            </Grid>
           </Box>
         </DialogContent>
         <DialogActions>
@@ -589,7 +609,7 @@ const DiscountsPage: React.FC = () => {
                       <Typography><strong>الغرض:</strong> {selectedDetailsDiscount.purpose}</Typography>
                       <Typography><strong>القيمة:</strong> 
                         {selectedDetailsDiscount.percent && ` ${selectedDetailsDiscount.percent}%`}
-                        {selectedDetailsDiscount.amount && ` ${selectedDetailsDiscount.amount.toLocaleString()} ${selectedDetailsDiscount.currency}`}
+                        {selectedDetailsDiscount.amount && ` ${selectedDetailsDiscount.currency === "USD" ? "$" : selectedDetailsDiscount.currency} ${selectedDetailsDiscount.amount.toLocaleString()}`}
                       </Typography>
                       <Typography><strong>الحالة:</strong> 
                         <Chip 

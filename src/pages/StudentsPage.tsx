@@ -32,8 +32,8 @@ import {
   Delete, 
   PersonAdd, 
   School, 
-  TrendingUp, 
-  TrendingDown,
+  // TrendingUp, 
+  // TrendingDown,
   Phone,
   LocationOn,
   CheckCircle,
@@ -62,16 +62,16 @@ const StudentsPage: React.FC = () => {
     updateStudent,
     deleteStudent,
     getStudentsByStatus,
-    getStudentsByCourseType,
-    updateStudentStatus,
+    // getStudentsByCourseType,
+    // updateStudentStatus,
   } = useStudents()
 
-  const { enrollments, getEnrollmentsByStudent } = useEnrollments()
+  const { getEnrollmentsByStudent } = useEnrollments()
 
   const [studentForm, setStudentForm] = useState<CreateStudentDto>({
     full_name: "",
     age: undefined,
-    dob: "",
+    dob: null,
     education_level: "",
     gender: "",
     phone: "",
@@ -108,21 +108,21 @@ const StudentsPage: React.FC = () => {
     }
   }
 
-  // Handle status update
-  const handleUpdateStatus = async (id: number, newStatus: string) => {
-    try {
-      await updateStudentStatus(id, newStatus)
-    } catch (error) {
-      console.error('Failed to update status:', error)
-    }
-  }
+  // // Handle status update
+  // const handleUpdateStatus = async (id: number, newStatus: string) => {
+  //   try {
+  //     await updateStudentStatus(id, newStatus)
+  //   } catch (error) {
+  //     console.error('Failed to update status:', error)
+  //   }
+  // }
 
   // Dialog handlers
   const handleOpenDialog = () => {
     setStudentForm({
       full_name: "",
       age: undefined,
-      dob: "",
+      dob: null,
       education_level: "",
       gender: "",
       phone: "",
@@ -588,7 +588,7 @@ const StudentsPage: React.FC = () => {
                 <FormControl fullWidth>
                   <InputLabel>طالب عائد؟</InputLabel>
                   <Select
-                    value={studentForm.is_returning.toString()}
+                    value={studentForm.is_returning?.toString()}
                     label="طالب عائد؟"
                     onChange={(e) => setStudentForm({ ...studentForm, is_returning: e.target.value === "true" })}
                   >

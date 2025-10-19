@@ -21,11 +21,11 @@ export interface DiscountFormData {
   code: string;
   name: string;
   purpose: string;
-  amount?: number;
-  currency: string;
-  percent?: number;
+  amount?: number | null;
+  currency?: string | null;
+  percent?: number | null;
   usage_limit?: number;
-  valid_from?: string;
-  valid_to?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
   active: boolean;
 }
