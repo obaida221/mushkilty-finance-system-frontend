@@ -22,6 +22,7 @@ import {
   Snackbar,
   Autocomplete,
   CircularProgress,
+  Divider,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { Search, Add, Undo, Edit, Delete, TrendingDown } from "@mui/icons-material"
@@ -43,6 +44,8 @@ const RefundsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
   const [editingRefund, setEditingRefund] = useState<Refund | null>(null)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null)
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: "success" | "error" }>({ 
     open: false, 
     message: "", 
@@ -83,9 +86,19 @@ const RefundsPage: React.FC = () => {
     setEditingRefund(null);
   }
 
+  const handleOpenDetailsDialog = (refund: Refund) => {
+    setSelectedRefund(refund);
+    setDetailsDialogOpen(true);
+  }
+
+  const handleCloseDetailsDialog = () => {
+    setDetailsDialogOpen(false);
+    setSelectedRefund(null);
+  }
+
   const handleSaveRefund = async () => {
     if (!refundForm.payment_id) {
-      handleSnackbar("يرجى اختيار الدفعة", "error");
+      handleSnackbar("يرجى اختيار الواردة", "error");
       return;
     }
 
@@ -141,7 +154,7 @@ const RefundsPage: React.FC = () => {
       valueGetter: (params) => {
         if (!params.row.refunded_at) return "—";
         const date = new Date(params.row.refunded_at);
-        return date.toLocaleDateString('ar-IQ');
+        return date.toLocaleDateString();
       }
     },
     { 
@@ -150,18 +163,33 @@ const RefundsPage: React.FC = () => {
       width: 120,
       valueGetter: (params) => {
         const date = new Date(params.row.payment?.paid_at);
-        return date.toLocaleDateString('ar-IQ');
+        return date.toLocaleDateString();
       }
     },
     { 
-      field: "student", 
-      headerName: "الطالب/الدافع", 
+      field: "type", 
+      headerName: "المصدر", 
       flex: 1,
       minWidth: 150,
       valueGetter: (params) => {
-        return params.row.payment?.enrollment?.student?.name || 
-               params.row.payment?.payer || 
-               "—";
+        if (params.row.payment?.enrollment) {
+          return "تسجيل طالب";
+        }
+        else if (params.row.payment?.payer) {
+          return "واردة خارجية";
+        }
+        return "—";
+      }
+    },
+    {
+      field: "student",
+      headerName: "الطالب/المؤسسة",
+      flex: 1,
+      minWidth: 150,
+      valueGetter: (params) => {
+        return params.row.payment?.enrollment?.student?.full_name ||
+          params.row.payment?.payer ||
+          "—";
       }
     },
     { 
@@ -200,6 +228,7 @@ const RefundsPage: React.FC = () => {
   ]
 
   const filteredRefunds = refunds.filter((r) => {
+    console.log("Filtering refund:", r);
     const searchLower = searchQuery.toLowerCase();
     return (
       (r.payment?.enrollment?.student?.name || "").toLowerCase().includes(searchLower) ||
@@ -227,7 +256,7 @@ const RefundsPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>المرتجعات</Typography>
-        <Button variant="contained" color="warning" startIcon={<Add />} onClick={() => handleOpenDialog()}>
+        <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => handleOpenDialog()}>
           إضافة مرتجع
         </Button>
       </Box>
@@ -245,12 +274,12 @@ const RefundsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box sx={{ bgcolor: "warning.main", p: 1.5, borderRadius: 2 }}>
+                <Box sx={{ bgcolor: "error.main", p: 1.5, borderRadius: 2 }}>
                   <Undo sx={{ color: "white" }} />
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">إجمالي المرتجعات (IQD)</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, color: "warning.main" }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700}}>
                     {totalIQD.toLocaleString()} IQD
                   </Typography>
                 </Box>
@@ -269,7 +298,7 @@ const RefundsPage: React.FC = () => {
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">إجمالي المرتجعات (USD)</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, color: "warning.main" }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
                     ${totalUSD.toLocaleString()}
                   </Typography>
                 </Box>
@@ -324,10 +353,12 @@ const RefundsPage: React.FC = () => {
             }}
             disableRowSelectionOnClick
             autoHeight
+            onRowClick={(params) => handleOpenDetailsDialog(params.row)}
             sx={{
               border: "none",
-              "& .MuiDataGrid-cell": { borderColor: "divider" },
+              "& .MuiDataGrid-cell": { borderColor: "divider", cursor: "pointer" },
               "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
+              "& .MuiDataGrid-row:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
             }}
           />
         </Box>
@@ -346,7 +377,7 @@ const RefundsPage: React.FC = () => {
             {!editingRefund && (
               <Alert severity="info" sx={{ mb: 1 }}>
                 <Typography variant="body2">
-                  <strong>ملاحظة:</strong> عند إنشاء المرتجع، سيتم تغيير حالة الدفعة تلقائياً إلى "مرتجعة"
+                  <strong>ملاحظة:</strong> عند إنشاء المرتجع، سيتم تغيير حالة الواردة تلقائياً إلى "مرتجعة"
                 </Typography>
               </Alert>
             )}
@@ -360,9 +391,9 @@ const RefundsPage: React.FC = () => {
                 getOptionLabel={(option) => {
                   if (!option) return "";
                   // Payment type from payment.ts doesn't have enrollment relation, but we handle both cases
-                  const studentName = option.payer || "دفعة خارجية";
+                  const studentName = option.payer || "واردة خارجية";
                   const amount = `${option.amount.toLocaleString()} ${option.currency}`;
-                  const date = new Date(option.paid_at).toLocaleDateString('ar-IQ');
+                  const date = new Date(option.paid_at).toLocaleDateString();
                   return `${studentName} - ${amount} (${date})`;
                 }}
                 value={payments.find(p => p.id === Number(refundForm.payment_id)) || null}
@@ -374,14 +405,15 @@ const RefundsPage: React.FC = () => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="الدفعة المراد إرجاعها *"
-                    placeholder="ابحث عن دفعة..."
+                    label="الواردة المراد إرجاعها *"
+                    placeholder="ابحث عن واردة..."
                     InputProps={{
                       ...params.InputProps,
                       endAdornment: (
                         <>
                           {paymentsLoading ? <CircularProgress color="inherit" size={20} /> : null}
                           {params.InputProps.endAdornment}
+                        <Divider/>
                         </>
                       ),
                     }}
@@ -414,21 +446,25 @@ const RefundsPage: React.FC = () => {
             {refundForm.payment_id && (
               <Box sx={{ p: 2, bgcolor: "background.default", borderRadius: 1 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  تفاصيل الدفعة:
+                  تفاصيل الواردة:
                 </Typography>
                 {(() => {
                   const payment = payments.find(p => p.id === Number(refundForm.payment_id));
                   if (!payment) return null;
+                  console.log("Selected payment details:", payment);
                   return (
                     <Box>
                       <Typography variant="body2">
                         <strong>المبلغ:</strong> {payment.amount.toLocaleString()} {payment.currency}
                       </Typography>
                       <Typography variant="body2">
-                        <strong>الدافع:</strong> {payment.payer || "—"}
+                        <strong>المصدر:</strong> {payment.enrollment ? `${payment.enrollment.student.full_name} (تسجيل)` : `${payment.payer} (واردة خارجية)` || "—"}
                       </Typography>
                       <Typography variant="body2">
-                        <strong>تاريخ الدفع:</strong> {new Date(payment.paid_at).toLocaleDateString('ar-IQ')}
+                        <strong>تاريخ الدفع:</strong> {new Date(payment.paid_at).toLocaleDateString()}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>النوع:</strong> {payment.type === "full" ? "دفعة كاملة" : "أقساط"}
                       </Typography>
                     </Box>
                   );
@@ -456,6 +492,161 @@ const RefundsPage: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onClose={handleCloseDetailsDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <TrendingDown /> تفاصيل المرتجع
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedRefund && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+              {/* Refund Details */}
+              <>
+                <Typography variant="h6" gutterBottom>معلومات المرتجع</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">رقم المرتجع</Typography>
+                    <Typography variant="body1">{selectedRefund.id}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">تاريخ الإرجاع</Typography>
+                    <Typography variant="body1">
+                      {selectedRefund.refunded_at ? new Date(selectedRefund.refunded_at).toLocaleDateString() : "—"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary">سبب الإرجاع</Typography>
+                    <Typography variant="body1">{selectedRefund.reason || "—"}</Typography>
+                  </Grid>
+                </Grid>
+              </>
+              <Divider/>
+
+              {/* Payment Details */}
+              {selectedRefund.payment && (
+                <>
+                  <Typography variant="h6" gutterBottom>معلومات الواردة</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">رقم الواردة</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.id}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">المبلغ</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: "bold", color: "warning.main" }}>
+                        {Number(selectedRefund.payment.amount || 0).toLocaleString()} {selectedRefund.payment.currency}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">تاريخ الدفع</Typography>
+                      <Typography variant="body1">
+                        {selectedRefund.payment.paid_at ? new Date(selectedRefund.payment.paid_at).toLocaleDateString() : "—"}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">نوع الواردة</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.type === "full" ? "دفعة كاملة" : "أقساط"}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">حالة الواردة</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.status === "returned" ? "مرتجعة" : selectedRefund.payment.status}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">طريقة الدفع</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.payment_method_id || "—"}</Typography>
+                    </Grid>
+                  </Grid>
+                </>
+              )}
+              <Divider />
+
+              {/* Student/External Payer Details */}
+              {selectedRefund.payment?.enrollment?.student ? (
+                <>
+                  <Typography variant="h6" gutterBottom>معلومات الطالب</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">الاسم الكامل</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.student?.full_name}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">الهاتف</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.student.phone || "—"}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">المدينة</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.student.city || "—"}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">الحالة</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.student.status || "—"}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">تاريخ الإنشاء</Typography>
+                      <Typography variant="body1">
+                        {selectedRefund.payment.enrollment.student.created_at ? 
+                          new Date(selectedRefund.payment.enrollment.student.created_at).toLocaleDateString() : "—"}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </>
+              ) : selectedRefund.payment?.payer ? (
+                <>
+                  <Typography variant="h6" gutterBottom>معلومات الدافع</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">اسم الدافع</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.payer}</Typography>
+                    </Grid>
+                  </Grid>
+                </>
+              ) : null}
+              <Divider />
+
+              {/* Enrollment Details (if available) */}
+              {selectedRefund.payment?.enrollment && (
+                <>
+                  <Typography variant="h6" gutterBottom>معلومات التسجيل</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">رقم التسجيل</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.id}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">السعر الإجمالي</Typography>
+                      <Typography variant="body1">
+                        {Number(selectedRefund.payment.enrollment.total_price || 0).toLocaleString()} {selectedRefund.payment.enrollment.currency}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">حالة التسجيل</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.status}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">تاريخ التسجيل</Typography>
+                      <Typography variant="body1">
+                        {selectedRefund.payment.enrollment.enrolled_at ? 
+                          new Date(selectedRefund.payment.enrollment.enrolled_at).toLocaleDateString() : "—"}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">ملاحظات</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.notes || "—"}</Typography>
+                    </Grid>
+                  </Grid>
+                </>
+              )}
+              <Divider/>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetailsDialog}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
