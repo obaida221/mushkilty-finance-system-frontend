@@ -53,6 +53,7 @@ const EnrollmentsPage: React.FC = () => {
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterBatch, setFilterBatch] = useState<string>("all")
+  const [selectedStudents, setSelectedStudents] = useState<number[]>([]) // For bulk enrollment
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
     open: false,
     message: "",
@@ -155,7 +156,7 @@ const EnrollmentsPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const formData = { ...enrollmentForm }
-      
+
       // Calculate total price if not manually set
       if (formData.batch_id) {
         const calculatedPrice = calculateTotalPrice(formData.batch_id, formData.discount_code || "")
@@ -174,37 +175,81 @@ const EnrollmentsPage: React.FC = () => {
         formData.enrolled_at = new Date().toISOString()
       }
 
-      // Clean up the payload for API
-      const cleanPayload: any = {
-        student_id: formData.student_id,
-        batch_id: formData.batch_id,
-        user_id: formData.user_id,
-        status: formData.status,
-      }
-
-      // Only add optional fields if they have values
-      if (formData.discount_code) {
-        cleanPayload.discount_code = formData.discount_code
-      }
-      if (formData.total_price !== undefined && formData.total_price !== null) {
-        cleanPayload.total_price = Number(formData.total_price)
-      }
-      if (formData.currency) {
-        cleanPayload.currency = formData.currency
-      }
-      if (formData.enrolled_at) {
-        cleanPayload.enrolled_at = formData.enrolled_at
-      }
-      if (formData.notes) {
-        cleanPayload.notes = formData.notes
-      }
-
       if (editingEnrollment) {
+        // Single update when editing
+        const cleanPayload: any = {
+          student_id: formData.student_id,
+          batch_id: formData.batch_id,
+          user_id: formData.user_id,
+          status: formData.status,
+        }
+
+        if (formData.discount_code) cleanPayload.discount_code = formData.discount_code
+        if (formData.total_price !== undefined && formData.total_price !== null) {
+          cleanPayload.total_price = Number(formData.total_price)
+        }
+        if (formData.currency) cleanPayload.currency = formData.currency
+        if (formData.enrolled_at) cleanPayload.enrolled_at = formData.enrolled_at
+        if (formData.notes) cleanPayload.notes = formData.notes
+
         await updateEnrollment(editingEnrollment.id, cleanPayload)
         setSnackbar({ open: true, message: "تم تحديث التسجيل بنجاح", severity: "success" })
       } else {
-        await createEnrollment(cleanPayload)
-        setSnackbar({ open: true, message: "تم إضافة التسجيل بنجاح", severity: "success" })
+        // Bulk enrollment when creating
+        if (selectedStudents.length === 0) {
+          setSnackbar({ open: true, message: "يرجى اختيار طالب واحد على الأقل", severity: "error" })
+          return
+        }
+
+        let successCount = 0
+        let errorCount = 0
+        const errors: string[] = []
+
+        for (const studentId of selectedStudents) {
+          try {
+            const cleanPayload: any = {
+              student_id: studentId,
+              batch_id: formData.batch_id,
+              user_id: formData.user_id,
+              status: formData.status,
+            }
+
+            if (formData.discount_code) cleanPayload.discount_code = formData.discount_code
+            if (formData.total_price !== undefined && formData.total_price !== null) {
+              cleanPayload.total_price = Number(formData.total_price)
+            }
+            if (formData.currency) cleanPayload.currency = formData.currency
+            if (formData.enrolled_at) cleanPayload.enrolled_at = formData.enrolled_at
+            if (formData.notes) cleanPayload.notes = formData.notes
+
+            await createEnrollment(cleanPayload)
+            successCount++
+          } catch (error: any) {
+            errorCount++
+            const studentName = students.find(s => s.id === studentId)?.full_name || `ID: ${studentId}`
+            errors.push(`${studentName}: ${error.response?.data?.message || "خطأ"}`)
+          }
+        }
+
+        if (successCount > 0 && errorCount === 0) {
+          setSnackbar({ 
+            open: true, 
+            message: `تم تسجيل ${successCount} طالب بنجاح`, 
+            severity: "success" 
+          })
+        } else if (successCount > 0 && errorCount > 0) {
+          setSnackbar({ 
+            open: true, 
+            message: `تم تسجيل ${successCount} طالب، فشل ${errorCount}. ${errors.slice(0, 2).join(", ")}`, 
+            severity: "error" 
+          })
+        } else {
+          setSnackbar({ 
+            open: true, 
+            message: `فشل تسجيل جميع الطلاب. ${errors[0] || "حدث خطأ"}`, 
+            severity: "error" 
+          })
+        }
       }
       handleCloseDialog()
     } catch (error: any) {
@@ -215,9 +260,7 @@ const EnrollmentsPage: React.FC = () => {
         severity: "error" 
       })
     }
-  }
-
-  // Handle delete
+  }  // Handle delete
   const handleDelete = async (id: number) => {
     if (window.confirm("هل أنت متأكد من حذف هذا التسجيل؟")) {
       try {
@@ -247,6 +290,7 @@ const EnrollmentsPage: React.FC = () => {
       status: "pending",
       notes: "",
     })
+    setSelectedStudents([]) // Reset selected students for bulk enrollment
     setEditingEnrollment(null)
     setOpenDialog(true)
   }
@@ -558,20 +602,50 @@ const EnrollmentsPage: React.FC = () => {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <Autocomplete
-                  options={students}
-                  getOptionLabel={(option) => `${option.full_name} - ${option.phone}`}
-                  value={students.find(s => s.id === enrollmentForm.student_id) || null}
-                  onChange={(_, newValue) => {
-                    setEnrollmentForm({ 
-                      ...enrollmentForm, 
-                      student_id: newValue ? newValue.id : 0 
-                    })
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} label="الطالب" required />
-                  )}
-                />
+                {editingEnrollment ? (
+                  // Single selection when editing
+                  <Autocomplete
+                    options={students}
+                    getOptionLabel={(option) => `${option.full_name} - ${option.phone}`}
+                    value={students.find(s => s.id === enrollmentForm.student_id) || null}
+                    onChange={(_, newValue) => {
+                      setEnrollmentForm({ 
+                        ...enrollmentForm, 
+                        student_id: newValue ? newValue.id : 0 
+                      })
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="الطالب" required />
+                    )}
+                  />
+                ) : (
+                  // Multiple selection when creating new
+                  <Autocomplete
+                    multiple
+                    options={students}
+                    getOptionLabel={(option) => `${option.full_name} - ${option.phone}`}
+                    value={students.filter(s => selectedStudents.includes(s.id))}
+                    onChange={(_, newValues) => {
+                      setSelectedStudents(newValues.map(v => v.id))
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="الطلاب (اختر متعدد)" required />
+                    )}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => {
+                        const { key, ...otherProps } = getTagProps({ index })
+                        return (
+                          <Chip
+                            key={key}
+                            label={option.full_name}
+                            size="small"
+                            {...otherProps}
+                          />
+                        )
+                      })
+                    }
+                  />
+                )}
               </Grid>
               <Grid item xs={12} md={6}>
                 <Autocomplete
