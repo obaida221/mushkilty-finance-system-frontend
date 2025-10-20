@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Box,
   Typography,
@@ -25,26 +25,27 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
+  Snackbar,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { 
   Search, 
   Edit, 
   Delete, 
-  Add, 
   PersonAdd, 
   CheckCircle,
   Pending,
   Cancel,
   School,
   TrendingUp,
-  People,
 } from "@mui/icons-material"
 import { useEnrollments } from '../hooks/useEnrollments'
 import { useStudents } from '../hooks/useStudents'
 import { useBatches } from '../hooks/useBatches'
+import { useDiscountCodes } from '../hooks/useDiscountCodes'
 import { useAuth } from '../context/AuthContext'
 import type { Enrollment, CreateEnrollmentDto } from "../types"
+import type { DiscountCode } from "../types/discount"
 
 const EnrollmentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
@@ -52,6 +53,11 @@ const EnrollmentsPage: React.FC = () => {
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterBatch, setFilterBatch] = useState<string>("all")
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  })
 
   // Hooks
   const { user } = useAuth()
@@ -67,6 +73,7 @@ const EnrollmentsPage: React.FC = () => {
 
   const { students, loading: studentsLoading } = useStudents()
   const { batches, loading: batchesLoading } = useBatches()
+  const { discountCodes, loading: discountCodesLoading } = useDiscountCodes()
 
   const [enrollmentForm, setEnrollmentForm] = useState<CreateEnrollmentDto>({
     student_id: 0,
@@ -80,22 +87,133 @@ const EnrollmentsPage: React.FC = () => {
     notes: "",
   })
 
+  // Calculate total price automatically
+  const calculateTotalPrice = useCallback((batchId: number, discountCode: string): number | undefined => {
+    const batch = batches.find(b => b.id === batchId)
+    if (!batch || !batch.actual_price) return undefined
+
+    let totalPrice = batch.actual_price
+
+    // Apply discount if code is provided
+    if (discountCode) {
+      const discount = discountCodes.find(d => d.code === discountCode)
+      if (discount && discount.active) {
+        // Check currency match
+        if (discount.currency && batch.currency && discount.currency !== batch.currency) {
+          // Currency mismatch - don't apply discount
+          return totalPrice
+        }
+
+        // Apply discount based on type
+        if (discount.percent) {
+          // Percentage discount
+          totalPrice = totalPrice - (totalPrice * discount.percent / 100)
+        } else if (discount.amount) {
+          // Fixed amount discount
+          totalPrice = totalPrice - discount.amount
+        }
+      }
+    }
+
+    return Math.max(0, totalPrice) // Ensure non-negative
+  }, [batches, discountCodes])
+
+  // Get filtered discount codes based on batch currency
+  const getFilteredDiscountCodes = (batchId: number): DiscountCode[] => {
+    const batch = batches.find(b => b.id === batchId)
+    if (!batch) return discountCodes.filter(d => d.active)
+
+    return discountCodes.filter(d => {
+      if (!d.active) return false
+      // If discount has no currency, it can be used anywhere
+      if (!d.currency) return true
+      // If batch has no currency, allow all discounts
+      if (!batch.currency) return true
+      // Otherwise, currencies must match
+      return d.currency === batch.currency
+    })
+  }
+
+  // Auto-calculate total price when batch or discount code changes
+  useEffect(() => {
+    if (enrollmentForm.batch_id && batches.length > 0) {
+      const calculatedPrice = calculateTotalPrice(enrollmentForm.batch_id, enrollmentForm.discount_code || "")
+      const batch = batches.find(b => b.id === enrollmentForm.batch_id)
+      
+      // Only update if price or currency actually changed
+      if (calculatedPrice !== enrollmentForm.total_price || (batch && batch.currency !== enrollmentForm.currency)) {
+        setEnrollmentForm(prev => ({
+          ...prev,
+          total_price: calculatedPrice,
+          currency: batch?.currency || prev.currency,
+        }))
+      }
+    }
+  }, [enrollmentForm.batch_id, enrollmentForm.discount_code, batches, calculateTotalPrice, enrollmentForm.total_price, enrollmentForm.currency])
+
   // Handle form submission
   const handleSubmit = async () => {
     try {
       const formData = { ...enrollmentForm }
+      
+      // Calculate total price if not manually set
+      if (formData.batch_id) {
+        const calculatedPrice = calculateTotalPrice(formData.batch_id, formData.discount_code || "")
+        if (calculatedPrice !== undefined) {
+          formData.total_price = calculatedPrice
+        }
+      }
+
+      // Set currency from batch
+      const batch = batches.find(b => b.id === formData.batch_id)
+      if (batch && batch.currency) {
+        formData.currency = batch.currency
+      }
+
       if (!formData.enrolled_at) {
         formData.enrolled_at = new Date().toISOString()
       }
-      
+
+      // Clean up the payload for API
+      const cleanPayload: any = {
+        student_id: formData.student_id,
+        batch_id: formData.batch_id,
+        user_id: formData.user_id,
+        status: formData.status,
+      }
+
+      // Only add optional fields if they have values
+      if (formData.discount_code) {
+        cleanPayload.discount_code = formData.discount_code
+      }
+      if (formData.total_price !== undefined && formData.total_price !== null) {
+        cleanPayload.total_price = Number(formData.total_price)
+      }
+      if (formData.currency) {
+        cleanPayload.currency = formData.currency
+      }
+      if (formData.enrolled_at) {
+        cleanPayload.enrolled_at = formData.enrolled_at
+      }
+      if (formData.notes) {
+        cleanPayload.notes = formData.notes
+      }
+
       if (editingEnrollment) {
-        await updateEnrollment(editingEnrollment.id, formData)
+        await updateEnrollment(editingEnrollment.id, cleanPayload)
+        setSnackbar({ open: true, message: "تم تحديث التسجيل بنجاح", severity: "success" })
       } else {
-        await createEnrollment(formData)
+        await createEnrollment(cleanPayload)
+        setSnackbar({ open: true, message: "تم إضافة التسجيل بنجاح", severity: "success" })
       }
       handleCloseDialog()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save enrollment:', error)
+      setSnackbar({ 
+        open: true, 
+        message: error.response?.data?.message || "حدث خطأ أثناء حفظ التسجيل", 
+        severity: "error" 
+      })
     }
   }
 
@@ -104,8 +222,14 @@ const EnrollmentsPage: React.FC = () => {
     if (window.confirm("هل أنت متأكد من حذف هذا التسجيل؟")) {
       try {
         await deleteEnrollment(id)
-      } catch (error) {
+        setSnackbar({ open: true, message: "تم حذف التسجيل بنجاح", severity: "success" })
+      } catch (error: any) {
         console.error('Failed to delete enrollment:', error)
+        setSnackbar({ 
+          open: true, 
+          message: error.response?.data?.message || "حدث خطأ أثناء حذف التسجيل", 
+          severity: "error" 
+        })
       }
     }
   }
@@ -272,7 +396,7 @@ const EnrollmentsPage: React.FC = () => {
     },
   ]
 
-  if (enrollmentsLoading || studentsLoading || batchesLoading) {
+  if (enrollmentsLoading || studentsLoading || batchesLoading || discountCodesLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
@@ -450,25 +574,69 @@ const EnrollmentsPage: React.FC = () => {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>الدفعة</InputLabel>
-                  <Select
-                    value={enrollmentForm.batch_id || ""}
-                    label="الدفعة"
-                    onChange={(e) => setEnrollmentForm({ ...enrollmentForm, batch_id: Number(e.target.value) })}
-                  >
-                    {batches.map((batch) => (
-                      <MenuItem key={batch.id} value={batch.id}>
-                        {batch.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  options={batches}
+                  getOptionLabel={(option) => {
+                    const currency = option.currency === "USD" ? "$" : "د.ع"
+                    const price = option.actual_price ? ` - ${option.actual_price.toLocaleString()} ${currency}` : ""
+                    return `${option.name}${price}`
+                  }}
+                  value={batches.find(b => b.id === enrollmentForm.batch_id) || null}
+                  onChange={(_, newValue) => {
+                    if (newValue) {
+                      setEnrollmentForm({ ...enrollmentForm, batch_id: newValue.id })
+                    } else {
+                      setEnrollmentForm({ ...enrollmentForm, batch_id: 0, total_price: undefined })
+                    }
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="الدفعة" required />
+                  )}
+                />
               </Grid>
             </Grid>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
+                <Autocomplete
+                  options={getFilteredDiscountCodes(enrollmentForm.batch_id)}
+                  getOptionLabel={(option) => {
+                    let label = `${option.code} - ${option.name}`
+                    if (option.percent) {
+                      label += ` (${option.percent}%)`
+                    } else if (option.amount) {
+                      const currency = option.currency === "USD" ? "$" : "د.ع"
+                      label += ` (${option.amount} ${currency})`
+                    }
+                    return label
+                  }}
+                  value={discountCodes.find(d => d.code === enrollmentForm.discount_code) || null}
+                  onChange={(_, newValue) => {
+                    setEnrollmentForm({ ...enrollmentForm, discount_code: newValue ? newValue.code : "" })
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="رمز الخصم (اختياري)" />
+                  )}
+                  renderOption={(props, option) => {
+                    const { key, ...otherProps } = props
+                    return (
+                      <li key={key} {...otherProps}>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {option.code} - {option.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.percent ? `خصم ${option.percent}%` : 
+                             option.amount ? `خصم ${option.amount} ${option.currency === "USD" ? "$" : "د.ع"}` : 
+                             "خصم"}
+                          </Typography>
+                        </Box>
+                      </li>
+                    )
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>الحالة</InputLabel>
                   <Select
@@ -483,37 +651,24 @@ const EnrollmentsPage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="المبلغ الإجمالي"
-                  type="number"
-                  value={enrollmentForm.total_price || ""}
-                  onChange={(e) => setEnrollmentForm({ ...enrollmentForm, total_price: Number(e.target.value) || undefined })}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>العملة</InputLabel>
-                  <Select
-                    value={enrollmentForm.currency || "IQD"}
-                    label="العملة"
-                    onChange={(e) => setEnrollmentForm({ ...enrollmentForm, currency: e.target.value as any })}
-                  >
-                    <MenuItem value="IQD">دينار عراقي</MenuItem>
-                    <MenuItem value="USD">دولار أمريكي</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
             </Grid>
 
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="رمز الخصم"
-                  value={enrollmentForm.discount_code}
-                  onChange={(e) => setEnrollmentForm({ ...enrollmentForm, discount_code: e.target.value })}
+                  label="المبلغ الإجمالي"
+                  type="number"
+                  value={enrollmentForm.total_price || ""}
+                  disabled
+                  helperText="يتم حسابه تلقائياً من سعر الدفعة والخصم"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {enrollmentForm.currency === "USD" ? "$" : "د.ع"}
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -545,6 +700,22 @@ const EnrollmentsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

@@ -33,6 +33,7 @@ export interface Batch {
   capacity?: number
   status?: "open" | "closed" | "full"
   actual_price?: number
+  currency?: "USD" | "IQD"
   created_at: string
   updated_at: string
   course?: Course
