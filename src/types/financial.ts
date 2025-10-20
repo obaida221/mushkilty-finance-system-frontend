@@ -1,7 +1,7 @@
 // Transaction Types
 export interface Transaction {
   id: string
-  type: "payment" | "expense" | "refund" | "payroll"
+  type: "payment" | "expense" | "refund" | "payroll" | string
   amount: number
   description: string
   date: string

@@ -552,11 +552,11 @@ const RefundsPage: React.FC = () => {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">حالة الواردة</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.status === "returned" ? "مرتجعة" : selectedRefund.payment.status}</Typography>
+                      <Typography variant="body1">{(selectedRefund.payment as any).status === "returned" ? "مرتجعة" : (selectedRefund.payment as any).status}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">طريقة الدفع</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.payment_method_id || "—"}</Typography>
+                      <Typography variant="body1">{(selectedRefund.payment as any).payment_method_id || "—"}</Typography>
                     </Grid>
                   </Grid>
                 </>
@@ -570,7 +570,7 @@ const RefundsPage: React.FC = () => {
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">الاسم الكامل</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.enrollment.student?.full_name}</Typography>
+                      <Typography variant="body1">{selectedRefund.payment.enrollment.student?.fullName || (selectedRefund.payment.enrollment.student as any).full_name}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">الهاتف</Typography>
@@ -578,17 +578,17 @@ const RefundsPage: React.FC = () => {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">المدينة</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.enrollment.student.city || "—"}</Typography>
+                      <Typography variant="body1">{(selectedRefund.payment.enrollment.student as any).city || "—"}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">الحالة</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.enrollment.student.status || "—"}</Typography>
+                      <Typography variant="body1">{(selectedRefund.payment.enrollment.student as any).status || "—"}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">تاريخ الإنشاء</Typography>
                       <Typography variant="body1">
-                        {selectedRefund.payment.enrollment.student.created_at ? 
-                          new Date(selectedRefund.payment.enrollment.student.created_at).toLocaleDateString() : "—"}
+                        {(selectedRefund.payment.enrollment.student as any).created_at ? 
+                          new Date((selectedRefund.payment.enrollment.student as any).created_at).toLocaleDateString() : "—"}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -618,23 +618,23 @@ const RefundsPage: React.FC = () => {
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">السعر الإجمالي</Typography>
                       <Typography variant="body1">
-                        {Number(selectedRefund.payment.enrollment.total_price || 0).toLocaleString()} {selectedRefund.payment.enrollment.currency}
+                        {Number((selectedRefund.payment.enrollment as any).total_price || 0).toLocaleString()} {(selectedRefund.payment.enrollment as any).currency}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">حالة التسجيل</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.enrollment.status}</Typography>
+                      <Typography variant="body1">{(selectedRefund.payment.enrollment as any).status}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">تاريخ التسجيل</Typography>
                       <Typography variant="body1">
-                        {selectedRefund.payment.enrollment.enrolled_at ? 
-                          new Date(selectedRefund.payment.enrollment.enrolled_at).toLocaleDateString() : "—"}
+                        {(selectedRefund.payment.enrollment as any).enrolled_at ? 
+                          new Date((selectedRefund.payment.enrollment as any).enrolled_at).toLocaleDateString() : "—"}
                       </Typography>
                     </Grid>
                     <Grid item xs={12}>
                       <Typography variant="body2" color="text.secondary">ملاحظات</Typography>
-                      <Typography variant="body1">{selectedRefund.payment.enrollment.notes || "—"}</Typography>
+                      <Typography variant="body1">{(selectedRefund.payment.enrollment as any).notes || "—"}</Typography>
                     </Grid>
                   </Grid>
                 </>

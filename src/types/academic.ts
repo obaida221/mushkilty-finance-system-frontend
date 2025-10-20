@@ -33,6 +33,7 @@ export interface Batch {
   capacity?: number
   status?: "open" | "closed" | "full"
   actual_price?: number
+  currency?: "USD" | "IQD"
   created_at: string
   updated_at: string
   course?: Course
@@ -47,8 +48,8 @@ export interface CreateBatchDto {
   description?: string
   level?: "A1" | "A2" | "B1" | "B2" | "C1"
   location?: string
-  start_date?: string
-  end_date?: string
+  start_date?: string | null
+  end_date?: string | null
   schedule?: string
   capacity?: number
   status?: "open" | "closed" | "full"

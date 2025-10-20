@@ -30,6 +30,9 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  Snackbar,
+  Tooltip,
+  Divider,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { 
@@ -42,6 +45,9 @@ import {
   CheckCircle,
   Cancel,
   People,
+  Refresh,
+  Visibility,
+  Close,
 } from "@mui/icons-material"
 import { useBatches } from '../hooks/useBatches'
 import { useCourses } from '../hooks/useCourses'
@@ -55,10 +61,14 @@ const BatchesPage: React.FC = () => {
   const [openCourseDialog, setOpenCourseDialog] = useState(false)
   const [openTrainerDialog, setOpenTrainerDialog] = useState(false)
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null)
+  const [openViewDialog, setOpenViewDialog] = useState(false)
+  const [viewingBatch, setViewingBatch] = useState<Batch | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCourse, setFilterCourse] = useState<string>("all")
   const [trainerSearch, setTrainerSearch] = useState<string>("")
   const [courseSearch, setCourseSearch] = useState<string>("")
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" })
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Hooks
   const { 
@@ -69,6 +79,7 @@ const BatchesPage: React.FC = () => {
     updateBatch,
     deleteBatch,
     getBatchesByStatus,
+    refreshBatches,
   } = useBatches()
 
   const { courses, loading: coursesLoading } = useCourses()
@@ -82,8 +93,8 @@ const BatchesPage: React.FC = () => {
     description: "",
     level: undefined,
     location: "",
-    start_date: "",
-    end_date: "",
+    start_date: null,
+    end_date: null,
     schedule: "",
     capacity: 0,
     status: "open",
@@ -96,12 +107,37 @@ const BatchesPage: React.FC = () => {
     try {
       if (editingBatch) {
         await updateBatch(editingBatch.id, batchForm)
+        setSnackbar({ open: true, message: "تم تحديث الدفعة بنجاح", severity: "success" })
       } else {
         await createBatch(batchForm)
+        setSnackbar({ open: true, message: "تم إنشاء الدفعة بنجاح", severity: "success" })
       }
+      setLastUpdated(new Date())
       handleCloseDialog()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save batch:', error)
+      let errorMessage = "حدث خطأ ما، يرجى المحاولة مرة أخرى"
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          errorMessage = "البيانات المرسلة غير صالحة، يرجى التحقق من جميع الحقول المطلوبة"
+          if (error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message
+          }
+        } else if (error.response.status === 401) {
+          errorMessage = "غير مصرح لك بالقيام بهذه العملية"
+        } else if (error.response.status === 403) {
+          errorMessage = "ليس لديك صلاحية للقيام بهذه العملية"
+        } else if (error.response.status === 404) {
+          errorMessage = "المورد المطلوب غير موجود"
+        } else if (error.response.status === 500) {
+          errorMessage = "خطأ في الخادم، يرجى المحاولة مرة أخرى لاحقاً"
+        }
+      } else if (error.request) {
+        errorMessage = "لا يمكن الاتصال بالخادم، يرجى التحقق من اتصالك بالإنترنت"
+      }
+      
+      setSnackbar({ open: true, message: errorMessage, severity: "error" })
     }
   }
 
@@ -110,8 +146,21 @@ const BatchesPage: React.FC = () => {
     if (window.confirm("هل أنت متأكد من حذف هذه الدُفعة؟ سيتم حذف جميع التسجيلات المرتبطة بها.")) {
       try {
         await deleteBatch(id)
-      } catch (error) {
+        setSnackbar({ open: true, message: "تم حذف الدفعة بنجاح", severity: "success" })
+        setLastUpdated(new Date())
+      } catch (error: any) {
         console.error('Failed to delete batch:', error)
+        let errorMessage = "فشل حذف الدفعة، يرجى المحاولة مرة أخرى"
+        
+        if (error.response) {
+          if (error.response.status === 404) {
+            errorMessage = "الدفعة غير موجودة"
+          } else if (error.response.status === 403) {
+            errorMessage = "ليس لديك صلاحية لحذف هذه الدفعة"
+          }
+        }
+        
+        setSnackbar({ open: true, message: errorMessage, severity: "error" })
       }
     }
   }
@@ -125,8 +174,8 @@ const BatchesPage: React.FC = () => {
       description: "",
       level: undefined,
       location: "",
-      start_date: "",
-      end_date: "",
+      start_date: null,
+      end_date: null,
       schedule: "",
       capacity: undefined,
       status: "open",
@@ -146,8 +195,8 @@ const BatchesPage: React.FC = () => {
       description: batch.description || "",
       level: batch.level,
       location: batch.location || "",
-      start_date: batch.start_date ? batch.start_date.split('T')[0] : "",
-      end_date: batch.end_date ? batch.end_date.split('T')[0] : "",
+      start_date: batch.start_date ? batch.start_date.split('T')[0] : null,
+      end_date: batch.end_date ? batch.end_date.split('T')[0] : null,
       schedule: batch.schedule || "",
       capacity: batch.capacity,
       status: batch.status,
@@ -182,6 +231,16 @@ const BatchesPage: React.FC = () => {
 
   const handleCloseTrainerDialog = () => {
     setOpenTrainerDialog(false)
+  }
+
+  const handleOpenViewDialog = (batch: Batch) => {
+    setViewingBatch(batch)
+    setOpenViewDialog(true)
+  }
+
+  const handleCloseViewDialog = () => {
+    setOpenViewDialog(false)
+    setViewingBatch(null)
   }
 
   // Handle trainer selection
@@ -226,26 +285,37 @@ const BatchesPage: React.FC = () => {
 
   // DataGrid columns
   const columns: GridColDef[] = [
+    {
+      field: "id",
+      headerName: "ID",
+      width: 20
+    }, 
     { 
       field: "name", 
-      headerName: "اسم الدُفعة", 
-      flex: 1, 
+      headerName: "اسم الدُفعة",  
       minWidth: 200 
     },
     {
       field: "course_id",
       headerName: "الدورة",
-      flex: 1,
-      minWidth: 150,
+      minWidth: 200,
       renderCell: (params) => {
         const course = courses.find(c => c.id === params.value)
         return <Chip label={course?.name || "غير محدد"} size="small" color="primary" />
       },
     },
     {
+      field: "project_type",
+      headerName: "النوع",
+      minWidth: 100,
+      renderCell: (params) => {
+        return <Chip label={params.row.course?.project_type || "غير محدد"} size="small" color="primary" />
+      },
+    },
+    {
       field: "level",
       headerName: "المستوى",
-      width: 100,
+      width: 130,
       renderCell: (params) => params.value ? (
         <Chip label={params.value} size="small" color="secondary" />
       ) : "-",
@@ -253,7 +323,7 @@ const BatchesPage: React.FC = () => {
     {
       field: "status",
       headerName: "الحالة",
-      width: 120,
+      minWidth: 100,
       renderCell: (params) => {
         const statusConfig = {
           open: { label: "مفتوح", color: "success" as const, icon: <CheckCircle fontSize="small" /> },
@@ -274,7 +344,7 @@ const BatchesPage: React.FC = () => {
     {
       field: "capacity",
       headerName: "السعة",
-      width: 100,
+      minWidth: 100,
       align: "center",
       headerAlign: "center",
       renderCell: (params) => params.value || "-",
@@ -282,7 +352,7 @@ const BatchesPage: React.FC = () => {
     {
       field: "enrollments",
       headerName: "المسجلين",
-      width: 100,
+      minWidth: 100,
       align: "center",
       headerAlign: "center",
       renderCell: (params) => {
@@ -293,42 +363,55 @@ const BatchesPage: React.FC = () => {
     {
       field: "start_date",
       headerName: "تاريخ البداية",
-      width: 130,
+      minWidth: 100,
+      width: 150,
       renderCell: (params) => params.value ? new Date(params.value).toLocaleDateString('ar') : "-",
     },
     {
       field: "end_date",
       headerName: "تاريخ النهاية",
-      width: 130,
+      minWidth: 100,
+      width: 150,
       renderCell: (params) => params.value ? new Date(params.value).toLocaleDateString('ar') : "-",
     },
     {
       field: "location",
       headerName: "الموقع",
-      width: 120,
+      minWidth: 150,
+      width: 200,
       renderCell: (params) => params.value || "-",
     },
     {
       field: "actions",
       headerName: "الإجراءات",
-      width: 120,
+      minWidth: 100,
+      width: 180,
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <IconButton 
-            size="small" 
-            color="primary" 
-            onClick={() => handleEditBatch(params.row)}
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            color="error" 
-            onClick={() => handleDelete(params.row.id)}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          <Tooltip title="عرض التفاصيل">
+            <IconButton size="small" color="primary" onClick={() => handleOpenViewDialog(params.row)}>
+              <Visibility fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="تعديل">
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleEditBatch(params.row)}
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="حذف">
+            <IconButton 
+              size="small" 
+              color="error"
+              onClick={() => handleDelete(params.row.id)}
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       ),
     },
@@ -349,9 +432,32 @@ const BatchesPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           إدارة الدُفعات
         </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
-          إضافة دُفعة
-        </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary">
+              آخر تحديث: {lastUpdated.toLocaleTimeString("ar-IQ")}
+            </Typography>
+          )}
+          <Button 
+            variant="outlined" 
+            startIcon={<Refresh />} 
+            onClick={async () => {
+              try {
+                refreshBatches();
+                setLastUpdated(new Date());
+                setSnackbar({ open: true, message: "تم تحديث البيانات بنجاح", severity: "success" });
+              } catch (error: any) {
+                console.error("Failed to refresh batches:", error);
+                setSnackbar({ open: true, message: "فشل تحديث البيانات، يرجى المحاولة مرة أخرى", severity: "error" });
+              }
+            }}
+          >
+            تحديث
+          </Button>
+          <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+            إضافة دُفعة
+          </Button>
+        </Box>
       </Box>
 
       {/* Error Alert */}
@@ -596,7 +702,6 @@ const BatchesPage: React.FC = () => {
                   value={batchForm.end_date}
                   onChange={(e) => setBatchForm({ ...batchForm, end_date: e.target.value })}
                   InputLabelProps={{ shrink: true }}
-                  required
                 />
               </Grid>
             </Grid>
@@ -756,6 +861,159 @@ const BatchesPage: React.FC = () => {
           <Button onClick={handleCloseTrainerDialog}>إلغاء</Button>
         </DialogActions>
       </Dialog>
+
+      {/* View Batch Details Dialog */}
+      <Dialog open={openViewDialog} onClose={handleCloseViewDialog} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">تفاصيل الدفعة</Typography>
+            <IconButton onClick={handleCloseViewDialog}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {viewingBatch && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: "1em", fontWeight: "bold", mb: 1.5, textDecoration: "underline" }}>معلومات الدفعة:</Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Typography><strong>المعرف:</strong> {viewingBatch.id}</Typography>
+                        <Typography><strong>اسم الدفعة:</strong> {viewingBatch.name}</Typography>
+                        <Typography><strong>الدورة:</strong> {viewingBatch.course?.name || "-"}</Typography>
+                        <Typography><strong>المستوى:</strong> {viewingBatch.level || "-"}</Typography>
+                        <Typography><strong>السعة:</strong> {viewingBatch.capacity || "-"}</Typography>
+                        <Typography><strong>الحالة:</strong>
+                          <Chip
+                            label={viewingBatch.status === "open" ? "مفتوحة" : viewingBatch.status === "closed" ? "مغلقة" : viewingBatch.status}
+                            color={viewingBatch.status === "open" ? "success" : viewingBatch.status === "closed" ? "error" : "default"}
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        </Typography>
+                        <Typography><strong>السعر:</strong> {viewingBatch.actual_price} {viewingBatch.currency || "-"}</Typography>
+                        <Typography><strong>الوصف:</strong> {viewingBatch.description || "-"}</Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: "1em", fontWeight: "bold", mb: 1.5, textDecoration: "underline" }}>الزمان والمكان:</Typography>
+
+                      <Typography><strong>الموعد:</strong> {viewingBatch.schedule || "-"}</Typography>
+
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                        <Box>
+                          <Typography><strong>تاريخ البدء:</strong></Typography>
+                          <Typography>{viewingBatch.start_date ? new Date(viewingBatch.start_date).toLocaleDateString('ar') : "-"}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography><strong>تاريخ الانتهاء:</strong></Typography>
+                          <Typography>{viewingBatch.end_date ? new Date(viewingBatch.end_date).toLocaleDateString('ar') : "-"}</Typography>
+                        </Box>
+                      </Box>
+
+                      <Typography><strong>الموقع:</strong> {viewingBatch.location || "-"}</Typography>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                        <Box>
+                          <Typography><strong>تاريخ الإنشاء:</strong></Typography>
+                          <Typography>{new Date(viewingBatch.created_at).toLocaleString('ar-EG')}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography><strong>آخر تعديل:</strong></Typography>
+                          <Typography>{new Date(viewingBatch.updated_at).toLocaleString('ar-EG')}</Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ fontSize: "1em", fontWeight: "bold", mb: 1.5, textDecoration: "underline" }}>
+                        الطلاب المسجلون ({viewingBatch.enrollments?.length || 0})
+                      </Typography>
+                      {viewingBatch.enrollments && viewingBatch.enrollments.length > 0 ? (
+                        <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
+                          <Table>
+                            <TableHead sx={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}>
+                              <TableRow>
+                                <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>الطالب</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>رمز الخصم</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>السعر الإجمالي</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>تاريخ التسجيل</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {viewingBatch.enrollments.map((enrollment) => (
+                                <TableRow key={enrollment.id} hover>
+                                  <TableCell>{enrollment.student_id}</TableCell>
+                                  <TableCell>
+                                    {(enrollment as any).student?.full_name || 
+                                     (enrollments.find(e => e.student_id === enrollment.student_id) as any)?.student?.full_name || 
+                                     `طالب #${enrollment.student_id}`}
+                                  </TableCell>
+                                  <TableCell>{enrollment.discount_code || "-"}</TableCell>
+                                  <TableCell>{enrollment.total_price} {enrollment.currency}</TableCell>
+                                  <TableCell>{enrollment.enrolled_at ? new Date(enrollment.enrolled_at).toLocaleDateString('ar') : "-"}</TableCell>
+                                  <TableCell>
+                                    <Chip
+                                      label={enrollment.status === "accepted" ? "مقبول" : enrollment.status === "pending" ? "قيد الانتظار" : enrollment.status}
+                                      color={enrollment.status === "accepted" ? "success" : enrollment.status === "pending" ? "warning" : "default"}
+                                      size="small"
+                                    />
+                                  </TableCell>
+                                  <TableCell>{enrollment.notes || "-"}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                          لا يوجد طلاب مسجلون في هذه الدفعة
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseViewDialog} variant="outlined">إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }
