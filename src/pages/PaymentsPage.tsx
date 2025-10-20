@@ -1001,6 +1001,7 @@ const PaymentsPage = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
               <Grid container spacing={2}>
                 
+                {/* المعلومات الأساسية */}
                 <Grid item xs={12} md={6}>
                   <Card variant="outlined">
                     <CardContent>
@@ -1089,6 +1090,35 @@ const PaymentsPage = () => {
                           }
                         />
                       </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* معلومات المستلم */}
+                <Grid item xs={12}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{
+                        fontSize: "1em", 
+                        fontWeight: "bold", 
+                        mb: 1.5, 
+                        textDecoration: "underline"
+                      }}>
+                        معلومات المستلم
+                      </Typography>
+                      
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <DetailItem 
+                            label="تم الاستلام بواسطة" 
+                            value={selectedDetailsPayment.user?.name} 
+                          />
+                          <DetailItem 
+                            label="بريد المستلم" 
+                            value={selectedDetailsPayment.user?.email} 
+                          />
+                        </Grid>
+                      </Grid>
                     </CardContent>
                   </Card>
                 </Grid>
