@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import {
   Box, Typography, Paper, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
   InputAdornment, MenuItem, FormControl, InputLabel, Select, Chip, Grid, Card, CardContent,
-  IconButton, CircularProgress, Alert, Snackbar, Tooltip, Autocomplete
+  IconButton, CircularProgress, Alert, Snackbar, Tooltip, Autocomplete, Divider
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import {
   Search, Add, Payment as PaymentIcon, Edit, Delete, Visibility,
-  Refresh, Person, CreditCard
+  Refresh, Person, CreditCard, Close
 } from "@mui/icons-material";
 import { usePayments } from "../hooks/usePayments";
 import { usePaymentMethods } from "../hooks/usePaymentMethods";
@@ -31,6 +31,32 @@ type PaymentFormType = {
   payment_source: "student_enrollment" | "external";
 };
 
+const DetailItem = ({ label, value, fallback = "غير محدد", multiline = false }) => (
+  <Box>
+    <Typography component="span" fontWeight="bold">{label}:</Typography>
+    {multiline ? (
+      <Box 
+      sx={{ 
+        mt: 0.5,
+        p: 1.5, 
+        bgcolor: 'grey.50', 
+        borderRadius: 1,
+        border: '1px solid',
+        borderColor: 'grey.200',
+        minHeight: '60px'
+      }}>
+        <Typography variant="body2">
+          {value || fallback}
+        </Typography>
+      </Box>
+    ) : (
+      <Typography component="span" sx={{ ml: 1 }}>
+        {value || fallback}
+      </Typography>
+    )}
+  </Box>
+);
+
 const PaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
@@ -40,6 +66,8 @@ const PaymentsPage = () => {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedDetailsPayment, setSelectedDetailsPayment] = useState<Payment | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -142,7 +170,15 @@ const PaymentsPage = () => {
     setOpenDialog(true);
   };
 
+  const openDetailsDialog = (payment: Payment) => {
+    setSelectedDetailsPayment(payment);
+    setDetailsDialogOpen(true);
+  };
+
+
+
   const handleCloseDialog = () => setOpenDialog(false);
+  const handleCloseDetailsDialog = () => setDetailsDialogOpen(false);
 
   const handleSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
@@ -266,7 +302,7 @@ const PaymentsPage = () => {
   };
 
   // دوال الحذف
-  const openDeleteDialog = (payment: Payment) => {
+    const openDeleteDialog = (payment: Payment) => {
     setSelectedPayment(payment);
     setDeleteDialogOpen(true);
   };
@@ -323,18 +359,19 @@ const PaymentsPage = () => {
     {
       field: "id",
       headerName: "ID",
-      width: 50
+      flex:0.5,
     },
     {
       field: "paid_at",
       headerName: "تاريخ الدفع",
-      width: 100,
+      flex:1,
       valueGetter: (params) => new Date(params.value).toLocaleDateString('ar-EG')
     },
     {
       field: "user",
       headerName: "المستلم",
-      width: 200,
+      flex:2,
+      minWidth: 100,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Person fontSize="small" color="action" />
@@ -347,7 +384,8 @@ const PaymentsPage = () => {
     {
       field: "payer",
       headerName: "الدافع",
-      width: 150,
+      flex:1.5,
+      minWidth: 150,
       renderCell: (params) => (
         <Typography color={params.value ? "text.primary" : "text.secondary"}>
           {params.value || params.row.enrollment.student.full_name || "—"}
@@ -357,7 +395,8 @@ const PaymentsPage = () => {
     {
       field: "paymentMethod",
       headerName: "طريقة الدفع",
-      width: 100,
+      flex: 1,
+      minWidth: 100,
       renderCell: (params) => (
         <Chip
           label={params.row.paymentMethod?.name || "غير معروف"}
@@ -370,8 +409,9 @@ const PaymentsPage = () => {
     {
       field: "amount",
       headerName: "المبلغ",
-      width: 150,
-      renderCell: (params) => (
+      flex: 1.5,
+      minWidth: 150,
+        renderCell: (params) => (
         <Typography sx={{ fontWeight: 600, color: "success.main" }}>
           {params.row.amount.toLocaleString()} {params.row.currency}
         </Typography>
@@ -380,8 +420,9 @@ const PaymentsPage = () => {
     {
       field: "type",
       headerName: "النوع",
-      width: 100,
-      renderCell: (params) => (
+      flex: 1,
+      minWidth: 100,     
+       renderCell: (params) => (
         <Chip
           label={params.value === "full" ? "كاملة" : "قسط"}
           size="small"
@@ -392,8 +433,9 @@ const PaymentsPage = () => {
     {
       field: "status",
       headerName: "الحالة",
-      width: 100,
-      renderCell: (params) => {
+      flex: 1,
+      minWidth: 100,
+          renderCell: (params) => {
         const status = params.value || "completed";
         const statusConfig = {
           completed: { label: "مكتملة", color: "success" as const },
@@ -413,8 +455,9 @@ const PaymentsPage = () => {
     {
       field: "note",
       headerName: "ملاحظات",
-      width: 120,
-      renderCell: (params) => (
+      flex: 1.2,
+      minWidth: 120,
+       renderCell: (params) => (
         <Typography variant="body2" color={params.value ? "text.primary" : "text.secondary"}>
           {params.value || "لا توجد ملاحظات"}
         </Typography>
@@ -423,10 +466,16 @@ const PaymentsPage = () => {
     {
       field: "actions",
       headerName: "إجراءات",
-      width: 100,
+      flex: 1,
+      minWidth: 100,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="عرض التفاصيل">
+            <IconButton size="small" color="primary" onClick={() => openDetailsDialog(params.row)}>
+              <Visibility fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="تعديل">
             <IconButton size="small" color="primary" onClick={() => handleOpenDialog(params.row)}>
               <Edit fontSize="small" />
@@ -437,13 +486,6 @@ const PaymentsPage = () => {
               <Delete fontSize="small" />
             </IconButton>
           </Tooltip>
-          {params.row.payment_proof && (
-            <Tooltip title="عرض إثبات الدفع">
-              <IconButton size="small" color="info" onClick={() => window.open(params.row.payment_proof, "_blank")}>
-                <Visibility fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
         </Box>
       ),
     },
@@ -931,6 +973,137 @@ const PaymentsPage = () => {
               (paymentForm.payment_source === "external" && !paymentForm.payer)}
           >
             {editingPayment ? "تحديث" : "حفظ"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* نافذة التفاصيل  */}
+      <Dialog 
+        open={detailsDialogOpen} 
+        onClose={handleCloseDetailsDialog} 
+        maxWidth="md" 
+        fullWidth
+        aria-labelledby="payment-details-title"
+      >
+        <DialogTitle 
+          id="payment-details-title"
+          sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+        >
+          تفاصيل الواردة
+        </DialogTitle>
+        
+        <DialogContent>
+          {!selectedDetailsPayment ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              <Grid container spacing={2}>
+                
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{
+                        fontSize: "1em", 
+                        fontWeight: "bold", 
+                        mb: 1.5, 
+                        textDecoration: "underline"
+                      }}>
+                        المعلومات الأساسية
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <DetailItem label="المعرف" value={selectedDetailsPayment.id} />
+                        <DetailItem label="المبلغ" value={`${selectedDetailsPayment.amount.toLocaleString()} ${selectedDetailsPayment.currency}`} />
+                        <DetailItem label="نوع الواردة" value={selectedDetailsPayment.type === "full" ? "كاملة" : "قسط"} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography component="span" fontWeight="bold">الحالة:</Typography>
+                          <Chip 
+                            label={
+                              selectedDetailsPayment.status === "completed" ? "مكتملة" :
+                              selectedDetailsPayment.status === "pending" ? "معلقة" : "مرتجعة"
+                            } 
+                            color={
+                              selectedDetailsPayment.status === "completed" ? "success" :
+                              selectedDetailsPayment.status === "pending" ? "warning" : "error"
+                            } 
+                            size="small"
+                          />
+                        </Box>
+                        <DetailItem 
+                          label="ملاحظات" 
+                          value={selectedDetailsPayment.note} 
+                          fallback="لا توجد ملاحظات"
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                
+                {/* معلومات الدفع والتوقيت */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{
+                        fontSize: "1em", 
+                        fontWeight: "bold", 
+                        mb: 1.5, 
+                        textDecoration: "underline"
+                      }}>
+                        معلومات الدفع
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <DetailItem 
+                          label="طريقة الدفع" 
+                          value={selectedDetailsPayment.paymentMethod?.name} 
+                        />
+                        <DetailItem 
+                          label="تاريخ الدفع" 
+                          value={selectedDetailsPayment.paid_at ? 
+                            new Date(selectedDetailsPayment.paid_at).toLocaleString('ar-EG') : 
+                            undefined
+                          }
+                        />
+                        <DetailItem 
+                          label="الدافع" 
+                          value={selectedDetailsPayment.payer || selectedDetailsPayment.enrollment?.student?.full_name} 
+                        />
+                      </Box>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <DetailItem 
+                          label="تاريخ الإنشاء" 
+                          value={selectedDetailsPayment.created_at ? 
+                            new Date(selectedDetailsPayment.created_at).toLocaleString('ar-EG') : 
+                            undefined
+                          }
+                        />
+                        <DetailItem 
+                          label="آخر تعديل" 
+                          value={selectedDetailsPayment.updated_at ? 
+                            new Date(selectedDetailsPayment.updated_at).toLocaleString('ar-EG') : 
+                            undefined
+                          }
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        
+        <DialogActions>
+          <Button 
+            onClick={handleCloseDetailsDialog} 
+            variant="outlined"
+            startIcon={<Close />}
+          >
+            إغلاق
           </Button>
         </DialogActions>
       </Dialog>
