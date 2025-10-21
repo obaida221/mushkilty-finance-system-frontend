@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   Box,
   Typography,
@@ -24,11 +23,13 @@ import {
   Snackbar,
   Card,
   CardContent,
+  Autocomplete,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, AccountBalance, Edit, Delete, CheckCircle, Schedule } from "@mui/icons-material"
+import { Search, Add, AccountBalance, Edit, Delete, CheckCircle, Schedule, Refresh } from "@mui/icons-material"
 import { usePayrolls } from "../hooks/usePayrolls"
-import type { Payroll } from "../types"
+import usersAPI from "../api/usersAPI"
+import type { Payroll, User } from "../types"
 
 const PayrollPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
@@ -42,6 +43,36 @@ const PayrollPage: React.FC = () => {
   })
 
   const { payrolls, loading, error, createPayroll, updatePayroll, deletePayroll } = usePayrolls()
+  const [users, setUsers] = useState<User[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
+  
+  React.useEffect(() => {
+    if (payrolls.length > 0 && !lastRefreshTime) {
+      setLastRefreshTime(new Date())
+    }
+  }, [payrolls, lastRefreshTime])
+
+  const refreshPayrolls = async () => {
+    try {
+      setLastRefreshTime(new Date())
+    } catch (err) {
+      console.error("فشل في تحديث البيانات:", err)
+    }
+  }
+
+  const fetchUsers = async () => {
+    setUsersLoading(true)
+    try {
+      const response = await usersAPI.getAll()
+      setUsers(response)
+    } catch (err) {
+      console.error("فشل في جلب المستخدمين:", err)
+    } finally {
+      setUsersLoading(false)
+    }
+  }
 
   const [payrollForm, setPayrollForm] = useState({
     user_id: "",
@@ -53,7 +84,8 @@ const PayrollPage: React.FC = () => {
     note: "",
   })
 
-  const handleOpenDialog = (payroll?: Payroll) => {
+  const handleOpenDialog = async (payroll?: Payroll) => {
+    await fetchUsers()
     if (payroll) {
       setEditingPayroll(payroll)
       setPayrollForm({
@@ -65,6 +97,13 @@ const PayrollPage: React.FC = () => {
         paid_at: payroll.paid_at || "",
         note: payroll.note || "",
       })
+      
+      if (payroll.user) {
+        setSelectedUser(payroll.user)
+      } else {
+        const foundUser = users.find(u => u.id === payroll.user_id)
+        setSelectedUser(foundUser || null)
+      }
     } else {
       setEditingPayroll(null)
       setPayrollForm({ 
@@ -76,6 +115,7 @@ const PayrollPage: React.FC = () => {
         paid_at: "", 
         note: "" 
       })
+      setSelectedUser(null)
     }
     setOpenDialog(true)
   }
@@ -92,9 +132,14 @@ const PayrollPage: React.FC = () => {
       return
     }
 
+    if (!selectedUser) {
+      handleSnackbar("يجب اختيار مستخدم صحيح", "error")
+      return
+    }
+    
     try {
       const payload = {
-        user_id: Number(payrollForm.user_id),
+        user_id: selectedUser.id,
         amount: Number(payrollForm.amount),
         currency: payrollForm.currency,
         period_start: payrollForm.period_start,
@@ -110,6 +155,7 @@ const PayrollPage: React.FC = () => {
         await createPayroll(payload)
         handleSnackbar("تم إضافة الراتب بنجاح", "success")
       }
+      setLastRefreshTime(new Date())
       handleCloseDialog()
     } catch (err) {
       console.error(err)
@@ -122,6 +168,7 @@ const PayrollPage: React.FC = () => {
       try {
         await deletePayroll(id)
         handleSnackbar("تم حذف الراتب بنجاح", "success")
+        setLastRefreshTime(new Date())
       } catch (err) {
         console.error(err)
         handleSnackbar("حدث خطأ أثناء الحذف", "error")
@@ -135,6 +182,7 @@ const PayrollPage: React.FC = () => {
         paid_at: new Date().toISOString() 
       })
       handleSnackbar("تم تحديد الراتب كمدفوع", "success")
+      setLastRefreshTime(new Date())
     } catch (err) {
       console.error(err)
       handleSnackbar("حدث خطأ أثناء تحديث الحالة", "error")
@@ -154,8 +202,8 @@ const PayrollPage: React.FC = () => {
   })
 
   // Calculate statistics
-  const totalIQD = payrolls.filter(p => p.currency === "IQD").reduce((sum, p) => sum + p.amount, 0)
-  const totalUSD = payrolls.filter(p => p.currency === "USD").reduce((sum, p) => sum + p.amount, 0)
+  const totalIQD = payrolls.filter(p => p.currency === "IQD").reduce((sum, p) => sum + +p.amount, 0)
+  const totalUSD = payrolls.filter(p => p.currency === "USD").reduce((sum, p) => sum + +p.amount, 0)
   const unpaidCount = payrolls.filter(p => !p.paid_at).length
   const paidCount = payrolls.filter(p => p.paid_at).length
 
@@ -256,9 +304,17 @@ const PayrollPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           إدارة الرواتب
         </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
-          إضافة راتب
-        </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            {lastRefreshTime ? `آخر تحديث: ${lastRefreshTime.toLocaleTimeString("en-IQ")}` : ""}
+          </Typography>
+          <Button variant="outlined" startIcon={<Refresh />} onClick={refreshPayrolls}>
+            تحديث
+          </Button>
+          <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
+            إضافة راتب
+          </Button>
+        </Box>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
@@ -372,13 +428,25 @@ const PayrollPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-            <TextField
+            <Autocomplete
               fullWidth
-              label="معرف المستخدم (User ID)"
-              type="number"
-              value={payrollForm.user_id}
-              onChange={(e) => setPayrollForm({ ...payrollForm, user_id: e.target.value })}
-              helperText="أدخل معرف الموظف/المعلم"
+              options={users}
+              loading={usersLoading}
+              getOptionLabel={(option) => `${option.name} (${option.email}) - ID: ${option.id}`}
+              value={selectedUser}
+              onChange={(_, newValue) => {
+                setSelectedUser(newValue);
+                setPayrollForm({ ...payrollForm, user_id: newValue ? newValue.id.toString() : "" });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="اختر المستخدم"
+                  helperText="ابحث عن الموظف/المعلم بالاسم أو البريد الإلكتروني"
+                  required
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option.id === value?.id}
             />
             
             <Grid container spacing={2}>
@@ -390,6 +458,7 @@ const PayrollPage: React.FC = () => {
                   value={payrollForm.period_start}
                   onChange={(e) => setPayrollForm({ ...payrollForm, period_start: e.target.value })}
                   InputLabelProps={{ shrink: true }}
+                  required
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -400,6 +469,7 @@ const PayrollPage: React.FC = () => {
                   value={payrollForm.period_end}
                   onChange={(e) => setPayrollForm({ ...payrollForm, period_end: e.target.value })}
                   InputLabelProps={{ shrink: true }}
+                  required
                 />
               </Grid>
             </Grid>
@@ -412,6 +482,7 @@ const PayrollPage: React.FC = () => {
                   type="number"
                   value={payrollForm.amount}
                   onChange={(e) => setPayrollForm({ ...payrollForm, amount: e.target.value })}
+                  required
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
