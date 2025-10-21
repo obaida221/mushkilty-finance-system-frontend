@@ -31,7 +31,7 @@ type PaymentFormType = {
   payment_source: "student_enrollment" | "external";
 };
 
-const DetailItem = ({ label, value, fallback = "غير محدد", multiline = false }) => (
+const DetailItem = ({ label, value, fallback = "غير محدد", multiline = false }: { label: string; value: any; fallback?: string; multiline?: boolean }) => (
   <Box>
     <Typography component="span" fontWeight="bold">{label}:</Typography>
     {multiline ? (
@@ -328,6 +328,7 @@ const PaymentsPage = () => {
 
   // فلترة الواردات
   const filteredPayments = payments.filter((payment: Payment) => {
+    console.log("Filtering payment:", payment);
     const matchesSearch =
       (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (payment.note?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
@@ -363,15 +364,14 @@ const PaymentsPage = () => {
     },
     {
       field: "paid_at",
-      headerName: "تاريخ الدفع",
-      flex:1,
-      valueGetter: (params) => new Date(params.value).toLocaleDateString('ar-EG')
+      headerName: "تاريخ الاستلام",
+      minWidth: 145,
+      valueGetter: (params) => new Date(params.value).toLocaleDateString('en-IQ')
     },
     {
       field: "user",
       headerName: "المستلم",
-      flex:2,
-      minWidth: 100,
+      minWidth: 180,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Person fontSize="small" color="action" />
@@ -394,8 +394,7 @@ const PaymentsPage = () => {
     },
     {
       field: "paymentMethod",
-      headerName: "طريقة الدفع",
-      flex: 1,
+      headerName: "وسيلة الدفع",
       minWidth: 100,
       renderCell: (params) => (
         <Chip
@@ -409,7 +408,6 @@ const PaymentsPage = () => {
     {
       field: "amount",
       headerName: "المبلغ",
-      flex: 1.5,
       minWidth: 150,
         renderCell: (params) => (
         <Typography sx={{ fontWeight: 600, color: "success.main" }}>
@@ -420,7 +418,6 @@ const PaymentsPage = () => {
     {
       field: "type",
       headerName: "النوع",
-      flex: 1,
       minWidth: 100,     
        renderCell: (params) => (
         <Chip
@@ -433,7 +430,6 @@ const PaymentsPage = () => {
     {
       field: "status",
       headerName: "الحالة",
-      flex: 1,
       minWidth: 100,
           renderCell: (params) => {
         const status = params.value || "completed";
@@ -455,7 +451,6 @@ const PaymentsPage = () => {
     {
       field: "note",
       headerName: "ملاحظات",
-      flex: 1.2,
       minWidth: 120,
        renderCell: (params) => (
         <Typography variant="body2" color={params.value ? "text.primary" : "text.secondary"}>
@@ -466,7 +461,6 @@ const PaymentsPage = () => {
     {
       field: "actions",
       headerName: "إجراءات",
-      flex: 1,
       minWidth: 100,
       sortable: false,
       renderCell: (params) => (
@@ -998,102 +992,279 @@ const PaymentsPage = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-              <Grid container spacing={2}>
-                
-                <Grid item xs={12} md={6}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{
-                        fontSize: "1em", 
-                        fontWeight: "bold", 
-                        mb: 1.5, 
-                        textDecoration: "underline"
-                      }}>
-                        المعلومات الأساسية
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <DetailItem label="المعرف" value={selectedDetailsPayment.id} />
-                        <DetailItem label="المبلغ" value={`${selectedDetailsPayment.amount.toLocaleString()} ${selectedDetailsPayment.currency}`} />
-                        <DetailItem label="نوع الواردة" value={selectedDetailsPayment.type === "full" ? "كاملة" : "قسط"} />
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography component="span" fontWeight="bold">الحالة:</Typography>
-                          <Chip 
-                            label={
-                              selectedDetailsPayment.status === "completed" ? "مكتملة" :
-                              selectedDetailsPayment.status === "pending" ? "معلقة" : "مرتجعة"
-                            } 
-                            color={
-                              selectedDetailsPayment.status === "completed" ? "success" :
-                              selectedDetailsPayment.status === "pending" ? "warning" : "error"
-                            } 
-                            size="small"
-                          />
-                        </Box>
-                        <DetailItem 
-                          label="ملاحظات" 
-                          value={selectedDetailsPayment.note} 
-                          fallback="لا توجد ملاحظات"
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                {/* معلومات الدفع والتوقيت */}
-                <Grid item xs={12} md={6}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{
-                        fontSize: "1em", 
-                        fontWeight: "bold", 
-                        mb: 1.5, 
-                        textDecoration: "underline"
-                      }}>
-                        معلومات الدفع
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <DetailItem 
-                          label="طريقة الدفع" 
-                          value={selectedDetailsPayment.paymentMethod?.name} 
-                        />
-                        <DetailItem 
-                          label="تاريخ الدفع" 
-                          value={selectedDetailsPayment.paid_at ? 
-                            new Date(selectedDetailsPayment.paid_at).toLocaleString('ar-EG') : 
-                            undefined
-                          }
-                        />
-                        <DetailItem 
-                          label="الدافع" 
-                          value={selectedDetailsPayment.payer || selectedDetailsPayment.enrollment?.student?.full_name} 
-                        />
-                      </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="h6" gutterBottom sx={{
+                          fontSize: "1em",
+                          fontWeight: "bold",
+                          mb: 1.5,
+                          textDecoration: "underline"
+                        }}>
+                          المعلومات الأساسية
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                              <DetailItem label="المعرف" value={selectedDetailsPayment.id} />
+                              <DetailItem label="المبلغ" value={`${selectedDetailsPayment.amount.toLocaleString()} ${selectedDetailsPayment.currency}`} />
+                              <DetailItem label="نوع الواردة" value={selectedDetailsPayment.type === "full" ? "كاملة" : "قسط"} />
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography component="span" fontWeight="bold">الحالة:</Typography>
+                                <Chip
+                                  label={
+                                    selectedDetailsPayment.status === "completed" ? "مكتملة" :
+                                      selectedDetailsPayment.status === "pending" ? "معلقة" : "مرتجعة"
+                                  }
+                                  color={
+                                    selectedDetailsPayment.status === "completed" ? "success" :
+                                      selectedDetailsPayment.status === "pending" ? "warning" : "error"
+                                  }
+                                  size="small"
+                                />
+                              </Box>
+                              <DetailItem
+                                label="ملاحظات"
+                                value={selectedDetailsPayment.note}
+                                fallback="لا توجد ملاحظات"
+                              />
+                            </Box>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                              <DetailItem
+                                label="طريقة الدفع"
+                                value={selectedDetailsPayment.paymentMethod?.name}
+                              />
+                              <DetailItem
+                                label="تاريخ الدفع"
+                                value={selectedDetailsPayment.paid_at ?
+                                  new Date(selectedDetailsPayment.paid_at).toLocaleString('en-IQ') :
+                                  undefined
+                                }
+                              />
+                              
+                              <DetailItem
+                                label="أنشئت بواسطة"
+                                value={selectedDetailsPayment.user?.name || "غير محدد"}
+                              />
 
-                      <Divider sx={{ my: 2 }} />
+                              <DetailItem
+                                label="تاريخ الإنشاء"
+                                value={selectedDetailsPayment.created_at ?
+                                  new Date(selectedDetailsPayment.created_at).toLocaleString('en-IQ') :
+                                  undefined
+                                }
+                              />
+                              <DetailItem
+                                label="آخر تعديل"
+                                value={selectedDetailsPayment.updated_at ?
+                                  new Date(selectedDetailsPayment.updated_at).toLocaleString('en-IQ') :
+                                  undefined
+                                }
+                              />
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
 
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <DetailItem 
-                          label="تاريخ الإنشاء" 
-                          value={selectedDetailsPayment.created_at ? 
-                            new Date(selectedDetailsPayment.created_at).toLocaleString('ar-EG') : 
-                            undefined
-                          }
-                        />
-                        <DetailItem 
-                          label="آخر تعديل" 
-                          value={selectedDetailsPayment.updated_at ? 
-                            new Date(selectedDetailsPayment.updated_at).toLocaleString('ar-EG') : 
-                            undefined
-                          }
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
+
+                  {/* معلومات المصدر */}
+                  <Grid item xs={12}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="h6" gutterBottom sx={{
+                          fontSize: "1em",
+                          fontWeight: "bold",
+                          mb: 1.5,
+                          textDecoration: "underline"
+                        }}>
+                          معلومات المصدر
+                        </Typography>
+
+                        {selectedDetailsPayment.payer ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                              <Typography variant="body2">
+                                واردة من جهة خارجية
+                              </Typography>
+                            </Alert>
+                            <DetailItem label="اسم المصدر" value={selectedDetailsPayment.payer} />
+                          </Box>
+                        ) : selectedDetailsPayment.enrollment ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                              <Typography variant="body2">
+                                واردة تابعة لتسجيل طالب
+                              </Typography>
+                            </Alert>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  <DetailItem
+                                    label="اسم الطالب"
+                                    value={(selectedDetailsPayment.enrollment as any).student?.full_name ||
+                                      selectedDetailsPayment.enrollment.student?.full_name ||
+                                      `طالب #${(selectedDetailsPayment.enrollment as any).student_id}`}
+                                  />
+                                  <DetailItem label="هاتف الطالب" value={selectedDetailsPayment.enrollment.student?.phone} />
+                                  <DetailItem label="مدينة الطالب" value={(selectedDetailsPayment.enrollment as any).student?.city} />
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  <DetailItem label="رمز الخصم" value={selectedDetailsPayment.enrollment.discount_code} />
+                                  <DetailItem label="السعر الإجمالي" value={`${selectedDetailsPayment.enrollment.total_price || 0} ${selectedDetailsPayment.currency}`} />
+                                  <DetailItem
+                                    label="حالة التسجيل"
+                                    value={
+                                      selectedDetailsPayment.enrollment.status === "accepted" ? "مقبول" :
+                                        selectedDetailsPayment.enrollment.status === "pending" ? "قيد الانتظار" :
+                                          selectedDetailsPayment.enrollment.status
+                                    }
+                                  />
+                                  <DetailItem
+                                    label="تاريخ التسجيل"
+                                    value={selectedDetailsPayment.enrollment.enrolled_at ?
+                                      new Date(selectedDetailsPayment.enrollment.enrolled_at).toLocaleDateString('ar') :
+                                      undefined
+                                    }
+                                  />
+                                </Box>
+                              </Grid>
+                            </Grid>
+
+                            <Divider sx={{ my: 2 }} />
+
+                            <Grid container spacing={2}>
+                              <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom sx={{
+                                  fontSize: "1em",
+                                  fontWeight: "bold",
+                                  mb: 1.5,
+                                  textDecoration: "underline"
+                                }}>
+                                  معلومات الدُفعة المسجل فيها
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  <DetailItem
+                                    label="اسم الدفعة"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.name || selectedDetailsPayment.enrollment.batch_id || "غير محدد"}
+                                  />
+                                  <DetailItem
+                                    label="المستوى"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.level || "غير محدد"}
+                                  />
+                                  <DetailItem
+                                    label="الموقع"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.location || "غير محدد"}
+                                  />
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  <DetailItem
+                                    label="تاريخ البدء"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.start_date ?
+                                      new Date((selectedDetailsPayment.enrollment as any).batch?.start_date).toLocaleDateString('ar') :
+                                      "غير محدد"
+                                    }
+                                  />
+                                  <DetailItem
+                                    label="تاريخ الانتهاء"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.end_date ?
+                                      new Date((selectedDetailsPayment.enrollment as any).batch?.end_date).toLocaleDateString('ar') :
+                                      "غير محدد"
+                                    }
+                                  />
+                                  <DetailItem
+                                    label="الجدول"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.schedule || "غير محدد"}
+                                  />
+                                </Box>
+                              </Grid>
+                            </Grid>
+
+                            <Divider sx={{ my: 2 }} />
+
+                            <Grid container spacing={2}>
+                              <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom sx={{
+                                  fontSize: "1em",
+                                  fontWeight: "bold",
+                                  mb: 1.5,
+                                  textDecoration: "underline"
+                                }}>
+                                  معلومات الدورة
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  <DetailItem
+                                    label="اسم الدورة"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.course?.name || "غير محدد"}
+                                  />
+                                  <DetailItem
+                                    label="نوع الدورة"
+                                    value={
+                                      (selectedDetailsPayment.enrollment as any).batch?.course?.project_type === "online" ? "أونلاين" :
+                                        (selectedDetailsPayment.enrollment as any).batch?.course?.project_type === "onsite" ? "حضوري" :
+                                          (selectedDetailsPayment.enrollment as any).batch?.course?.project_type === "kids" ? "أطفال" :
+                                            (selectedDetailsPayment.enrollment as any).batch?.course?.project_type === "ielts" ? "IELTS" :
+                                              "غير محدد"
+                                    }
+                                  />
+                                  <DetailItem
+                                    label="وصف الدورة"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.course?.description || "غير محدد"}
+                                    multiline
+                                  />
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  <DetailItem
+                                    label="المدرب"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.trainer?.name || "غير محدد"}
+                                  />
+                                  <DetailItem
+                                    label="سعر الدورة"
+                                    value={
+                                      (selectedDetailsPayment.enrollment as any).batch?.actual_price ?
+                                        `${(selectedDetailsPayment.enrollment as any).batch?.actual_price.toLocaleString()} ${(selectedDetailsPayment.enrollment as any).batch?.currency || selectedDetailsPayment.currency}` :
+                                        "غير محدد"
+                                    }
+                                  />
+                                  <DetailItem
+                                    label="السعة"
+                                    value={(selectedDetailsPayment.enrollment as any).batch?.capacity ?
+                                      `${(selectedDetailsPayment.enrollment as any).batch?.capacity} طالب` :
+                                      "غير محدد"
+                                    }
+                                  />
+                                </Box>
+                              </Grid>
+                            </Grid>
+                          </Box>
+                        ) : (
+                          <Alert severity="warning" sx={{ mb: 2 }}>
+                            <Typography variant="body2">
+                              لا توجد معلومات كافية عن الدافع
+                            </Typography>
+                          </Alert>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
                 </Grid>
-              </Grid>
-            </Box>
+              </Box>
           )}
         </DialogContent>
         

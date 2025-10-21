@@ -1,3 +1,5 @@
+import { User } from "./auth"
+
 export type PaymentStatus = 'completed' | 'returned' | 'pending';
 export type PaymentType = 'installment' | 'full';
 export type Currency = 'USD' | 'IQD';
@@ -26,11 +28,7 @@ export interface Payment {
   paid_at: string;
   payment_proof?: string | null;
 
-  user?: {
-    id: number;
-    name: string;
-    email?: string;
-  };
+  user?: User;
 
   enrollment?: {
     id: number;

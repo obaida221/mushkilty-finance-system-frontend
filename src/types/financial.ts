@@ -1,3 +1,5 @@
+import { User } from "./auth"
+
 // Transaction Types
 export interface Transaction {
   id: string
@@ -49,10 +51,7 @@ export interface Payment {
       phone?: string;
     };
   };
-  user?: {
-    id: number;
-    name: string;
-  };
+  user?: User;
   refunds?: Refund[];
 }
 
@@ -69,11 +68,7 @@ export interface Expense {
   updated_at: string;
   
   // Relations
-  user?: {
-    id: number;
-    name: string;
-    email?: string;
-  };
+  user?: User;
 }
 
 // Refund Types
@@ -136,10 +131,5 @@ export interface Payroll {
   updated_at: string;
   
   // Relations
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-    role_id: number;
-  };
+  user?: User;
 }
