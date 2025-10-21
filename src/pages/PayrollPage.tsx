@@ -160,6 +160,7 @@ const PayrollPage: React.FC = () => {
   const paidCount = payrolls.filter(p => p.paid_at).length
 
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     {
       field: "period",
       headerName: "الفترة",

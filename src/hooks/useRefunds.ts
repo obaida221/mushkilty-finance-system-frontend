@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { refundsAPI } from '../api';
 import type { Refund } from '../types';
+import { useStudents } from './useStudents';
+import { usePayments } from './usePayments';
 
 export interface CreateRefundDto {
   payment_id: number;
@@ -18,6 +20,8 @@ export const useRefunds = () => {
   const [refunds, setRefunds] = useState<Refund[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { updateStudentStatusBasedOnRefund } = useStudents();
+  const { getPaymentById } = usePayments();
 
   const fetchRefunds = async () => {
     try {
@@ -42,6 +46,13 @@ export const useRefunds = () => {
     setError(null);
     try {
       const response = await refundsAPI.create(data);
+      
+      // تحديث حالة الطالب إلى "مرفوض" عند إرجاع المبلغ
+      const payment = await getPaymentById(data.payment_id);
+      if (payment.enrollment?.student?.id) {
+        await updateStudentStatusBasedOnRefund(payment.enrollment.student.id);
+      }
+      
       await fetchRefunds(); // Refresh the list
       return response.data;
     } catch (err: any) {

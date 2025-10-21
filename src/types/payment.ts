@@ -1,19 +1,19 @@
 import { User } from "./auth"
+import type { BaseEntity, Currency } from "./common"
 
 export type PaymentStatus = 'completed' | 'returned' | 'pending';
 export type PaymentType = 'installment' | 'full';
-export type Currency = 'USD' | 'IQD';
 
-export interface PaymentMethod {
-  id: number;
+export interface PaymentMethod extends BaseEntity {
   name: string;
   method_number?: string | null;
   description?: string | null;
   is_valid: boolean;
+  user_id: number;
+  user?: User;
 }
 
-export interface Payment {
-  id: number;
+export interface Payment extends BaseEntity {
   user_id: number;
   enrollment_id?: number | null;
   payment_method_id: number;

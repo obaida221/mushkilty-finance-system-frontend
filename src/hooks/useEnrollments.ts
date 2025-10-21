@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { enrollmentsAPI } from '../api'
 import type { Enrollment, CreateEnrollmentDto } from '../types'
+import { useStudents } from './useStudents'
 
 interface UseEnrollmentsState {
   enrollments: Enrollment[]
@@ -42,11 +43,17 @@ export const useEnrollments = (): UseEnrollmentsReturn => {
     }
   }, [])
 
+  const { updateStudentStatusBasedOnEnrollment } = useStudents()
+  
   const createEnrollment = useCallback(async (data: CreateEnrollmentDto): Promise<Enrollment> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }))
       const response = await enrollmentsAPI.create(data)
       const newEnrollment = response.data
+      
+      // تحديث حالة الطالب إلى "تم الاختبار" عند التسجيل
+      await updateStudentStatusBasedOnEnrollment(data.student_id)
+      
       setState(prev => ({
         ...prev,
         enrollments: [newEnrollment, ...prev.enrollments],
@@ -61,7 +68,7 @@ export const useEnrollments = (): UseEnrollmentsReturn => {
       }))
       throw error
     }
-  }, [])
+  }, [updateStudentStatusBasedOnEnrollment])
 
   const updateEnrollment = useCallback(async (id: number, data: Partial<CreateEnrollmentDto>): Promise<Enrollment> => {
     try {

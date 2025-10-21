@@ -194,6 +194,7 @@ const CoursesPage: React.FC = () => {
 
   // DataGrid columns
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     { 
       field: "name", 
       headerName: "اسم الدورة", 

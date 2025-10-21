@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { paymentsAPI } from "../api";
 import type { Payment } from "../types/payment";
+import { useStudents } from "./useStudents";
 
 export type PaymentStatus = 'completed' | 'returned' | 'pending';
 
@@ -56,12 +57,24 @@ export const usePayments = (): UsePaymentsReturn => {
     }
   }, []);
 
+  const { updateStudentStatusBasedOnPayment } = useStudents();
+  
   // Create payment
   const createPayment = useCallback(async (data: CreatePaymentDto): Promise<Payment> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       const res = await paymentsAPI.create(data);
       const newPayment = res.data;
+      
+      // تحديث حالة الطالب إلى "مقبول" عند دفع الرسوم
+      if (data.enrollment_id && data.status === "completed") {
+        // الحصول على معرف الطالب من التسجيل
+        const payment = await getPaymentById(newPayment.id);
+        if (payment.enrollment?.student?.id) {
+          await updateStudentStatusBasedOnPayment(payment.enrollment.student.id);
+        }
+      }
+      
       setState(prev => ({
         ...prev,
         payments: [newPayment, ...prev.payments],
@@ -76,7 +89,7 @@ export const usePayments = (): UsePaymentsReturn => {
       }));
       throw error;
     }
-  }, []);
+  }, [updateStudentStatusBasedOnPayment]);
 
   // Update payment
   const updatePayment = useCallback(async (id: number, data: Partial<CreatePaymentDto>): Promise<Payment> => {

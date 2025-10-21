@@ -147,6 +147,7 @@ const RefundsPage: React.FC = () => {
     .reduce((sum, r) => sum + Number(r.payment?.amount || 0), 0);
 
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     { 
       field: "refunded_at", 
       headerName: "تاريخ الإرجاع", 

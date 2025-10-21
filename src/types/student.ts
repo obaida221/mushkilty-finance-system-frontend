@@ -1,9 +1,11 @@
 // Student Types (Based on Backend API Documentation)
-export interface Student {
-  id: number
+import type { BaseEntity } from './common';
+import type { Enrollment } from './academic';
+
+export interface Student extends BaseEntity {
   full_name: string
   age?: number
-  dob?: string // Date of birth (ISO string)
+  dob?: string | null // Date of birth (ISO string)
   education_level?: string
   gender?: string
   phone: string
@@ -13,8 +15,6 @@ export interface Student {
   previous_course?: string
   is_returning: boolean
   status: "pending" | "contacted with" | "tested" | "accepted" | "rejected"
-  created_at: string
-  updated_at: string
   enrollments?: Enrollment[]
 }
 
@@ -73,18 +73,5 @@ export interface LegacyStudent {
   createdAt: string
 }
 
-// Import types from academic to avoid circular dependencies
-export interface Enrollment {
-  id: number
-  student_id: number
-  batch_id: number
-  discount_code?: string
-  user_id: number
-  total_price?: number
-  currency?: "USD" | "IQD"
-  enrolled_at?: string
-  status?: "pending" | "accepted" | "dropped" | "completed"
-  notes?: string
-  created_at: string
-  updated_at: string
-}
+// Re-export Enrollment from academic for convenience
+export type { Enrollment } from './academic';

@@ -187,6 +187,7 @@ const DiscountsPage: React.FC = () => {
   })
 
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     { 
       field: "code", 
       headerName: "كود الخصم", 

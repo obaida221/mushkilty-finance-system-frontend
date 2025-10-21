@@ -339,9 +339,10 @@ const EnrollmentsPage: React.FC = () => {
 
   // DataGrid columns
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     {
       field: "student_id",
-      headerName: "الطالب",
+      headerName: "اسم الطالب",
       flex: 1,
       minWidth: 150,
       renderCell: (params) => {
@@ -366,6 +367,15 @@ const EnrollmentsPage: React.FC = () => {
       renderCell: (params) => {
         const batch = batches.find(b => b.id === params.value)
         return <Chip label={batch?.name || "غير محدد"} size="small" color="primary" />
+      },
+    },
+    {
+      field: "batch.course.name",
+      headerName: "الدورة",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => {
+        return <Chip label={params.row?.batch?.course?.name || "غير محدد"} size="small" color="primary" />
       },
     },
     {

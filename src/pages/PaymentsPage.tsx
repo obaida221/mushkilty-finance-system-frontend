@@ -452,6 +452,7 @@ const PaymentsPage = () => {
       field: "note",
       headerName: "ملاحظات",
       minWidth: 120,
+      sortable: false,
        renderCell: (params) => (
         <Typography variant="body2" color={params.value ? "text.primary" : "text.secondary"}>
           {params.value || "لا توجد ملاحظات"}
@@ -461,7 +462,8 @@ const PaymentsPage = () => {
     {
       field: "actions",
       headerName: "إجراءات",
-      minWidth: 100,
+      minWidth: 130,
+      width: 150,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>

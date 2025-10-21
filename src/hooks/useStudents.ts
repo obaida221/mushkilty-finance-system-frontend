@@ -18,6 +18,9 @@ interface UseStudentsReturn extends UseStudentsState {
   getStudentsByCourseType: (courseType: string) => Student[]
   getStudentsByCity: (city: string) => Student[]
   updateStudentStatus: (id: number, status: string) => Promise<Student>
+  updateStudentStatusBasedOnEnrollment: (studentId: number) => Promise<Student>
+  updateStudentStatusBasedOnPayment: (studentId: number) => Promise<Student>
+  updateStudentStatusBasedOnRefund: (studentId: number) => Promise<Student>
   refreshStudents: () => void
 }
 
@@ -127,6 +130,21 @@ export const useStudents = (): UseStudentsReturn => {
   const updateStudentStatus = useCallback(async (id: number, status: string): Promise<Student> => {
     return updateStudent(id, { status: status as any })
   }, [updateStudent])
+  
+  // تحديث حالة الطالب إلى "تم الاختبار" عند التسجيل في دورة
+  const updateStudentStatusBasedOnEnrollment = useCallback(async (studentId: number): Promise<Student> => {
+    return updateStudent(studentId, { status: "tested" })
+  }, [updateStudent])
+  
+  // تحديث حالة الطالب إلى "مقبول" عند دفع الرسوم
+  const updateStudentStatusBasedOnPayment = useCallback(async (studentId: number): Promise<Student> => {
+    return updateStudent(studentId, { status: "accepted" })
+  }, [updateStudent])
+  
+  // تحديث حالة الطالب إلى "مرفوض" عند إرجاع المبلغ
+  const updateStudentStatusBasedOnRefund = useCallback(async (studentId: number): Promise<Student> => {
+    return updateStudent(studentId, { status: "rejected" })
+  }, [updateStudent])
 
   const refreshStudents = useCallback(() => {
     fetchStudents()
@@ -147,6 +165,9 @@ export const useStudents = (): UseStudentsReturn => {
     getStudentsByCourseType,
     getStudentsByCity,
     updateStudentStatus,
+    updateStudentStatusBasedOnEnrollment,
+    updateStudentStatusBasedOnPayment,
+    updateStudentStatusBasedOnRefund,
     refreshStudents,
   }
 }

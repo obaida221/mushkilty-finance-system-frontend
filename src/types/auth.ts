@@ -1,13 +1,12 @@
 // User and Authentication Types (Based on Actual Backend Response)
-export interface User {
-  id: number
+import type { BaseEntity } from './common';
+
+export interface User extends BaseEntity {
   email: string
   name: string
   role_id?: number
   role?: Role
   permissions?: Permission[]  // Direct permissions array from backend
-  created_at?: string
-  updated_at?: string
 }
 
 export interface Role {

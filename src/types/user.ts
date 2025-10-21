@@ -1,11 +1,9 @@
 import type { Role } from './auth';
+import type { BaseEntity } from './common';
 
-export interface User {
-  id: number;
+export interface User extends BaseEntity {
   name: string;
   email: string;
   role_id?: number;
   role?: Role;
-  created_at?: string;
-  updated_at?: string;
 }

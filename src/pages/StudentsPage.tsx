@@ -24,6 +24,7 @@ import {
   CardContent,
   Alert,
   CircularProgress,
+  Snackbar,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { 
@@ -52,6 +53,11 @@ const StudentsPage: React.FC = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCourseType, setFilterCourseType] = useState<string>("all")
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success"
+  })
 
   // Hooks
   const { 
@@ -82,18 +88,30 @@ const StudentsPage: React.FC = () => {
     is_returning: false,
     status: "pending",
   })
+  
+  const showSnackbar = (message: string, severity: "success" | "error" = "success") => {
+    setSnackbar({ open: true, message, severity })
+  }
 
   // Handle form submission
   const handleSubmit = async () => {
     try {
       if (editingStudent) {
-        await updateStudent(editingStudent.id, studentForm)
+        // Ensure dob is valid date string or null
+        const updatedForm = {
+          ...studentForm,
+          dob: studentForm.dob !== null && studentForm.dob !== "" ? studentForm.dob : null
+        }
+        await updateStudent(editingStudent.id, updatedForm)
+        showSnackbar("تم تحديث بيانات الطالب بنجاح")
       } else {
         await createStudent(studentForm)
+        showSnackbar("تم إضافة الطالب بنجاح")
       }
       handleCloseDialog()
     } catch (error) {
       console.error('Failed to save student:', error)
+      showSnackbar("حدث خطأ أثناء حفظ بيانات الطالب", "error")
     }
   }
 
@@ -141,7 +159,7 @@ const StudentsPage: React.FC = () => {
     setStudentForm({
       full_name: student.full_name,
       age: student.age,
-      dob: student.dob ? student.dob.split('T')[0] : "",
+      dob: student.dob ? student.dob.split('T')[0] : null,
       education_level: student.education_level || "",
       gender: student.gender || "",
       phone: student.phone,
@@ -181,6 +199,7 @@ const StudentsPage: React.FC = () => {
 
   // DataGrid columns
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     { 
       field: "full_name", 
       headerName: "اسم الطالب", 
@@ -616,6 +635,20 @@ const StudentsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity} 
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

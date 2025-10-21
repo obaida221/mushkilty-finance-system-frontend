@@ -42,12 +42,12 @@ import {
   Search as SearchIcon,
   Visibility,
 } from '@mui/icons-material';
-import { paymentMethodsAPI } from '../api/paymentMethodsAPI';
+import { paymentMethodsAPI, type PaymentMethodWithUser } from '../api/paymentMethodsAPI';
 // import { authService } from '../services/authService';
-import type { PaymentMethod, PaymentMethodFormData } from '../types/paymentMethods';
+import type { PaymentMethodFormData } from '../types/paymentMethods';
 
 const PaymentMethodsPage: React.FC = () => {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,9 +55,9 @@ const PaymentMethodsPage: React.FC = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodWithUser | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedDetailsPaymentMethod, setSelectedDetailsPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [selectedDetailsPaymentMethod, setSelectedDetailsPaymentMethod] = useState<PaymentMethodWithUser | null>(null);
 
   const [paymentMethodForm, setPaymentMethodForm] = useState<PaymentMethodFormData>({
     name: '',
@@ -164,7 +164,7 @@ const PaymentMethodsPage: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (paymentMethod: PaymentMethod) => {
+  const openEditDialog = (paymentMethod: PaymentMethodWithUser) => {
     setSelectedPaymentMethod(paymentMethod);
     setPaymentMethodForm({
       name: paymentMethod.name,
@@ -175,12 +175,12 @@ const PaymentMethodsPage: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const openDeleteDialog = (paymentMethod: PaymentMethod) => {
+  const openDeleteDialog = (paymentMethod: PaymentMethodWithUser) => {
     setSelectedPaymentMethod(paymentMethod);
     setDeleteDialogOpen(true);
   };
 
-  const openDetailsDialog = (paymentMethod: PaymentMethod) => {
+  const openDetailsDialog = (paymentMethod: PaymentMethodWithUser) => {
     setSelectedDetailsPaymentMethod(paymentMethod);
     setDetailsDialogOpen(true);
   };
@@ -332,7 +332,7 @@ const PaymentMethodsPage: React.FC = () => {
 
           <TableContainer>
             <Table>
-              <TableHead sx={{ bgcolor: '#94A3B8' }}>
+              <TableHead sx={{ bgcolor: 'background.default' }}>
                 <TableRow>
                   <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>#id</TableCell>
                   <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>الاسم</TableCell>
@@ -340,7 +340,7 @@ const PaymentMethodsPage: React.FC = () => {
                   <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>بواسطة</TableCell>
                   <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>الوصف</TableCell>
                   <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>الحالة</TableCell>
-                  <TableCell align="right" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem'} }}>إجراءات</TableCell>
+                  <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem'} }}>إجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -371,7 +371,7 @@ const PaymentMethodsPage: React.FC = () => {
                             sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
                           />
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell>
                           <Tooltip title="عرض التفاصيل">
                             <IconButton size="small" color="primary" onClick={() => openDetailsDialog(paymentMethod)}>
                               <Visibility fontSize="small" />

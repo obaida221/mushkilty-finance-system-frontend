@@ -149,6 +149,7 @@ const ExpensesPage: React.FC = () => {
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 50 },
     { 
       field: "expense_date", 
       headerName: "التاريخ", 

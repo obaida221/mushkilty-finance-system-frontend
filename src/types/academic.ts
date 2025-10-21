@@ -1,12 +1,12 @@
 // Course Types (based on API documentation)
-export interface Course {
-  id: number
+import type { BaseEntity } from './common';
+import type { User } from './user';
+
+export interface Course extends BaseEntity {
   user_id: number // Teacher/instructor ID
   name: string
   project_type?: "online" | "onsite" | "kids" | "ielts"
   description?: string
-  created_at: string
-  updated_at: string
   user?: User // Teacher/instructor details
   batches?: Batch[] // Associated batches
 }
@@ -19,8 +19,7 @@ export interface CreateCourseDto {
 }
 
 // Batch Types (based on API documentation)
-export interface Batch {
-  id: number
+export interface Batch extends BaseEntity {
   course_id: number
   trainer_id: number
   name: string
@@ -34,8 +33,6 @@ export interface Batch {
   status?: "open" | "closed" | "full"
   actual_price?: number
   currency?: "USD" | "IQD"
-  created_at: string
-  updated_at: string
   course?: Course
   trainer?: User
   enrollments?: Enrollment[]
@@ -58,8 +55,7 @@ export interface CreateBatchDto {
 }
 
 // Enrollment Types (based on API documentation)
-export interface Enrollment {
-  id: number
+export interface Enrollment extends BaseEntity {
   student_id: number
   batch_id: number
   discount_code?: string
@@ -69,8 +65,6 @@ export interface Enrollment {
   enrolled_at?: string
   status?: "pending" | "accepted" | "dropped" | "completed"
   notes?: string
-  created_at: string
-  updated_at: string
   student?: {
     id: number
     full_name: string
