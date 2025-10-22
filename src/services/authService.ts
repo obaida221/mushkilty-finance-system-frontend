@@ -1,4 +1,10 @@
-import type { LoginRequest, LoginResponse, RegisterRequest, User, BackendPermissionResponse } from '../types';
+import type { 
+  // LoginRequest, 
+  LoginResponse, 
+  RegisterRequest, 
+  User, 
+  BackendPermissionResponse,
+} from '../types';
 
 /**
  * Authentication Service Class

@@ -26,20 +26,30 @@ import {
   Autocomplete,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, AccountBalance, Edit, Delete, CheckCircle, Schedule, Refresh } from "@mui/icons-material"
+import { Search, Add, AccountBalance, CheckCircle, Schedule, Refresh } from "@mui/icons-material"
 import { usePayrolls } from "../hooks/usePayrolls"
 import usersAPI from "../api/usersAPI"
 import type { Payroll, User } from "../types"
+import { ActionsCell, DeleteConfirmDialog, PayrollViewDialog } from "../components/global-ui"
 
 const PayrollPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
   const [editingPayroll, setEditingPayroll] = useState<Payroll | null>(null)
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">("all")
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ 
-    open: false, 
-    message: "", 
-    severity: "success" 
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success"
+  })
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: number | null; name: string }>({
+    open: false,
+    id: null,
+    name: ""
+  })
+  const [viewDialog, setViewDialog] = useState<{ open: boolean; payroll: Payroll | null }>({
+    open: false,
+    payroll: null
   })
 
   const { payrolls, loading, error, createPayroll, updatePayroll, deletePayroll } = usePayrolls()
@@ -47,7 +57,7 @@ const PayrollPage: React.FC = () => {
   const [usersLoading, setUsersLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
-  
+
   React.useEffect(() => {
     if (payrolls.length > 0 && !lastRefreshTime) {
       setLastRefreshTime(new Date())
@@ -97,7 +107,7 @@ const PayrollPage: React.FC = () => {
         paid_at: payroll.paid_at || "",
         note: payroll.note || "",
       })
-      
+
       if (payroll.user) {
         setSelectedUser(payroll.user)
       } else {
@@ -106,14 +116,14 @@ const PayrollPage: React.FC = () => {
       }
     } else {
       setEditingPayroll(null)
-      setPayrollForm({ 
-        user_id: "", 
-        amount: "", 
-        currency: "IQD", 
-        period_start: "", 
-        period_end: "", 
-        paid_at: "", 
-        note: "" 
+      setPayrollForm({
+        user_id: "",
+        amount: "",
+        currency: "IQD",
+        period_start: "",
+        period_end: "",
+        paid_at: "",
+        note: ""
       })
       setSelectedUser(null)
     }
@@ -136,7 +146,7 @@ const PayrollPage: React.FC = () => {
       handleSnackbar("يجب اختيار مستخدم صحيح", "error")
       return
     }
-    
+
     try {
       const payload = {
         user_id: selectedUser.id,
@@ -150,10 +160,10 @@ const PayrollPage: React.FC = () => {
 
       if (editingPayroll) {
         await updatePayroll(editingPayroll.id, payload)
-        handleSnackbar("تم تحديث الراتب بنجاح", "success")
+        handleSnackbar(`تم تحديث راتب ${selectedUser?.name || "الموظف"} بنجاح`, "success")
       } else {
         await createPayroll(payload)
-        handleSnackbar("تم إضافة الراتب بنجاح", "success")
+        handleSnackbar(`تم إضافة راتب جديد لـ ${selectedUser?.name || "الموظف"} بنجاح`, "success")
       }
       setLastRefreshTime(new Date())
       handleCloseDialog()
@@ -163,23 +173,45 @@ const PayrollPage: React.FC = () => {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (confirm("هل أنت متأكد من حذف هذا الراتب؟")) {
-      try {
-        await deletePayroll(id)
-        handleSnackbar("تم حذف الراتب بنجاح", "success")
-        setLastRefreshTime(new Date())
-      } catch (err) {
-        console.error(err)
-        handleSnackbar("حدث خطأ أثناء الحذف", "error")
-      }
+  const handleDeleteClick = (id: number) => {
+    const payroll = payrolls.find(p => p.id === id)
+    setDeleteDialog({
+      open: true,
+      id,
+      name: payroll?.user?.name || "الموظف"
+    })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (deleteDialog.id === null) return
+
+    try {
+      await deletePayroll(deleteDialog.id)
+      handleSnackbar(`تم حذف راتب ${deleteDialog.name} بنجاح`, "success")
+      setLastRefreshTime(new Date())
+      setDeleteDialog({ open: false, id: null, name: "" })
+    } catch (err) {
+      console.error(err)
+      handleSnackbar("حدث خطأ أثناء حذف الراتب، يرجى المحاولة مرة أخرى", "error")
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ open: false, id: null, name: "" })
+  }
+
+  const handleViewPayroll = (payroll: Payroll) => {
+    setViewDialog({ open: true, payroll })
+  }
+
+  const handleCloseViewDialog = () => {
+    setViewDialog({ open: false, payroll: null })
   }
 
   const handleMarkAsPaid = async (payroll: Payroll) => {
     try {
-      await updatePayroll(payroll.id, { 
-        paid_at: new Date().toISOString() 
+      await updatePayroll(payroll.id, {
+        paid_at: new Date().toISOString()
       })
       handleSnackbar("تم تحديد الراتب كمدفوع", "success")
       setLastRefreshTime(new Date())
@@ -191,10 +223,11 @@ const PayrollPage: React.FC = () => {
 
   // Filter by search and status
   const filteredPayrolls = payrolls.filter((p) => {
+    console.log('Filtering payrolls:', p)
     const matchesSearch = p.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          p.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          p.note?.toLowerCase().includes(searchQuery.toLowerCase())
-    
+
     const matchesStatus = statusFilter === "all" ? true :
                          statusFilter === "paid" ? p.paid_at !== null :
                          p.paid_at === null
@@ -260,7 +293,7 @@ const PayrollPage: React.FC = () => {
       width: 140,
       renderCell: (params) => (
         <Typography>
-          {params.row.paid_at ? new Date(params.row.paid_at).toLocaleDateString("ar-IQ") : "-"}
+          {params.row.paid_at ? new Date(params.row.paid_at).toLocaleDateString("en-IQ") : "-"}
         </Typography>
       ),
     },
@@ -279,8 +312,8 @@ const PayrollPage: React.FC = () => {
       renderCell: (params) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           {!params.row.paid_at && (
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               variant="outlined"
               color="success"
               onClick={() => handleMarkAsPaid(params.row)}
@@ -289,8 +322,14 @@ const PayrollPage: React.FC = () => {
               دفع
             </Button>
           )}
-          <Button size="small" onClick={() => handleOpenDialog(params.row)} startIcon={<Edit />} />
-          <Button size="small" color="error" onClick={() => handleDelete(params.row.id)} startIcon={<Delete />} />
+          <ActionsCell
+            rowId={params.row.id}
+            row={params.row}
+            onEdit={handleOpenDialog}
+            onDelete={handleDeleteClick}
+            onView={handleViewPayroll}
+            viewButton={true}
+          />
         </Box>
       ),
     },
@@ -448,7 +487,7 @@ const PayrollPage: React.FC = () => {
               )}
               isOptionEqualToValue={(option, value) => option.id === value?.id}
             />
-            
+
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -528,13 +567,38 @@ const PayrollPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="تأكيد حذف الراتب"
+        message="هل أنت متأكد من حذف راتب"
+        itemName={deleteDialog.name}
+      />
+
+      {/* Payroll View Dialog */}
+      <PayrollViewDialog
+        open={viewDialog.open}
+        onClose={handleCloseViewDialog}
+        payroll={viewDialog.payroll}
+      />
+
+      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        message={snackbar.message}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      />
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

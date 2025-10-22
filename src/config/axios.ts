@@ -1,11 +1,11 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError,  InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-interface ApiResponse<T = any> {
-  data: T;
-  status: number;
-  statusText: string;
-}
+// interface ApiResponse<T = any> {
+//   data: T;
+//   status: number;
+//   statusText: string;
+// }
 
 interface ApiError {
   message: string;
