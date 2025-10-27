@@ -33,8 +33,6 @@ import {
   Delete, 
   PersonAdd, 
   School, 
-  // TrendingUp, 
-  // TrendingDown,
   Phone,
   LocationOn,
   CheckCircle,
@@ -42,10 +40,15 @@ import {
   Cancel,
   ContactPhone,
   Quiz,
+  Person,
+  CalendarToday,
+  Description,
+  Visibility,
 } from "@mui/icons-material"
 import { useStudents } from '../hooks/useStudents'
 import { useEnrollments } from '../hooks/useEnrollments'
 import type { Student, CreateStudentDto } from "../types"
+import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
 const StudentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
@@ -53,6 +56,11 @@ const StudentsPage: React.FC = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterCourseType, setFilterCourseType] = useState<string>("all")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
     open: false,
     message: "",
@@ -68,8 +76,6 @@ const StudentsPage: React.FC = () => {
     updateStudent,
     deleteStudent,
     getStudentsByStatus,
-    // getStudentsByCourseType,
-    // updateStudentStatus,
   } = useStudents()
 
   const { getEnrollmentsByStudent } = useEnrollments()
@@ -97,7 +103,6 @@ const StudentsPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       if (editingStudent) {
-        // Ensure dob is valid date string or null
         const updatedForm = {
           ...studentForm,
           dob: studentForm.dob !== null && studentForm.dob !== "" ? studentForm.dob : null
@@ -115,25 +120,47 @@ const StudentsPage: React.FC = () => {
     }
   }
 
-  // Handle delete
-  const handleDelete = async (id: number) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا الطالب؟ سيتم حذف جميع التسجيلات المرتبطة به.")) {
-      try {
-        await deleteStudent(id)
-      } catch (error) {
-        console.error('Failed to delete student:', error)
-      }
+  // Handle delete with dialog
+  const handleDeleteWithDialog = (student: Student) => {
+    setStudentToDelete(student)
+    setDeleteDialogOpen(true)
+  }
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!studentToDelete) return
+    
+    setDeleteLoading(true)
+    try {
+      await deleteStudent(studentToDelete.id)
+      setDeleteDialogOpen(false)
+      setStudentToDelete(null)
+      showSnackbar("تم حذف الطالب بنجاح")
+    } catch (error) {
+      console.error('Failed to delete student:', error)
+      showSnackbar("حدث خطأ أثناء حذف الطالب", "error")
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
-  // // Handle status update
-  // const handleUpdateStatus = async (id: number, newStatus: string) => {
-  //   try {
-  //     await updateStudentStatus(id, newStatus)
-  //   } catch (error) {
-  //     console.error('Failed to update status:', error)
-  //   }
-  // }
+  // Close delete dialog
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false)
+    setStudentToDelete(null)
+  }
+
+  // Handle view details
+  const handleViewDetails = (student: Student) => {
+    setSelectedStudent(student)
+    setDetailsDialogOpen(true)
+  }
+
+  // Close details dialog
+  const handleCloseDetailsDialog = () => {
+    setDetailsDialogOpen(false)
+    setSelectedStudent(null)
+  }
 
   // Dialog handlers
   const handleOpenDialog = () => {
@@ -197,141 +224,196 @@ const StudentsPage: React.FC = () => {
   const acceptedStudents = getStudentsByStatus("accepted").length
   const testedStudents = getStudentsByStatus("tested").length
 
-  // DataGrid columns
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 50 },
-    { 
-      field: "full_name", 
-      headerName: "اسم الطالب", 
-      flex: 1, 
-      minWidth: 150 
-    },
-    { 
-      field: "phone", 
-      headerName: "رقم الهاتف", 
-      width: 130,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Phone fontSize="small" color="action" />
-          {params.value}
-        </Box>
-      )
-    },
-    {
-      field: "status",
-      headerName: "الحالة",
-      width: 130,
-      renderCell: (params) => {
-        const statusConfig = {
-          pending: { label: "قيد الانتظار", color: "default" as const, icon: <Pending fontSize="small" /> },
-          "contacted with": { label: "تم التواصل", color: "info" as const, icon: <ContactPhone fontSize="small" /> },
-          tested: { label: "تم الاختبار", color: "warning" as const, icon: <Quiz fontSize="small" /> },
-          accepted: { label: "مقبول", color: "success" as const, icon: <CheckCircle fontSize="small" /> },
-          rejected: { label: "مرفوض", color: "error" as const, icon: <Cancel fontSize="small" /> },
-        }
-        const config = statusConfig[params.value as keyof typeof statusConfig] || statusConfig.pending
-        return (
-          <Chip 
-            label={config.label} 
-            size="small" 
-            color={config.color}
-            icon={config.icon}
-          />
-        )
-      },
-    },
-    {
-      field: "course_type",
-      headerName: "نوع الدورة",
-      width: 100,
-      renderCell: (params) => {
-        if (!params.value) return "-"
-        const typeLabels = {
-          online: "أونلاين",
-          onsite: "حضوري",
-          kids: "أطفال",
-          ielts: "آيلتس"
-        }
-        return <Chip label={typeLabels[params.value as keyof typeof typeLabels]} size="small" color="primary" />
-      },
-    },
-    {
-      field: "city",
-      headerName: "المدينة",
-      width: 100,
-      renderCell: (params) => params.value ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <LocationOn fontSize="small" color="action" />
-          {params.value}
-        </Box>
-      ) : "-",
-    },
-    {
-      field: "age",
-      headerName: "العمر",
-      width: 80,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params) => params.value || "-",
-    },
-    {
-      field: "enrollments",
-      headerName: "التسجيلات",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params) => {
-        const studentEnrollments = getEnrollmentsByStudent(params.row.id)
-        return (
-          <Chip 
-            label={studentEnrollments.length} 
-            size="small" 
-            color={studentEnrollments.length > 0 ? "success" : "default"}
-          />
-        )
-      },
-    },
-    {
-      field: "created_at",
-      headerName: "تاريخ التسجيل",
-      width: 130,
-      renderCell: (params) => new Date(params.value).toLocaleDateString('ar'),
-    },
-    {
-      field: "actions",
-      headerName: "الإجراءات",
-      width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <IconButton 
-            size="small" 
-            color="primary" 
-            onClick={() => handleEditStudent(params.row)}
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            color="error" 
-            onClick={() => handleDelete(params.row.id)}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
-  ]
-
-  if (studentsLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
-    )
+  // الحصول على تسجيلات الطالب
+  const getStudentEnrollmentsCount = (studentId: number) => {
+    return getEnrollmentsByStudent(studentId).length
   }
 
-  return (
+  // الحصول على معلومات الطالب المفصلة
+  const getStudentDetails = (studentId: number) => {
+    const student = students.find(s => s.id === studentId)
+    if (!student) return null
+    
+    const enrollments = getEnrollmentsByStudent(studentId)
+    
+    return {
+      student,
+      enrollments,
+      enrollmentCount: enrollments.length,
+      statusInfo: getStatusInfo(student.status),
+      courseTypeInfo: getCourseTypeInfo(student.course_type)
+    }
+  }
+
+  // معلومات الحالة
+  const getStatusInfo = (status: string) => {
+    const statusConfig = {
+      pending: { label: "قيد الانتظار", color: "default" as const, icon: <Pending fontSize="small" /> },
+      "contacted with": { label: "تم التواصل", color: "info" as const, icon: <ContactPhone fontSize="small" /> },
+      tested: { label: "تم الاختبار", color: "warning" as const, icon: <Quiz fontSize="small" /> },
+      accepted: { label: "مقبول", color: "success" as const, icon: <CheckCircle fontSize="small" /> },
+      rejected: { label: "مرفوض", color: "error" as const, icon: <Cancel fontSize="small" /> },
+    }
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
+  }
+
+  // معلومات نوع الدورة
+  const getCourseTypeInfo = (courseType: string | undefined) => {
+    const typeLabels = {
+      online: { label: "أونلاين", color: "primary" as const },
+      onsite: { label: "حضوري", color: "success" as const },
+      kids: { label: "أطفال", color: "info" as const },
+      ielts: { label: "آيلتس", color: "secondary" as const }
+    }
+    return courseType ? typeLabels[courseType as keyof typeof typeLabels] : { label: "غير محدد", color: "default" as const }
+  }
+      // DataGrid columns
+    const columns: GridColDef[] = [
+      { 
+        field: "id", 
+        headerName: "ID", 
+        flex: 0.5, 
+        minWidth: 50,
+        maxWidth: 80 
+      },
+      { 
+        field: "full_name", 
+        headerName: "اسم الطالب", 
+        flex: 2, 
+        minWidth: 150 
+      },
+      { 
+        field: "phone", 
+        headerName: "رقم الهاتف", 
+        flex: 1,
+        minWidth: 130,
+        renderCell: (params) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Phone fontSize="small" color="action" />
+            {params.value}
+          </Box>
+        )
+      },
+      {
+        field: "status",
+        headerName: "الحالة",
+        flex: 1,
+        minWidth: 130,
+        renderCell: (params) => {
+          const config = getStatusInfo(params.value)
+          return (
+            <Chip 
+              label={config.label} 
+              size="small" 
+              color={config.color}
+              icon={config.icon}
+            />
+          )
+        },
+      },
+      {
+        field: "course_type",
+        headerName: "نوع الدورة",
+        flex: 0.8,
+        minWidth: 100,
+        renderCell: (params) => {
+          const config = getCourseTypeInfo(params.value)
+          return <Chip label={config.label} size="small" color={config.color} />
+        },
+      },
+      {
+        field: "city",
+        headerName: "المدينة",
+        flex: 0.8,
+        minWidth: 100,
+        renderCell: (params) => params.value ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <LocationOn fontSize="small" color="action" />
+            {params.value}
+          </Box>
+        ) : "-",
+      },
+      {
+        field: "age",
+        headerName: "العمر",
+        flex: 0.5,
+        minWidth: 80,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (params) => params.value || "-",
+      },
+      {
+        field: "enrollments",
+        headerName: "التسجيلات",
+        flex: 0.8,
+        minWidth: 100,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (params) => {
+          const studentEnrollments = getEnrollmentsByStudent(params.row.id)
+          return (
+            <Chip 
+              label={studentEnrollments.length} 
+              size="small" 
+              color={studentEnrollments.length > 0 ? "success" : "default"}
+            />
+          )
+        },
+      },
+      {
+        field: "created_at",
+        headerName: "تاريخ التسجيل",
+        flex: 1,
+        minWidth: 130,
+        renderCell: (params) => new Date(params.value).toLocaleDateString('ar'),
+      },
+      {
+        field: "actions",
+        headerName: "الإجراءات",
+        flex: 1,
+        minWidth: 120,
+        maxWidth: 150,
+        sortable: false,
+        renderCell: (params) => (
+          <Box>
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleViewDetails(params.row)}
+              title="عرض التفاصيل"
+            >
+              <Visibility fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleEditStudent(params.row)}
+              disabled={deleteLoading}
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              color="error" 
+              onClick={() => handleDeleteWithDialog(params.row)}
+              disabled={deleteLoading}
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          </Box>
+        ),
+      },
+    ]
+
+    if (studentsLoading) {
+      return (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress />
+        </Box>
+      )
+    }
+
+    return (
     <Box>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
@@ -633,6 +715,327 @@ const StudentsPage: React.FC = () => {
           <Button onClick={handleSubmit} variant="contained">
             {editingStudent ? "تعديل" : "إضافة"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        title="تأكيد حذف الطالب"
+        itemName={studentToDelete ? `"${studentToDelete.full_name}"` : ""}
+        loading={deleteLoading}
+        message={
+          studentToDelete && getStudentEnrollmentsCount(studentToDelete.id) > 0 
+            ? `هل أنت متأكد من حذف هذا الطالب؟ سيتم حذف ${getStudentEnrollmentsCount(studentToDelete.id)} تسجيل مرتبط به.`
+            : "هل أنت متأكد من حذف هذا الطالب؟"
+        }
+      />
+
+      {/* Student Details Dialog */}
+      <Dialog 
+        open={detailsDialogOpen} 
+        onClose={handleCloseDetailsDialog} 
+        maxWidth="md" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: 1, 
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Person color="primary" />
+            <Typography variant="h6">
+              تفاصيل الطالب
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 1 }}>
+          {selectedStudent && (() => {
+            const studentDetails = getStudentDetails(selectedStudent.id)
+            if (!studentDetails) return null
+            
+            const { student, enrollments, enrollmentCount, statusInfo, courseTypeInfo } = studentDetails
+            
+            return (
+              <Grid container spacing={2}>
+                {/*  المعلومات الأساسية */}
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ mb: 2 }}>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography variant="subtitle1" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                        <Description color="primary" fontSize="small" />
+                        المعلومات الأساسية
+                      </Typography>
+                      
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              الاسم الكامل
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                              {student.full_name}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              رقم الهاتف
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Phone fontSize="small" color="action" />
+                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                {student.phone}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12} >
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              العمر
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.age || "غير محدد"}
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              الجنس
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.gender === "male" ? "ذكر" : student.gender === "female" ? "أنثى" : "غير محدد"}
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              المدينة
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <LocationOn fontSize="small" color="action" />
+                              <Typography variant="body1">
+                                {student.city || "غير محدد"}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              المنطقة
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.area || "غير محدد"}
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              المستوى التعليمي
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.education_level || "غير محدد"}
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              تاريخ الميلاد
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.dob ? new Date(student.dob).toLocaleDateString('ar') : "غير محدد"}
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              تاريخ التسجيل
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <CalendarToday fontSize="small" color="action" />
+                              <Typography variant="body1">
+                                {new Date(student.created_at).toLocaleDateString('ar')}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* معلومات الدورة والحالة */}
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ mb: 2 }}>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography variant="subtitle1" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                        <School color="primary" fontSize="small" />
+                        معلومات الدورة والحالة
+                      </Typography>
+                      
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                              نوع الدورة
+                            </Typography>
+                            <Chip 
+                              label={courseTypeInfo.label} 
+                              size="medium"
+                              color={courseTypeInfo.color}
+                              sx={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                            />
+                          </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                              الحالة
+                            </Typography>
+                            <Chip 
+                              label={statusInfo.label} 
+                              size="medium"
+                              color={statusInfo.color}
+                              icon={statusInfo.icon}
+                              sx={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                            />
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              طالب عائد
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontWeight: student.is_returning ? 600 : 400 }}>
+                              {student.is_returning ? "نعم" : "لا"}
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                              عدد التسجيلات
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <School fontSize="small" color="action" />
+                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                {enrollmentCount} تسجيل
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+
+                  {/* الدورات السابقة */}
+                  <Card sx={{ mb: 2 }}>
+                    <CardContent sx={{ p: 1 }}>
+                      <Typography variant="subtitle1" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                        <Description color="primary" fontSize="small" />
+                        الدورات السابقة
+                      </Typography>
+                      
+                      <Paper 
+                        variant="outlined" 
+                        sx={{ 
+                          p: 2, 
+                          bgcolor: 'background.default',
+                          minHeight: '100px'
+                        }}
+                      >
+                        <Typography variant="body1">
+                          {student.previous_course || "لا توجد دورات سابقة"}
+                        </Typography>
+                      </Paper>
+                    </CardContent>
+                  </Card>
+
+                  {/* قائمة التسجيلات */}
+                  <Card>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography variant="subtitle1" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                        <School color="primary" fontSize="small" />
+                        التسجيلات ({enrollmentCount})
+                      </Typography>
+                      
+                      {enrollments.length === 0 ? (
+                        <Alert severity="info" sx={{ py: 1 }}>
+                          لا توجد تسجيلات للطالب
+                        </Alert>
+                      ) : (
+                        <Box sx={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {enrollments.map((enrollment) => (
+                            <Paper 
+                              key={enrollment.id}
+                              variant="outlined" 
+                              sx={{ 
+                                p: 1.5, 
+                                mb: 1,
+                              }}
+                            >
+                              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                تسجيل #{enrollment.id}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                تاريخ التسجيل: {new Date(enrollment.created_at).toLocaleDateString('ar')}
+                              </Typography>
+                            </Paper>
+                          ))}
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            )
+          })()}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={handleCloseDetailsDialog}
+            variant="outlined"
+            size="small"
+          >
+            إغلاق
+          </Button>
+          {selectedStudent && (
+            <Button 
+              onClick={() => {
+                handleCloseDetailsDialog()
+                handleEditStudent(selectedStudent)
+              }}
+              variant="contained"
+              size="small"
+              startIcon={<Edit />}
+            >
+              تعديل
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       

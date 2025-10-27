@@ -24,8 +24,6 @@ import {
   CardContent,
   Alert,
   CircularProgress,
-  // Tab,
-  // Tabs,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { 
@@ -34,18 +32,21 @@ import {
   Delete, 
   Add, 
   Class, 
-  // Person, 
-  // School,
   Group,
   OnlinePrediction,
   LocationOn,
   ChildCare,
   Quiz,
+  Visibility,
+  CalendarToday,
+  Person,
+  Description,
 } from "@mui/icons-material"
 import { useCourses } from '../hooks/useCourses'
 import { useBatches } from '../hooks/useBatches'
 import { useEnrollments } from '../hooks/useEnrollments'
 import type { Course, CreateCourseDto } from "../types"
+import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -73,6 +74,11 @@ const CoursesPage: React.FC = () => {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [filterType, setFilterType] = useState<string>("all")
   const [tabValue, setTabValue] = useState(0)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
 
   // Hooks
   const { 
@@ -118,20 +124,44 @@ const CoursesPage: React.FC = () => {
     }
   }
 
-  // Handle delete
-  const handleDelete = async (id: number) => {
-    const courseBatches = getBatchesByCourse(id)
-    const confirmMessage = courseBatches.length > 0 
-      ? `هل أنت متأكد من حذف هذه الدورة؟ سيتم حذف ${courseBatches.length} مجموعة و جميع التسجيلات المرتبطة بها.`
-      : "هل أنت متأكد من حذف هذه الدورة؟"
+  // Handle delete with dialog
+  const handleDeleteWithDialog = (course: Course) => {
+    setCourseToDelete(course)
+    setDeleteDialogOpen(true)
+  }
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!courseToDelete) return
     
-    if (window.confirm(confirmMessage)) {
-      try {
-        await deleteCourse(id)
-      } catch (error) {
-        console.error('Failed to delete course:', error)
-      }
+    setDeleteLoading(true)
+    try {
+      await deleteCourse(courseToDelete.id)
+      setDeleteDialogOpen(false)
+      setCourseToDelete(null)
+    } catch (error) {
+      console.error('Failed to delete course:', error)
+    } finally {
+      setDeleteLoading(false)
     }
+  }
+
+  // Close delete dialog
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false)
+    setCourseToDelete(null)
+  }
+
+  // Handle view details
+  const handleViewDetails = (course: Course) => {
+    setSelectedCourse(course)
+    setDetailsDialogOpen(true)
+  }
+
+  // Close details dialog
+  const handleCloseDetailsDialog = () => {
+    setDetailsDialogOpen(false)
+    setSelectedCourse(null)
   }
 
   // Dialog handlers
@@ -192,131 +222,161 @@ const CoursesPage: React.FC = () => {
     }
   }
 
-  // DataGrid columns
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 50 },
-    { 
-      field: "name", 
-      headerName: "اسم الدورة", 
-      flex: 1, 
-      minWidth: 200 
-    },
-    {
-      field: "project_type",
-      headerName: "النوع",
-      width: 120,
-      renderCell: (params) => {
-        if (!params.value) return "-"
-        const typeConfig = {
-          online: { label: "أونلاين", color: "primary" as const, icon: <OnlinePrediction fontSize="small" /> },
-          onsite: { label: "حضوري", color: "success" as const, icon: <LocationOn fontSize="small" /> },
-          kids: { label: "أطفال", color: "info" as const, icon: <ChildCare fontSize="small" /> },
-          ielts: { label: "آيلتس", color: "secondary" as const, icon: <Quiz fontSize="small" /> },
-        }
-        const config = typeConfig[params.value as keyof typeof typeConfig]
-        if (!config) return <Chip label={params.value} size="small" />
-        return (
-          <Chip 
-            label={config.label} 
-            size="small" 
-            color={config.color}
-            icon={config.icon}
-          />
-        )
+    // DataGrid columns
+    const columns: GridColDef[] = [
+      { 
+        field: "id", 
+        headerName: "ID", 
+        flex: 0.3, 
+        minWidth: 50,
+        maxWidth: 70 
       },
-    },
-    {
-      field: "user_id",
-      headerName: "أُضيفت بواسطة",
-      width: 150,
-      renderCell: (params) => {
-        const user = params.row.user
-        return user ? (
-          <Chip label={user.name} size="small" color="secondary" />
-        ) : (
-          <Chip label="غير محدد" size="small" />
-        )
+      { 
+        field: "name", 
+        headerName: "اسم الدورة", 
+        flex: 2, 
+        minWidth: 200 
       },
-    },
-    {
-      field: "batches",
-      headerName: "الدُفعات",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params) => {
-        const stats = getCourseStats(params.row.id)
-        return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography variant="body2" fontWeight={500}>
-              {stats.batchCount}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {stats.activeBatches} نشط
-            </Typography>
+      {
+        field: "project_type",
+        headerName: "النوع",
+        flex: 0.8,
+        minWidth: 120,
+        maxWidth: 140,
+        renderCell: (params) => {
+          if (!params.value) return "-"
+          const typeConfig = {
+            online: { label: "أونلاين", color: "primary" as const, icon: <OnlinePrediction fontSize="small" /> },
+            onsite: { label: "حضوري", color: "success" as const, icon: <LocationOn fontSize="small" /> },
+            kids: { label: "أطفال", color: "info" as const, icon: <ChildCare fontSize="small" /> },
+            ielts: { label: "آيلتس", color: "secondary" as const, icon: <Quiz fontSize="small" /> },
+          }
+          const config = typeConfig[params.value as keyof typeof typeConfig]
+          if (!config) return <Chip label={params.value} size="small" />
+          return (
+            <Chip 
+              label={config.label} 
+              size="small" 
+              color={config.color}
+              icon={config.icon}
+            />
+          )
+        },
+      },
+      {
+        field: "user_id",
+        headerName: "أُضيفت بواسطة",
+        flex: 1,
+        minWidth: 150,
+        maxWidth: 180,
+        renderCell: (params) => {
+          const user = params.row.user
+          return user ? (
+            <Chip label={user.name} size="small" color="secondary" />
+          ) : (
+            <Chip label="غير محدد" size="small" />
+          )
+        },
+      },
+      {
+        field: "batches",
+        headerName: "الدُفعات",
+        flex: 0.7,
+        minWidth: 100,
+        maxWidth: 120,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (params) => {
+          const stats = getCourseStats(params.row.id)
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Typography variant="body2" fontWeight={500}>
+                {stats.batchCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {stats.activeBatches} نشط
+              </Typography>
+            </Box>
+          )
+        },
+      },
+      {
+        field: "enrollments",
+        headerName: "المسجلين",
+        flex: 0.7,
+        minWidth: 100,
+        maxWidth: 120,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (params) => {
+          const stats = getCourseStats(params.row.id)
+          return (
+            <Chip 
+              label={stats.enrollmentCount} 
+              size="small" 
+              color={stats.enrollmentCount > 0 ? "success" : "default"}
+            />
+          )
+        },
+      },
+      {
+        field: "created_at",
+        headerName: "تاريخ الإنشاء",
+        flex: 0.8,
+        minWidth: 130,
+        maxWidth: 150,
+        renderCell: (params) => new Date(params.value).toLocaleDateString('ar'),
+      },
+      {
+        field: "actions",
+        headerName: "الإجراءات",
+        flex: 0.8,
+        minWidth: 120,
+        maxWidth: 140,
+        sortable: false,
+        renderCell: (params) => (
+          <Box>
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleViewDetails(params.row)}
+              title="عرض التفاصيل"
+            >
+              <Visibility fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleEditCourse(params.row)}
+              disabled={deleteLoading}
+              title="تعديل"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              color="error" 
+              onClick={() => handleDeleteWithDialog(params.row)}
+              disabled={deleteLoading}
+              title="حذف"
+            >
+              <Delete fontSize="small" />
+            </IconButton>
           </Box>
-        )
+        ),
       },
-    },
-    {
-      field: "enrollments",
-      headerName: "المسجلين",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params) => {
-        const stats = getCourseStats(params.row.id)
-        return (
-          <Chip 
-            label={stats.enrollmentCount} 
-            size="small" 
-            color={stats.enrollmentCount > 0 ? "success" : "default"}
-          />
-        )
-      },
-    },
-    {
-      field: "created_at",
-      headerName: "تاريخ الإنشاء",
-      width: 130,
-      renderCell: (params) => new Date(params.value).toLocaleDateString('ar'),
-    },
-    {
-      field: "actions",
-      headerName: "الإجراءات",
-      width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <IconButton 
-            size="small" 
-            color="primary" 
-            onClick={() => handleEditCourse(params.row)}
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            color="error" 
-            onClick={() => handleDelete(params.row.id)}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+    ]
+
+    if (coursesLoading) {
+      return (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress />
         </Box>
-      ),
-    },
-  ]
+      )
+    }
 
-  if (coursesLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  return (
-    <Box>
+      <Box>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
@@ -383,8 +443,6 @@ const CoursesPage: React.FC = () => {
           </Grid>
         ))}
       </Grid>
-
-
 
       {/* Content */}
       <Paper>
@@ -493,21 +551,21 @@ const CoursesPage: React.FC = () => {
                   required
                 />
               </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>نوع الدورة</InputLabel>
-                    <Select
-                      value={courseForm.project_type || ""}
-                      label="نوع الدورة"
-                      onChange={(e) => setCourseForm({ ...courseForm, project_type: e.target.value as any })}
-                    >
-                      <MenuItem value="">غير محدد</MenuItem>
-                      <MenuItem value="online">أونلاين</MenuItem>
-                      <MenuItem value="onsite">حضوري</MenuItem>
-                      <MenuItem value="kids">أطفال</MenuItem>
-                      <MenuItem value="ielts">آيلتس</MenuItem>
-                    </Select>
-                  </FormControl>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>نوع الدورة</InputLabel>
+                  <Select
+                    value={courseForm.project_type || ""}
+                    label="نوع الدورة"
+                    onChange={(e) => setCourseForm({ ...courseForm, project_type: e.target.value as any })}
+                  >
+                    <MenuItem value="">غير محدد</MenuItem>
+                    <MenuItem value="online">أونلاين</MenuItem>
+                    <MenuItem value="onsite">حضوري</MenuItem>
+                    <MenuItem value="kids">أطفال</MenuItem>
+                    <MenuItem value="ielts">آيلتس</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
 
@@ -526,6 +584,300 @@ const CoursesPage: React.FC = () => {
           <Button onClick={handleSubmit} variant="contained">
             {editingCourse ? "تحديث" : "إضافة"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        title="تأكيد حذف الدورة"
+        itemName={courseToDelete ? `"${courseToDelete.name}"` : ""}
+        loading={deleteLoading}
+        message={
+          courseToDelete && getBatchesByCourse(courseToDelete.id).length > 0 
+            ? `هل أنت متأكد من حذف هذه الدورة؟ سيتم حذف ${getBatchesByCourse(courseToDelete.id).length} مجموعة و جميع التسجيلات المرتبطة بها.`
+            : "هل أنت متأكد من حذف هذه الدورة؟"
+        }
+      />
+
+      {/* Course Details Dialog */}
+      <Dialog 
+        open={detailsDialogOpen} 
+        onClose={handleCloseDetailsDialog} 
+        maxWidth="sm" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: 1, 
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Class color="primary" />
+            <Typography variant="h6">
+              تفاصيل الدورة
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 2 }}>
+          {selectedCourse && (
+            <Box>
+              {/* Basic Information */}
+              <Card sx={{ mb: 2 }}>
+                <CardContent sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Description color="primary" fontSize="small" />
+                    المعلومات الأساسية
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          اسم الدورة
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {selectedCourse.name}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          النوع
+                        </Typography>
+                        <Box>
+                          {selectedCourse.project_type ? (
+                            <Chip 
+                              label={
+                                selectedCourse.project_type === "online" ? "أونلاين" :
+                                selectedCourse.project_type === "onsite" ? "حضوري" :
+                                selectedCourse.project_type === "kids" ? "أطفال" :
+                                selectedCourse.project_type === "ielts" ? "آيلتس" : selectedCourse.project_type
+                              }
+                              size="small"
+                              color={
+                                selectedCourse.project_type === "online" ? "primary" :
+                                selectedCourse.project_type === "onsite" ? "success" :
+                                selectedCourse.project_type === "kids" ? "info" :
+                                selectedCourse.project_type === "ielts" ? "secondary" : "default"
+                              }
+                            />
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              غير محدد
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <Person fontSize="small" />
+                          أُضيفت بواسطة
+                        </Typography>
+                        {selectedCourse.user ? (
+                          <Chip 
+                            label={selectedCourse.user.name} 
+                            size="small" 
+                            color="secondary" 
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            غير محدد
+                          </Typography>
+                        )}
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <CalendarToday fontSize="small" />
+                          تاريخ الإنشاء
+                        </Typography>
+                        <Typography variant="body2">
+                          {new Date(selectedCourse.created_at).toLocaleDateString('ar')}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                  
+                  {/* Description */}
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      وصف الدورة
+                    </Typography>
+                    <Paper 
+                      variant="outlined" 
+                      sx={{ 
+                        p: 1.5, 
+                        bgcolor: 'background.default',
+                        mt: 0.5
+                      }}
+                    >
+                      <Typography variant="body2">
+                        {selectedCourse.description || "لا يوجد وصف للدورة"}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Statistics */}
+              <Card sx={{ mb: 2 }}>
+                <CardContent sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Group color="primary" fontSize="small" />
+                    الإحصائيات
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {(() => {
+                      const stats = getCourseStats(selectedCourse.id)
+                      
+                      return [
+                        {
+                          label: "إجمالي المجموعات",
+                          value: stats.batchCount,
+                          color: "primary.main",
+                          icon: <Group fontSize="small" />,
+                        },
+                        {
+                          label: " اجمالي المسجلين",
+                          value: stats.enrollmentCount,
+                          color: "success.main",
+                          icon: <Person fontSize="small" />,
+                        },
+                        {
+                          label:  "المجموعات النشطة",
+                          value: stats.activeBatches,
+                          color: "info.main",
+                          icon: <Class fontSize="small" />,                         
+                        },
+                        {
+                          label: "المجموعات غير النشطة",
+                          value: stats.batchCount - stats.activeBatches,
+                          color: "warning.main",
+                          icon: <Class fontSize="small" />,
+                        }
+                      ]
+                    })().map((stat, index) => (
+                      <Grid item xs={3} key={index}>
+                        <Paper 
+                          variant="outlined" 
+                          sx={{ 
+                            p: 1.5, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1.5,
+                            borderLeft: `3px solid`,
+                            borderLeftColor: stat.color
+                          }}
+                        >
+                          <Box sx={{ color: stat.color }}>
+                            {stat.icon}
+                          </Box>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                              {stat.value}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {stat.label}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Batches List */}
+              <Card>
+                <CardContent sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Group color="primary" fontSize="small" />
+                    المجموعات ({getBatchesByCourse(selectedCourse.id).length})
+                  </Typography>
+                  
+                  {(() => {
+                    const courseBatches = getBatchesByCourse(selectedCourse.id)
+                    
+                    if (courseBatches.length === 0) {
+                      return (
+                        <Alert severity="info" sx={{ py: 1 }}>
+                          لا توجد مجموعات مرتبطة
+                        </Alert>
+                      )
+                    }
+                    
+                    return (
+                      <Box>
+                        {courseBatches.map((batch) => (
+                          <Paper 
+                            key={batch.id}
+                            variant="outlined" 
+                            sx={{ 
+                              p: 1.5, 
+                              mb: 1,
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                {batch.name}
+                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Chip 
+                                  label={batch.status === "open" ? "مفتوحة" : "مغلقة"} 
+                                  size="small"
+                                  color={batch.status === "open" ? "success" : "default"}
+                                />
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(batch.start_date).toLocaleDateString('ar')}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Paper>
+                        ))}
+                      </Box>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={handleCloseDetailsDialog}
+            variant="outlined"
+            size="small"
+          >
+            إغلاق
+          </Button>
+          {selectedCourse && (
+            <Button 
+              onClick={() => {
+                handleCloseDetailsDialog()
+                handleEditCourse(selectedCourse)
+              }}
+              variant="contained"
+              size="small"
+              startIcon={<Edit />}
+            >
+              تعديل
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
