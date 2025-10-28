@@ -31,6 +31,9 @@ import DebugPermissionsPage from "./pages/DebugPermissionsPage"
 import UserManagementPage from "./pages/UserManagementPage"
 import RoleManagementPage from "./pages/RoleManagementPage"
 import PermissionManagementPage from "./pages/PermissionManagementPage"
+import InnerNavTestPage from "./pages/InnerNavTestPage"
+import AcademicManagementPage from "./pages/AcademicManagementPage"
+import FinancialManagementPage from "./pages/FinancialManagementPage"
 
 // Create RTL cache
 const cacheRtl = createCache({
@@ -50,6 +53,7 @@ const AppContent: React.FC = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/debug-permissions" element={<DebugPermissionsPage />} />
+              <Route path="/inner-nav-test" element={<InnerNavTestPage />} />
               <Route
                 path="/*"
                 element={
@@ -100,7 +104,17 @@ const AppContent: React.FC = () => {
                           } 
                         />
                         
-                        {/* Academic Management */}
+                        {/* Academic Management - Unified Page */}
+                        <Route 
+                          path="/academic" 
+                          element={
+                            <ProtectedRoute requiredPermission="students:read">
+                              <AcademicManagementPage />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        
+                        {/* Academic Management - Individual Pages (keep for backward compatibility) */}
                         <Route 
                           path="/students" 
                           element={
@@ -134,7 +148,17 @@ const AppContent: React.FC = () => {
                           } 
                         />
                         
-                        {/* Financial Management */}
+                        {/* Financial Management - Unified Page */}
+                        <Route 
+                          path="/financial" 
+                          element={
+                            <ProtectedRoute requiredPermission="payments:read">
+                              <FinancialManagementPage />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        
+                        {/* Financial Management - Individual Pages (keep for backward compatibility) */}
                         <Route 
                           path="/transactions" 
                           element={

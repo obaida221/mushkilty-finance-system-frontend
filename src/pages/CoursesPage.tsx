@@ -378,10 +378,7 @@ const CoursesPage: React.FC = () => {
     return (
       <Box>
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          إدارة الدورات
-        </Typography>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 3 }}>
         <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
           إضافة دورة
         </Button>

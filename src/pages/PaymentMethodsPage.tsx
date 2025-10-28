@@ -213,10 +213,7 @@ const PaymentMethodsPage: React.FC = () => {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: { xs: 2, sm: 3 }, flexWrap: 'wrap', gap: { xs: 1, sm: 2 } }}>
-        <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1.5rem', sm: 'inherit' } }}>
-          <CreditCardIcon sx={{ fontSize: { xs: 28, sm: 32 } }} /> وسائل الدفع
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: { xs: 'flex-start', sm: 'center' }, mb: { xs: 2, sm: 3 }, flexWrap: 'wrap', gap: { xs: 1, sm: 2 } }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button
             variant="outlined"
