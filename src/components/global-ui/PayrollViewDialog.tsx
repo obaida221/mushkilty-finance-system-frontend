@@ -10,7 +10,7 @@ import {
   Typography,
   Box,
   Grid,
-  Divider,
+  // Divider,
   Chip,
   Card,
   CardContent,
@@ -119,7 +119,7 @@ const PayrollViewDialog: React.FC<PayrollViewDialogProps> = ({
                       المبلغ
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "1.1rem" }}>
-                      {formatCurrency(payroll.amount, payroll.currency)}
+                      {formatCurrency(String(payroll.amount), payroll.currency)}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -140,7 +140,7 @@ const PayrollViewDialog: React.FC<PayrollViewDialogProps> = ({
                       بداية الفترة
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {payroll.period_start ? new Date(payroll.period_start).toLocaleDateString("ar-IQ") : "-"}
+                      {payroll.period_start ? new Date(payroll.period_start).toLocaleDateString("en-IQ") : "-"}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -148,7 +148,7 @@ const PayrollViewDialog: React.FC<PayrollViewDialogProps> = ({
                       نهاية الفترة
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {payroll.period_end ? new Date(payroll.period_end).toLocaleDateString("ar-IQ") : "-"}
+                      {payroll.period_end ? new Date(payroll.period_end).toLocaleDateString("en-IQ") : "-"}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>

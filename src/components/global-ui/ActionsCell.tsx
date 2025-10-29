@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Box, Button, IconButton, Tooltip } from "@mui/material"
+import { Box, IconButton, Tooltip } from "@mui/material"
 import { Edit, Delete, Visibility } from "@mui/icons-material"
 
 interface ActionsCellProps {
@@ -27,7 +27,7 @@ const ActionsCell: React.FC<ActionsCellProps> = ({
   deleteButton = true,
   viewButton = false,
   customActions = null,
-  actionType = "buttons"
+  // actionType = "buttons"
 }) => {
   const handleEdit = () => {
     if (onEdit) onEdit(row)
