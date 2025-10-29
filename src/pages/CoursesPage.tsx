@@ -73,7 +73,7 @@ const CoursesPage: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false)
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [filterType, setFilterType] = useState<string>("all")
-  const [tabValue, setTabValue] = useState(0)
+  const tabValue = 0
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -207,7 +207,6 @@ const CoursesPage: React.FC = () => {
   const onlineCourses = getCoursesByType("online").length
   const onsiteCourses = getCoursesByType("onsite").length
   const totalBatches = batches.length
-  const totalEnrollments = enrollments.length
 
   // Get course statistics
   const getCourseStats = (courseId: number) => {
@@ -378,7 +377,10 @@ const CoursesPage: React.FC = () => {
     return (
       <Box>
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            إدارة الدورات
+          </Typography>
         <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
           إضافة دورة
         </Button>
@@ -413,7 +415,7 @@ const CoursesPage: React.FC = () => {
             color: "secondary.main" 
           },
           { 
-            label: "إجمالي المجموعات", 
+            label: "إجمالي الدُفعات", 
             value: totalBatches, 
             icon: <Group sx={{ color: "white" }} />, 
             color: "success.main" 
@@ -594,7 +596,7 @@ const CoursesPage: React.FC = () => {
         loading={deleteLoading}
         message={
           courseToDelete && getBatchesByCourse(courseToDelete.id).length > 0 
-            ? `هل أنت متأكد من حذف هذه الدورة؟ سيتم حذف ${getBatchesByCourse(courseToDelete.id).length} مجموعة و جميع التسجيلات المرتبطة بها.`
+            ? `هل أنت متأكد من حذف هذه الدورة؟ سيتم حذف ${getBatchesByCourse(courseToDelete.id).length} دُفعة و جميع التسجيلات المرتبطة بها.`
             : "هل أنت متأكد من حذف هذه الدورة؟"
         }
       />
@@ -741,7 +743,7 @@ const CoursesPage: React.FC = () => {
                       
                       return [
                         {
-                          label: "إجمالي المجموعات",
+                          label: "إجمالي الدُفعات",
                           value: stats.batchCount,
                           color: "primary.main",
                           icon: <Group fontSize="small" />,
@@ -753,13 +755,13 @@ const CoursesPage: React.FC = () => {
                           icon: <Person fontSize="small" />,
                         },
                         {
-                          label:  "المجموعات النشطة",
+                          label:  "الدُفعات النشطة",
                           value: stats.activeBatches,
                           color: "info.main",
                           icon: <Class fontSize="small" />,                         
                         },
                         {
-                          label: "المجموعات غير النشطة",
+                          label: "الدُفعات غير النشطة",
                           value: stats.batchCount - stats.activeBatches,
                           color: "warning.main",
                           icon: <Class fontSize="small" />,
@@ -801,7 +803,7 @@ const CoursesPage: React.FC = () => {
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
                     <Group color="primary" fontSize="small" />
-                    المجموعات ({getBatchesByCourse(selectedCourse.id).length})
+                    الدُفعات ({getBatchesByCourse(selectedCourse.id).length})
                   </Typography>
                   
                   {(() => {
@@ -810,7 +812,7 @@ const CoursesPage: React.FC = () => {
                     if (courseBatches.length === 0) {
                       return (
                         <Alert severity="info" sx={{ py: 1 }}>
-                          لا توجد مجموعات مرتبطة
+                          لا توجد دُفعات مرتبطة
                         </Alert>
                       )
                     }
@@ -840,7 +842,7 @@ const CoursesPage: React.FC = () => {
                                   color={batch.status === "open" ? "success" : "default"}
                                 />
                                 <Typography variant="caption" color="text.secondary">
-                                  {new Date(batch.start_date).toLocaleDateString('ar')}
+                                  {batch?.start_date ? new Date(batch.start_date).toLocaleDateString('ar') : "تاريخ غير محدد"}
                                 </Typography>
                               </Box>
                             </Box>

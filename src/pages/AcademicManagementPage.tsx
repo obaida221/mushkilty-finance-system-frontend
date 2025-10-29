@@ -2,15 +2,20 @@
 
 import React, { useState } from 'react'
 import { Box, Typography } from '@mui/material'
-import { PersonAdd, School, Discount as DiscountIcon } from '@mui/icons-material'
+import { PersonAdd, School, Discount as DiscountIcon, Group as GroupIcon, HowToReg as HowToRegIcon } from '@mui/icons-material'
 import InnerNavBar from '../components/InnerNavBar'
 import { useStudents } from '../hooks/useStudents'
 import { useCourses } from '../hooks/useCourses'
+import { useDiscountCodes } from '../hooks/useDiscountCodes'
+import { useBatches } from '../hooks/useBatches'
+import { useEnrollments } from '../hooks/useEnrollments'
 
 // Import the existing pages (they'll work as content sections)
 import StudentsPage from './StudentsPage'
 import CoursesPage from './CoursesPage'
 import DiscountsPage from './DiscountsPage'
+import BatchesPage from './BatchesPage'
+import EnrollmentsPage from './EnrollmentsPage'
 
 const AcademicManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('students')
@@ -19,9 +24,10 @@ const AcademicManagementPage: React.FC = () => {
   const { students } = useStudents()
   const { courses } = useCourses()
   
-  // For discounts, we'll need to fetch from API or use a hook
-  // For now using placeholder
-  const discountsCount = 8
+  // Get real counts from hooks
+  const { discountCodes } = useDiscountCodes()
+  const { batches } = useBatches()
+  const { enrollments } = useEnrollments()
 
   const tabs = [
     {
@@ -40,7 +46,19 @@ const AcademicManagementPage: React.FC = () => {
       label: 'الخصومات',
       value: 'discounts',
       icon: <DiscountIcon />,
-      count: discountsCount,
+      count: discountCodes.length,
+    },
+    {
+      label: 'الدُفعات',
+      value: 'batches',
+      icon: <GroupIcon />,
+      count: batches.length,
+    },
+    {
+      label: 'التسجيلات',
+      value: 'enrollments',
+      icon: <HowToRegIcon />,
+      count: enrollments.length,
     },
   ]
 
@@ -53,7 +71,7 @@ const AcademicManagementPage: React.FC = () => {
             إدارة الشؤون الأكاديمية
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            إدارة شاملة للطلاب والدورات والخصومات
+            إدارة شاملة للطلاب والدورات والخصومات والدُفعات والتسجيلات
           </Typography>
         </Box>
       </Box>
@@ -65,6 +83,8 @@ const AcademicManagementPage: React.FC = () => {
       <Box sx={{ mt: 3 }}>
         {activeTab === 'students' && <StudentsPage />}
         {activeTab === 'courses' && <CoursesPage />}
+        {activeTab === 'batches' && <BatchesPage />}
+        {activeTab === 'enrollments' && <EnrollmentsPage />}
         {activeTab === 'discounts' && <DiscountsPage />}
       </Box>
     </Box>

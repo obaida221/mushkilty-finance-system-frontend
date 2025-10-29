@@ -56,14 +56,8 @@ interface DashboardMenuItem {
 const menuItems: DashboardMenuItem[] = [
   { text: "لوحة التحكم", icon: <Dashboard />, path: "/", permission: "dashboard:read" },
   { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permission: "users:read" },
-  { text: "إدارة الشؤون الأكاديمية", icon: <LocalLibrary />, path: "/academic", permission: "students:read" },
-  { text: "دُفعات الدورات", icon: <AccountBalance />, path: "/batches", permission: "batches:read" },
-  { text: "التسجيلات", icon: <PersonAdd />, path: "/enrollments", permission: "enrollments:read" },
-  { text: "المعاملات", icon: <Receipt />, path: "/transactions", permission: "transactions:read" },
+  { text: "الشؤون الأكاديمية", icon: <LocalLibrary />, path: "/academic", permission: "students:read" },
   { text: "إدارة المالية", icon: <AccountBalanceWallet />, path: "/financial", permission: "payments:read" },
-  { text: "المصروفات", icon: <MoneyOff />, path: "/expenses", permission: "expenses:read" },
-  { text: "كشوف الرواتب", icon: <Paid />, path: "/payroll", permission: "payrolls:read" },
-  { text: "التحليلات", icon: <Equalizer />, path: "/analytics", permission: "analytics:read" },
 ]
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {

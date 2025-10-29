@@ -415,8 +415,12 @@ const StudentsPage: React.FC = () => {
 
     return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 3 }}>
+        {/* Header */}      
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            إدارة الطلاب
+          </Typography>
+
         <Button variant="contained" startIcon={<PersonAdd />} onClick={handleOpenDialog}>
           إضافة طالب
         </Button>
