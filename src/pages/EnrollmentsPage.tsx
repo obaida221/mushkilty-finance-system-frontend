@@ -38,6 +38,13 @@ import {
   Cancel,
   School,
   TrendingUp,
+  Visibility,
+  Person,
+  CalendarToday,
+  Receipt,
+  Discount,
+  Description,
+  Class,
 } from "@mui/icons-material"
 import { useEnrollments } from '../hooks/useEnrollments'
 import { useStudents } from '../hooks/useStudents'
@@ -46,6 +53,7 @@ import { useDiscountCodes } from '../hooks/useDiscountCodes'
 import { useAuth } from '../context/AuthContext'
 import type { Enrollment, CreateEnrollmentDto } from "../types"
 import type { DiscountCode } from "../types/discount"
+import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
 const EnrollmentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
@@ -53,12 +61,17 @@ const EnrollmentsPage: React.FC = () => {
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterBatch, setFilterBatch] = useState<string>("all")
-  const [selectedStudents, setSelectedStudents] = useState<number[]>([]) // For bulk enrollment
+  const [selectedStudents, setSelectedStudents] = useState<number[]>([])
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
     open: false,
     message: "",
     severity: "success",
   })
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [enrollmentToDelete, setEnrollmentToDelete] = useState<Enrollment | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null)
 
   // Hooks
   const { user } = useAuth()
@@ -260,21 +273,52 @@ const EnrollmentsPage: React.FC = () => {
         severity: "error" 
       })
     }
-  }  // Handle delete
-  const handleDelete = async (id: number) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا التسجيل؟")) {
-      try {
-        await deleteEnrollment(id)
-        setSnackbar({ open: true, message: "تم حذف التسجيل بنجاح", severity: "success" })
-      } catch (error: any) {
-        console.error('Failed to delete enrollment:', error)
-        setSnackbar({ 
-          open: true, 
-          message: error.response?.data?.message || "حدث خطأ أثناء حذف التسجيل", 
-          severity: "error" 
-        })
-      }
+  }
+
+  // Handle delete with dialog
+  const handleDeleteWithDialog = (enrollment: Enrollment) => {
+    setEnrollmentToDelete(enrollment)
+    setDeleteDialogOpen(true)
+  }
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!enrollmentToDelete) return
+    
+    setDeleteLoading(true)
+    try {
+      await deleteEnrollment(enrollmentToDelete.id)
+      setDeleteDialogOpen(false)
+      setEnrollmentToDelete(null)
+      setSnackbar({ open: true, message: "تم حذف التسجيل بنجاح", severity: "success" })
+    } catch (error: any) {
+      console.error('Failed to delete enrollment:', error)
+      setSnackbar({ 
+        open: true, 
+        message: error.response?.data?.message || "حدث خطأ أثناء حذف التسجيل", 
+        severity: "error" 
+      })
+    } finally {
+      setDeleteLoading(false)
     }
+  }
+
+  // Close delete dialog
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false)
+    setEnrollmentToDelete(null)
+  }
+
+  // Handle view details
+  const handleViewDetails = (enrollment: Enrollment) => {
+    setSelectedEnrollment(enrollment)
+    setDetailsDialogOpen(true)
+  }
+
+  // Close details dialog
+  const handleCloseDetailsDialog = () => {
+    setDetailsDialogOpen(false)
+    setSelectedEnrollment(null)
   }
 
   // Dialog handlers
@@ -290,7 +334,7 @@ const EnrollmentsPage: React.FC = () => {
       status: "pending",
       notes: "",
     })
-    setSelectedStudents([]) // Reset selected students for bulk enrollment
+    setSelectedStudents([]) 
     setEditingEnrollment(null)
     setOpenDialog(true)
   }
@@ -337,13 +381,40 @@ const EnrollmentsPage: React.FC = () => {
   const acceptedEnrollments = getEnrollmentsByStatus("accepted").length
   const completedEnrollments = getEnrollmentsByStatus("completed").length
 
-  // DataGrid columns
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 50 },
+  // Get enrollment details for display
+  const getEnrollmentDetails = (enrollment: Enrollment) => {
+    const student = students.find(s => s.id === enrollment.student_id)
+    const batch = batches.find(b => b.id === enrollment.batch_id)
+    const discount = discountCodes.find(d => d.code === enrollment.discount_code)
+    const user = enrollment.user
+
+    return {
+      student,
+      batch,
+      discount,
+      user,
+      originalPrice: batch?.actual_price || 0,
+      discountAmount: discount ? 
+        (discount.percent ? 
+          (batch?.actual_price || 0) * discount.percent / 100 : 
+          discount.amount || 0) : 0,
+      finalPrice: enrollment.total_price || 0
+    }
+  }
+
+// DataGrid columns
+   const columns: GridColDef[] = [
+    { 
+      field: "id", 
+      headerName: "ID", 
+      flex: 0.3, 
+      minWidth: 50,
+      maxWidth: 70 
+    },
     {
       field: "student_id",
       headerName: "اسم الطالب",
-      flex: 1,
+      flex: 1.5,
       minWidth: 150,
       renderCell: (params) => {
         const student = students.find(s => s.id === params.value)
@@ -364,6 +435,7 @@ const EnrollmentsPage: React.FC = () => {
       headerName: "الدفعة",
       flex: 1,
       minWidth: 150,
+      maxWidth: 200,
       renderCell: (params) => {
         const batch = batches.find(b => b.id === params.value)
         return <Chip label={batch?.name || "غير محدد"} size="small" color="primary" />
@@ -374,6 +446,7 @@ const EnrollmentsPage: React.FC = () => {
       headerName: "الدورة",
       flex: 1,
       minWidth: 150,
+      maxWidth: 200,
       renderCell: (params) => {
         return <Chip label={params.row?.batch?.course?.name || "غير محدد"} size="small" color="primary" />
       },
@@ -381,7 +454,9 @@ const EnrollmentsPage: React.FC = () => {
     {
       field: "status",
       headerName: "الحالة",
-      width: 120,
+      flex: 0.8,
+      minWidth: 120,
+      maxWidth: 140,
       renderCell: (params) => {
         const statusConfig = {
           pending: { label: "قيد الانتظار", color: "warning" as const, icon: <Pending fontSize="small" /> },
@@ -403,7 +478,9 @@ const EnrollmentsPage: React.FC = () => {
     {
       field: "total_price",
       headerName: "المبلغ الإجمالي",
-      width: 130,
+      flex: 1,
+      minWidth: 130,
+      maxWidth: 160,
       renderCell: (params) => {
         if (!params.value) return "-"
         const currency = params.row.currency === "USD" ? "$" : "د.ع"
@@ -413,13 +490,17 @@ const EnrollmentsPage: React.FC = () => {
     {
       field: "enrolled_at",
       headerName: "تاريخ التسجيل",
-      width: 130,
+      flex: 0.8,
+      minWidth: 130,
+      maxWidth: 150,
       renderCell: (params) => params.value ? new Date(params.value).toLocaleDateString('ar') : "-",
     },
     {
       field: "discount_code",
       headerName: "رمز الخصم",
-      width: 100,
+      flex: 0.6,
+      minWidth: 100,
+      maxWidth: 120,
       renderCell: (params) => params.value ? (
         <Chip label={params.value} size="small" color="secondary" />
       ) : "-",
@@ -427,21 +508,35 @@ const EnrollmentsPage: React.FC = () => {
     {
       field: "actions",
       headerName: "الإجراءات",
-      width: 120,
+      flex: 0.8,
+      minWidth: 120,
+      maxWidth: 140,
       sortable: false,
       renderCell: (params) => (
         <Box>
           <IconButton 
             size="small" 
             color="primary" 
+            onClick={() => handleViewDetails(params.row)}
+            title="عرض التفاصيل"
+          >
+            <Visibility fontSize="small" />
+          </IconButton>
+          <IconButton 
+            size="small" 
+            color="primary" 
             onClick={() => handleEditEnrollment(params.row)}
+            disabled={deleteLoading}
+            title="تعديل"
           >
             <Edit fontSize="small" />
           </IconButton>
           <IconButton 
             size="small" 
             color="error" 
-            onClick={() => handleDelete(params.row.id)}
+            onClick={() => handleDeleteWithDialog(params.row)}
+            disabled={deleteLoading}
+            title="حذف"
           >
             <Delete fontSize="small" />
           </IconButton>
@@ -782,6 +877,333 @@ const EnrollmentsPage: React.FC = () => {
           <Button onClick={handleSubmit} variant="contained">
             {editingEnrollment ? "تحديث" : "تسجيل"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <DeleteConfirmDialog
+              open={deleteDialogOpen}
+              onClose={handleCloseDeleteDialog}
+              onConfirm={handleConfirmDelete}
+              title="تأكيد حذف التسجيل"
+              itemName={enrollmentToDelete ? `تسجيل الطالب ${students.find(s => s.id === enrollmentToDelete.student_id)?.full_name || ''}` : ""}
+              loading={deleteLoading}
+              message="هل أنت متأكد من حذف هذا التسجيل؟ سيتم حذف جميع البيانات المرتبطة به."
+            />
+
+          {/* Enrollment Details Dialog */}
+      <Dialog 
+        open={detailsDialogOpen} 
+        onClose={handleCloseDetailsDialog} 
+        maxWidth="md" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: 1, 
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <School color="primary" />
+            <Typography variant="h6">
+              تفاصيل التسجيل
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 2 }}>
+          {selectedEnrollment && (() => {
+            const details = getEnrollmentDetails(selectedEnrollment)
+            
+            return (
+              <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+                {/*- المعلومات الأساسية */}
+                <Box sx={{ flex: 1 }}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent sx={{ p: 2, height: '100%' }}>
+                      <Typography variant="subtitle1" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                        <Description color="primary" fontSize="small" />
+                        المعلومات الأساسية
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {/* Student Information */}
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
+                            <Person fontSize="small" />
+                            الطالب
+                          </Typography>
+                          {details.student ? (
+                            <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                {details.student.full_name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {details.student.phone} | {details.student.email}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ p: 1.5 }}>
+                              غير محدد
+                            </Typography>
+                          )}
+                        </Box>
+                        
+                        {/* Course and Batch Information */}
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
+                            <Class fontSize="small" />
+                            الدورة والدفعة
+                          </Typography>
+                          {details.batch ? (
+                            <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                {details.batch.course?.name || "غير محدد"} - {details.batch.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {details.batch.start_date ? new Date(details.batch.start_date).toLocaleDateString('ar') : "غير محدد"}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ p: 1.5 }}>
+                              غير محدد
+                            </Typography>
+                          )}
+                        </Box>
+
+                        {/* Enrollment Date */}
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
+                            <CalendarToday fontSize="small" />
+                            تاريخ التسجيل
+                          </Typography>
+                          <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
+                            <Typography variant="body2">
+                              {selectedEnrollment.enrolled_at ? new Date(selectedEnrollment.enrolled_at).toLocaleDateString('ar') : "غير محدد"}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Registration Officer */}
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
+                            <Person fontSize="small" />
+                            مسؤول التسجيل
+                          </Typography>
+                          <Box sx={{ p: 1.5 }}>
+                            {details.user ? (
+                              <Chip 
+                                label={details.user.name} 
+                                size="small" 
+                                color="secondary" 
+                              />
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                غير محدد
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Box>
+
+                {/*  المعلومات الإضافية */}
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Status and Payment Information */}
+                  <Card>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                        <Receipt color="primary" fontSize="small" />
+                        حالة التسجيل والدفع
+                      </Typography>
+                      
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <Paper 
+                            variant="outlined" 
+                            sx={{ 
+                              p: 1.5, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 1.5,
+                              borderLeft: `3px solid`,
+                              borderLeftColor: 
+                                selectedEnrollment.status === "accepted" ? "success.main" :
+                                selectedEnrollment.status === "pending" ? "warning.main" :
+                                selectedEnrollment.status === "completed" ? "info.main" : "error.main"
+                            }}
+                          >
+                            <Box sx={{ 
+                              color: 
+                                selectedEnrollment.status === "accepted" ? "success.main" :
+                                selectedEnrollment.status === "pending" ? "warning.main" :
+                                selectedEnrollment.status === "completed" ? "info.main" : "error.main"
+                            }}>
+                              {selectedEnrollment.status === "accepted" ? <CheckCircle fontSize="small" /> :
+                              selectedEnrollment.status === "pending" ? <Pending fontSize="small" /> :
+                              selectedEnrollment.status === "completed" ? <School fontSize="small" /> :
+                              <Cancel fontSize="small" />}
+                            </Box>
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                                {selectedEnrollment.status === "accepted" ? "مقبول" :
+                                selectedEnrollment.status === "pending" ? "قيد الانتظار" :
+                                selectedEnrollment.status === "completed" ? "مكتمل" : "منسحب"}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                حالة التسجيل
+                              </Typography>
+                            </Box>
+                          </Paper>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                          <Paper 
+                            variant="outlined" 
+                            sx={{ 
+                              p: 1.5, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 1.5,
+                              borderLeft: `3px solid`,
+                              borderLeftColor: "primary.main"
+                            }}
+                          >
+                            <Box sx={{ color: "primary.main" }}>
+                              <Receipt fontSize="small" />
+                            </Box>
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                                {details.finalPrice.toLocaleString()} {selectedEnrollment.currency === "USD" ? "$" : "د.ع"}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                المبلغ النهائي
+                              </Typography>
+                            </Box>
+                          </Paper>
+                        </Grid>
+                      </Grid>
+
+                      {/* Price Breakdown */}
+                      {details.batch && (
+                        <Box sx={{ mt: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                            تفاصيل السعر:
+                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="caption">سعر الدورة:</Typography>
+                            <Typography variant="caption">{details.originalPrice.toLocaleString()} {selectedEnrollment.currency === "USD" ? "$" : "د.ع"}</Typography>
+                          </Box>
+                          {details.discount && (
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Typography variant="caption">
+                                خصم {details.discount.code}:
+                              </Typography>
+                              <Typography variant="caption" color="success.main">
+                                -{details.discountAmount.toLocaleString()} {selectedEnrollment.currency === "USD" ? "$" : "د.ع"}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid', borderColor: 'divider', pt: 0.5, mt: 0.5 }}>
+                            <Typography variant="body2" fontWeight={600}>المبلغ الإجمالي:</Typography>
+                            <Typography variant="body2" fontWeight={600}>{details.finalPrice.toLocaleString()} {selectedEnrollment.currency === "USD" ? "$" : "د.ع"}</Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Discount Information */}
+                  {details.discount && (
+                    <Card>
+                      <CardContent sx={{ p: 2 }}>
+                        <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                          <Discount color="primary" fontSize="small" />
+                          معلومات الخصم
+                        </Typography>
+                        
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <Box sx={{ mb: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                رمز الخصم
+                              </Typography>
+                              <Chip 
+                                label={details.discount.code} 
+                                size="small" 
+                                color="secondary"
+                                sx={{ mt: 0.5 }}
+                              />
+                            </Box>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Box sx={{ mb: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                قيمة الخصم
+                              </Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
+                                {details.discount.percent ? `${details.discount.percent}%` : 
+                                details.discount.amount ? `${details.discount.amount.toLocaleString()} ${details.discount.currency === "USD" ? "$" : "د.ع"}` : 
+                                "غير محدد"}
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Notes */}
+                  {selectedEnrollment.notes && (
+                    <Card>
+                      <CardContent sx={{ p: 2 }}>
+                        <Typography variant="subtitle1" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                          <Description color="primary" fontSize="small" />
+                          ملاحظات
+                        </Typography>
+                        <Paper 
+                          variant="outlined" 
+                          sx={{ 
+                            p: 1.5, 
+                            bgcolor: 'background.default',
+                          }}
+                        >
+                          <Typography variant="body2">
+                            {selectedEnrollment.notes}
+                          </Typography>
+                        </Paper>
+                      </CardContent>
+                    </Card>
+                  )}
+                </Box>
+              </Box>
+            )
+          })()}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={handleCloseDetailsDialog}
+            variant="outlined"
+            size="small"
+          >
+            إغلاق
+          </Button>
+          {selectedEnrollment && (
+            <Button 
+              onClick={() => {
+                handleCloseDetailsDialog()
+                handleEditEnrollment(selectedEnrollment)
+              }}
+              variant="contained"
+              size="small"
+              startIcon={<Edit />}
+            >
+              تعديل
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

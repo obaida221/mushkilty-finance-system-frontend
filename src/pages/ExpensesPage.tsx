@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   Box,
   Typography,
@@ -23,12 +23,17 @@ import {
   Grid,
   Card,
   CardContent,
+  Divider,
+  Stack,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, MoneyOff, Edit, Delete, TrendingDown } from "@mui/icons-material"
+import { Search, Add, MoneyOff, Edit, Delete, TrendingDown, Visibility } from "@mui/icons-material"
 import { useExpenses, type CreateExpenseDto } from "../hooks/useExpenses"
 import { useAuth } from "../context/AuthContext"
 import type { Expense, Currency } from "../types/financial"
+import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
 type ExpenseFormType = {
   beneficiary: string;
@@ -43,10 +48,26 @@ const ExpensesPage: React.FC = () => {
   const { expenses, error, createExpense, updateExpense, deleteExpense } = useExpenses()
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
+  const [openDetailDialog, setOpenDetailDialog] = useState(false)
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: "success" | "error" }>({ 
     open: false, message: "", severity: "success" 
   });
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    expenseId: number | null
+    expenseName: string
+  }>({
+    open: false,
+    expenseId: null,
+    expenseName: ""
+  })
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   const [expenseForm, setExpenseForm] = useState<ExpenseFormType>({
     beneficiary: "",
@@ -55,6 +76,16 @@ const ExpensesPage: React.FC = () => {
     currency: "IQD",
     expense_date: new Date().toISOString().split('T')[0],
   });
+
+  const handleOpenDetailDialog = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setOpenDetailDialog(true);
+  };
+
+  const handleCloseDetailDialog = () => {
+    setOpenDetailDialog(false);
+    setSelectedExpense(null);
+  };
 
   const handleSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
@@ -88,8 +119,40 @@ const ExpensesPage: React.FC = () => {
     setEditingExpense(null);
   }
 
+  const handleOpenDeleteDialog = (expense: Expense) => {
+    setDeleteDialog({
+      open: true,
+      expenseId: expense.id,
+      expenseName: expense.beneficiary
+    })
+  }
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialog({
+      open: false,
+      expenseId: null,
+      expenseName: ""
+    })
+    setDeleteLoading(false)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog.expenseId) return
+
+    setDeleteLoading(true)
+    try {
+      await deleteExpense(deleteDialog.expenseId)
+      handleSnackbar("تم حذف المصروف بنجاح", "success")
+      handleCloseDeleteDialog()
+    } catch (err: any) {
+      console.error("Failed to delete expense:", err)
+      const errorMsg = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الحذف"
+      handleSnackbar(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg, "error")
+      setDeleteLoading(false)
+    }
+  }
+
   const handleSaveExpense = async () => {
-    // Validation
     if (!expenseForm.beneficiary || !expenseForm.amount || Number(expenseForm.amount) <= 0) {
       handleSnackbar("يرجى إدخال المستفيد والمبلغ بشكل صحيح", "error");
       return;
@@ -126,19 +189,6 @@ const ExpensesPage: React.FC = () => {
     }
   }
 
-  const handleDeleteExpense = async (id: number) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا المصروف؟")) return;
-
-    try {
-      await deleteExpense(id);
-      handleSnackbar("تم حذف المصروف بنجاح", "success");
-    } catch (err: any) {
-      console.error("Failed to delete expense:", err);
-      const errorMsg = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الحذف";
-      handleSnackbar(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg, "error");
-    }
-  }
-
   // Calculate totals
   const totalIQD = expenses
     .filter(e => e.currency === "IQD")
@@ -149,68 +199,109 @@ const ExpensesPage: React.FC = () => {
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 50 },
-    { 
-      field: "expense_date", 
-      headerName: "التاريخ", 
-      width: 120,
-      valueGetter: (params) => {
-        const date = new Date(params.row.expense_date);
-        return date.toLocaleDateString('ar-IQ');
-      }
-    },
-    { 
-      field: "beneficiary", 
-      headerName: "المستفيد", 
-      flex: 1,
-      minWidth: 150,
-    },
-    { 
-      field: "description", 
-      headerName: "الوصف", 
-      flex: 1, 
-      minWidth: 200,
-      valueGetter: (params) => params.row.description || "—"
-    },
-    { 
-      field: "amount", 
-      headerName: "المبلغ", 
-      width: 150, 
-      renderCell: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "error.main" }}>
-          {Number(params.row.amount).toLocaleString()} {params.row.currency}
-        </Typography>
-      )
-    },
-    {
-      field: "actions",
-      headerName: "الإجراءات",
-      width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Box>
-          <IconButton color="primary" size="small" onClick={() => handleOpenDialog(params.row)}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton color="error" size="small" onClick={() => handleDeleteExpense(params.row.id)}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
-  ]
+  { 
+    field: "id", 
+    headerName: "ID", 
+    flex: isMobile ? 0.2 : 0.3,
+    minWidth: isMobile ? 40 : 50,
+    maxWidth: isMobile ? 60 : 70,
+    hideable: true,
+  },
+  { 
+    field: "expense_date", 
+    headerName: "التاريخ", 
+    flex: isMobile ? 0.6 : 0.8,
+    minWidth: isMobile ? 90 : 120,
+    maxWidth: isMobile ? 110 : 140,
+    valueGetter: (params) => {
+      const date = new Date(params.row.expense_date);
+      return isMobile 
+        ? date.toLocaleDateString('ar-IQ', { month: 'numeric', day: 'numeric' })
+        : date.toLocaleDateString('ar-IQ');
+    }
+  },
+  { 
+    field: "beneficiary", 
+    headerName: "المستفيد", 
+    flex: isMobile ? 1.2 : 1.5,
+    minWidth: isMobile ? 100 : 150,
+    maxWidth: isTablet ? 200 : 400,
+  },
+  { 
+    field: "description", 
+    headerName: "الوصف", 
+    flex: isMobile ? 1 : 1.2, 
+    minWidth: isMobile ? 120 : 200,
+    hideable: true,
+    hide: isMobile,
+    valueGetter: (params) => params.row.description || "—"
+  },
+  { 
+    field: "amount", 
+    headerName: "المبلغ", 
+    flex: isMobile ? 0.8 : 1,
+    minWidth: isMobile ? 100 : 150,
+    maxWidth: isMobile ? 120 : 180,
+    renderCell: (params) => (
+      <Typography sx={{ 
+        fontWeight: 600, 
+        color: "error.main",
+        fontSize: isMobile ? '0.75rem' : '0.875rem'
+      }}>
+        {Number(params.row.amount).toLocaleString()} {params.row.currency}
+      </Typography>
+    )
+  },
+  {
+    field: "actions",
+    headerName: isMobile ? "" : "الإجراءات",
+    flex: isMobile ? 0.6 : 0.8,
+    minWidth: isMobile ? 80 : 160,
+    maxWidth: isMobile ? 100 : 180,
+    sortable: false,
+    renderCell: (params) => (
+      <Box sx={{ display: 'flex', gap: isMobile ? 0.5 : 1 }}>
+        <IconButton 
+          color="primary" 
+          size={isMobile ? "small" : "medium"}
+          onClick={() => handleOpenDetailDialog(params.row)}
+          title="عرض التفاصيل"
+        >
+          <Visibility fontSize={isMobile ? "small" : "medium"} />
+        </IconButton>
+        <IconButton 
+          color="primary" 
+          size={isMobile ? "small" : "medium"}
+          onClick={() => handleOpenDialog(params.row)}
+          title="تعديل"
+        >
+          <Edit fontSize={isMobile ? "small" : "medium"} />
+        </IconButton>
+        <IconButton 
+          color="error" 
+          size={isMobile ? "small" : "medium"}
+          onClick={() => handleOpenDeleteDialog(params.row)}
+          title="حذف"
+        >
+          <Delete fontSize={isMobile ? "small" : "medium"} />
+        </IconButton>
+      </Box>
+    ),
+  },
+];
 
-  const filteredExpenses = expenses.filter((exp) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      (exp.beneficiary || "").toLowerCase().includes(searchLower) ||
-      (exp.description || "").toLowerCase().includes(searchLower) ||
-      exp.amount.toString().includes(searchLower) ||
-      exp.currency.toLowerCase().includes(searchLower)
-    );
-  })
+const filteredExpenses = expenses.filter((exp) => {
+  const searchLower = searchQuery.toLowerCase();
   return (
-    <Box>
+    (exp.beneficiary || "").toLowerCase().includes(searchLower) ||
+    (exp.description || "").toLowerCase().includes(searchLower) ||
+    exp.amount.toString().includes(searchLower) ||
+    exp.currency.toLowerCase().includes(searchLower)
+  );
+})
+
+return (
+  <Box>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>المصروفات</Typography>
@@ -286,27 +377,32 @@ const ExpensesPage: React.FC = () => {
             InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
             sx={{ mb: 3 }}
           />
-          <DataGrid
-            rows={filteredExpenses}
-            columns={columns}
-            getRowId={(row) => row.id}
-            pageSizeOptions={[5, 10, 25]}
-            initialState={{
+          <Box sx={{ 
+            height: isMobile ? 400 : 500,
+            width: '100%'
+          }}>
+            <DataGrid
+              rows={filteredExpenses}
+              columns={columns}
+              getRowId={(row) => row.id}
+              pageSizeOptions={[5, 10, 25]}
+              initialState={{
               pagination: { paginationModel: { pageSize: 10 } },
               sorting: { sortModel: [{ field: "date", sort: "desc" }] },
-            }}
-            disableRowSelectionOnClick
+              }}
+              disableRowSelectionOnClick
             autoHeight
-            sx={{
-              border: "none",
+              sx={{
+                border: "none",
               "& .MuiDataGrid-cell": { borderColor: "divider" },
               "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
-            }}
-          />
+              }}
+            />
+          </Box>
         </Box>
       </Paper>
 
-      {/* Dialog */}
+      {/* Add/Edit Expense Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -371,10 +467,216 @@ const ExpensesPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Expense Details Dialog */}
+      <Dialog 
+        open={openDetailDialog} 
+        onClose={handleCloseDetailDialog} 
+        maxWidth= "sm"
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ p: isMobile ? 2 : 3 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Visibility /> 
+            <Typography variant={isMobile ? "h6" : "h5"}>
+              تفاصيل المصروف
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: isMobile ? 2 : 3 }}>
+          {selectedExpense && (
+            <Grid container spacing={isMobile ? 2 : 4}>
+              
+              {/* المعلومات الأساسية  */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 2,
+                      fontWeight: 600
+                    }}
+                  >
+                    المعلومات الأساسية
+                  </Typography>
+                  
+                  <Stack spacing={2}>
+                    {/* المستفيد */}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        المستفيد
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 600,
+                        }}
+                      >
+                        {selectedExpense.beneficiary}
+                      </Typography>
+                    </Box>
+
+                    {/* المبلغ */}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        المبلغ
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        sx={{ 
+                          fontWeight: 700,
+                          direction: 'ltr',
+                          textAlign: 'left'
+                        }}
+                      >
+                        {Number(selectedExpense.amount).toLocaleString()} {selectedExpense.currency}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* معلومات النظام */}
+                <Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 2,
+                      fontWeight: 600
+                    }}
+                  >
+                    معلومات النظام
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        معرف المصروف
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontFamily: 'monospace',
+                          fontWeight: 600
+                        }}
+                      >
+                        #{selectedExpense.id}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        معرف المستخدم
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontFamily: 'monospace',
+                          fontWeight: 600
+                        }}
+                      >
+                        {selectedExpense.user_id}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Grid>
+
+              {/* المعلومات الإضافية  */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 2,
+                      fontWeight: 600
+                    }}
+                  >
+                    المعلومات الإضافية
+                  </Typography>
+                  
+                  <Stack spacing={2}>
+                    {/* الوصف */}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        الوصف
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedExpense.description || "لا يوجد وصف"}
+                      </Typography>
+                    </Box>
+
+                    {/* العملة */}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        العملة
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {selectedExpense.currency === "IQD" ? "دينار عراقي (IQD)" : "دولار أمريكي (USD)"}
+                      </Typography>
+                    </Box>
+
+                    {/* التاريخ */}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        تاريخ المصروف
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {new Date(selectedExpense.expense_date).toLocaleDateString('ar-IQ', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: isMobile ? 2 : 3 }}>
+          <Button 
+            onClick={handleCloseDetailDialog}
+            size={isMobile ? "small" : "medium"}
+            variant="outlined"
+          >
+            إغلاق
+          </Button>
+          <Button 
+            variant="contained" 
+            startIcon={<Edit />}
+            onClick={() => {
+              handleCloseDetailDialog();
+              handleOpenDialog(selectedExpense!);
+            }}
+            size={isMobile ? "small" : "medium"}
+          >
+            تعديل المصروف
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        title="تأكيد حذف المصروف"
+        message="هل أنت متأكد من حذف المصروف الخاص بـ"
+        itemName={deleteDialog.expenseName}
+        loading={deleteLoading}
+      />
+
+      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{
+          vertical: isMobile ? 'bottom' : 'top',
+          horizontal: 'center'
+        }}
       >
         <Alert severity={snackbar.severity} sx={{ width: "100%" }} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
           {snackbar.message}

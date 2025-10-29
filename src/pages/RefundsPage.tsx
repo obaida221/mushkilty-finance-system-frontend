@@ -25,11 +25,12 @@ import {
   Divider,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, Undo, Edit, Delete, TrendingDown } from "@mui/icons-material"
+import { Search, Add, Undo, Edit, Delete, TrendingDown, Visibility } from "@mui/icons-material"
 import { useRefunds } from "../hooks/useRefunds"
 import { usePayments } from "../hooks/usePayments"
 import type { Refund } from "../types/financial"
 import type { Payment } from "../types/payment"
+import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
 interface RefundFormType {
   payment_id: string;
@@ -46,6 +47,9 @@ const RefundsPage: React.FC = () => {
   const [editingRefund, setEditingRefund] = useState<Refund | null>(null)
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [refundToDelete, setRefundToDelete] = useState<Refund | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: "success" | "error" }>({ 
     open: false, 
     message: "", 
@@ -96,6 +100,33 @@ const RefundsPage: React.FC = () => {
     setSelectedRefund(null);
   }
 
+  const handleOpenDeleteDialog = (refund: Refund) => {
+    setRefundToDelete(refund);
+    setDeleteDialogOpen(true);
+  }
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setRefundToDelete(null);
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!refundToDelete) return;
+    
+    setDeleteLoading(true);
+    try {
+      await deleteRefund(refundToDelete.id);
+      handleSnackbar("تم حذف المرتجع بنجاح", "success");
+      handleCloseDeleteDialog();
+    } catch (err: any) {
+      console.error("Failed to delete refund:", err);
+      const errorMsg = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الحذف";
+      handleSnackbar(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg, "error");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   const handleSaveRefund = async () => {
     if (!refundForm.payment_id) {
       handleSnackbar("يرجى اختيار الواردة", "error");
@@ -124,19 +155,6 @@ const RefundsPage: React.FC = () => {
     }
   }
 
-  const handleDeleteRefund = async (id: number) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) return;
-    
-    try {
-      await deleteRefund(id);
-      handleSnackbar("تم حذف المرتجع بنجاح", "success");
-    } catch (err: any) {
-      console.error("Failed to delete refund:", err);
-      const errorMsg = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الحذف";
-      handleSnackbar(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg, "error");
-    }
-  }
-
   // Calculate totals by currency
   const totalIQD = refunds
     .filter(r => r.payment?.currency === "IQD")
@@ -147,11 +165,19 @@ const RefundsPage: React.FC = () => {
     .reduce((sum, r) => sum + Number(r.payment?.amount || 0), 0);
 
   const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 50 },
+    { 
+      field: "id", 
+      headerName: "ID", 
+      flex: 0.3, 
+      minWidth: 50,
+      maxWidth: 70 
+    },
     { 
       field: "refunded_at", 
       headerName: "تاريخ الإرجاع", 
-      width: 120,
+      flex: 0.8,
+      minWidth: 120,
+      maxWidth: 140,
       valueGetter: (params) => {
         if (!params.row.refunded_at) return "—";
         const date = new Date(params.row.refunded_at);
@@ -161,7 +187,9 @@ const RefundsPage: React.FC = () => {
     { 
       field: "payment_date", 
       headerName: "تاريخ الدفع", 
-      width: 120,
+      flex: 0.8,
+      minWidth: 120,
+      maxWidth: 140,
       valueGetter: (params) => {
         const date = new Date(params.row.payment?.paid_at);
         return date.toLocaleDateString();
@@ -172,6 +200,7 @@ const RefundsPage: React.FC = () => {
       headerName: "المصدر", 
       flex: 1,
       minWidth: 150,
+      maxWidth: 200,
       valueGetter: (params) => {
         if (params.row.payment?.enrollment) {
           return "تسجيل طالب";
@@ -185,7 +214,7 @@ const RefundsPage: React.FC = () => {
     {
       field: "student",
       headerName: "الطالب/المؤسسة",
-      flex: 1,
+      flex: 1.5,
       minWidth: 150,
       valueGetter: (params) => {
         return params.row.payment?.enrollment?.student?.full_name ||
@@ -196,7 +225,9 @@ const RefundsPage: React.FC = () => {
     { 
       field: "amount", 
       headerName: "المبلغ", 
-      width: 150, 
+      flex: 1,
+      minWidth: 150,
+      maxWidth: 180,
       renderCell: (params) => (
         <Typography sx={{ fontWeight: 600, color: "warning.main" }}>
           {Number(params.row.payment?.amount || 0).toLocaleString()} {params.row.payment?.currency}
@@ -213,14 +244,43 @@ const RefundsPage: React.FC = () => {
     { 
       field: "actions", 
       headerName: "الإجراءات", 
-      width: 120, 
+      flex: 0.8,
+      minWidth: 150,
+      maxWidth: 180,
       sortable: false, 
       renderCell: (params) => (
         <Box>
-          <IconButton color="primary" size="small" onClick={() => handleOpenDialog(params.row)}>
+          <IconButton 
+            color="primary" 
+            size="small" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenDetailsDialog(params.row);
+            }}
+            title="عرض التفاصيل"
+          >
+            <Visibility fontSize="small" />
+          </IconButton>
+          <IconButton 
+            color="primary" 
+            size="small" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenDialog(params.row);
+            }}
+            title="تعديل"
+          >
             <Edit fontSize="small" />
           </IconButton>
-          <IconButton color="error" size="small" onClick={() => handleDeleteRefund(params.row.id)}>
+          <IconButton 
+            color="error" 
+            size="small" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenDeleteDialog(params.row);
+            }}
+            title="حذف"
+          >
             <Delete fontSize="small" />
           </IconButton>
         </Box>
@@ -254,9 +314,9 @@ const RefundsPage: React.FC = () => {
 
   return (
     <Box>
+
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>المرتجعات</Typography>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 3 }}>
         <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => handleOpenDialog()}>
           إضافة مرتجع
         </Button>
@@ -365,7 +425,7 @@ const RefundsPage: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* Dialog */}
+      {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -481,6 +541,17 @@ const RefundsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        title="حذف المرتجع"
+        message="هل أنت متأكد من حذف المرتجع"
+        itemName={refundToDelete ? `المرتجع رقم ${refundToDelete.id}` : ""}
+        loading={deleteLoading}
+      />
 
       {/* Snackbar */}
       <Snackbar
