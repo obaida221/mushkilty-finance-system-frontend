@@ -86,10 +86,10 @@ const UserManagementPage: React.FC = () => {
     setError(null);
     
     try {
-      // if (!userManagementPermissions.canViewUsers) {
-      //   setError('ليس لديك صلاحية لعرض المستخدمين');
-      //   return;
-      // }
+      if (!userManagementPermissions.canReadUsers) {
+        setError('ليس لديك صلاحية لعرض المستخدمين');
+        return;
+      }
 
       const [usersData, rolesData] = await Promise.all([
         userManagementService.getAllUsers(),
@@ -214,15 +214,15 @@ const UserManagementPage: React.FC = () => {
     );
   }
 
-  // if (!userManagementPermissions.canViewUsers) {
-  //   return (
-  //     <Box sx={{ p: 3 }}>
-  //       <Alert severity="warning">
-  //         ليس لديك صلاحية للوصول إلى إدارة المستخدمين
-  //       </Alert>
-  //     </Box>
-  //   );
-  // }
+  if (!userManagementPermissions.canReadUsers) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning">
+          ليس لديك صلاحية للوصول إلى إدارة المستخدمين
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -240,7 +240,7 @@ const UserManagementPage: React.FC = () => {
           >
             تحديث
           </Button>
-          {/* {userManagementPermissions.canCreateUsers && ( */}
+          {userManagementPermissions.canCreateUsers && (
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -248,7 +248,7 @@ const UserManagementPage: React.FC = () => {
             >
               إضافة مستخدم
             </Button>
-          {/* )} */}
+          )}
         </Box>
       </Box>
 
@@ -387,7 +387,7 @@ const UserManagementPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {/* {userManagementPermissions.canUpdateUsers && ( */}
+                        {userManagementPermissions.canUpdateUsers && (
                           <Tooltip title="تعديل">
                             <IconButton 
                               size="small" 
@@ -397,8 +397,8 @@ const UserManagementPage: React.FC = () => {
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
-                        {/* )} */}
-                        {/* {userManagementPermissions.canDeleteUsers && ( */}
+                        )}
+                        {userManagementPermissions.canDeleteUsers && (
                           <Tooltip title="حذف">
                             <IconButton 
                               size="small" 
@@ -408,7 +408,7 @@ const UserManagementPage: React.FC = () => {
                               <DeleteIcon />
                             </IconButton>
                           </Tooltip>
-                        {/* )} */}
+                        )}
                       </Box>
                     </TableCell>
                   </TableRow>

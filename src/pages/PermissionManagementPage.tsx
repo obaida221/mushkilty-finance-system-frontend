@@ -39,7 +39,7 @@ import {
   Security as SecurityIcon,
   Build as BuildIcon,
 } from '@mui/icons-material';
-import { usePermissions } from '../hooks/usePermissions';
+import usePermissions from '../hooks/usePermissions';
 import { userManagementService } from '../services/userManagementService';
 import { Permission} from '../types';
 
@@ -84,7 +84,7 @@ const PermissionManagementPage: React.FC = () => {
   });
   
   // Permissions
-  const { userManagementPermissions } = usePermissions();
+  const { canReadPermissions, canDeletePermissions } = usePermissions();
 
   // Load data on component mount
   useEffect(() => {
@@ -96,7 +96,7 @@ const PermissionManagementPage: React.FC = () => {
     setError(null);
     
     try {
-      if (!userManagementPermissions.canViewPermissions) {
+      if (!canReadPermissions) {
         setError('ليس لديك صلاحية لعرض الصلاحيات');
         return;
       }
@@ -163,7 +163,7 @@ const PermissionManagementPage: React.FC = () => {
     );
   }
 
-  if (!userManagementPermissions.canViewPermissions) {
+  if (!canReadPermissions) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="warning">
@@ -356,7 +356,7 @@ const PermissionManagementPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {userManagementPermissions.canDeletePermissions && (
+                        {canDeletePermissions && (
                           <Tooltip title="حذف">
                             <IconButton 
                               size="small" 

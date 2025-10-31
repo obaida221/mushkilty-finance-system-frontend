@@ -37,6 +37,12 @@ export const usePermissions = () => {
   const canAccessStudents = 
     canReadStudents || canCreateStudents || 
     canUpdateStudents || canDeleteStudents;
+  const studentsManagementPermissions = {
+    canReadStudents,
+    canCreateStudents,
+    canUpdateStudents,
+    canDeleteStudents,
+  };
 
   const canReadCourses = hasPermission('courses:read');
   const canCreateCourses = hasPermission('courses:create');
@@ -45,6 +51,12 @@ export const usePermissions = () => {
   const canAccessCourses = 
     canReadCourses || canCreateCourses || 
     canUpdateCourses || canDeleteCourses;
+  const coursesManagementPermissions = {
+    canReadCourses,
+    canCreateCourses,
+    canUpdateCourses,
+    canDeleteCourses,
+  };
 
   const canReadBatches = hasPermission('batches:read');
   const canCreateBatches = hasPermission('batches:create');
@@ -53,6 +65,13 @@ export const usePermissions = () => {
   const canAccessBatches = 
     canReadBatches || canCreateBatches || 
     canUpdateBatches || canDeleteBatches;
+  const batchesManagementPermissions = {
+    canReadBatches,
+    canCreateBatches,
+    canUpdateBatches,
+    canDeleteBatches,
+  };
+  
 
   const canReadEnrollments = hasPermission('enrollments:read');
   const canCreateEnrollments = hasPermission('enrollments:create');
@@ -61,6 +80,12 @@ export const usePermissions = () => {
   const canAccessEnrollments =
     canReadEnrollments || canCreateEnrollments ||
     canUpdateEnrollments || canDeleteEnrollments;
+  const enrollmentsManagementPermissions = {
+    canReadEnrollments,
+    canCreateEnrollments,
+    canUpdateEnrollments,
+    canDeleteEnrollments,
+  };
 
   const canReadDiscounts = hasPermission('discounts:read');
   const canCreateDiscounts = hasPermission('discounts:create');
@@ -69,6 +94,12 @@ export const usePermissions = () => {
   const canAccessDiscounts =
     canReadDiscounts || canCreateDiscounts ||
     canUpdateDiscounts || canDeleteDiscounts;
+  const discountsManagementPermissions = {
+    canReadDiscounts,
+    canCreateDiscounts,
+    canUpdateDiscounts,
+    canDeleteDiscounts,
+  };
 
 
   // Financial permissions
@@ -79,6 +110,12 @@ export const usePermissions = () => {
   const canAccessPayments =
     canReadPayments || canCreatePayments ||
     canUpdatePayments || canDeletePayments;
+  const paymentsManagementPermissions = {
+    canReadPayments,
+    canCreatePayments,
+    canUpdatePayments,
+    canDeletePayments,
+  }
   
   const canReadExpenses = hasPermission('expenses:read');
   const canCreateExpenses = hasPermission('expenses:create');
@@ -87,6 +124,12 @@ export const usePermissions = () => {
   const canAccessExpenses =
     canReadExpenses || canCreateExpenses ||
     canUpdateExpenses || canDeleteExpenses;
+  const expensesManagementPermissions = {
+    canReadExpenses,
+    canCreateExpenses,
+    canUpdateExpenses,
+    canDeleteExpenses,
+  };
   
   const canReadRefunds = hasPermission('refunds:read');
   const canCreateRefunds = hasPermission('refunds:create');
@@ -95,7 +138,14 @@ export const usePermissions = () => {
   const canAccessRefunds =
     canReadRefunds || canCreateRefunds ||
     canUpdateRefunds || canDeleteRefunds;
-  
+  const refundsManagementPermissions = {
+    canReadRefunds,
+    canCreateRefunds,
+    canUpdateRefunds,
+    canDeleteRefunds,
+  };
+
+  // Payment methods permissions  
   const canReadPaymentMethods = hasPermission('payment-methods:read');
   const canCreatePaymentMethods = hasPermission('payment-methods:create');
   const canUpdatePaymentMethods = hasPermission('payment-methods:update');
@@ -103,7 +153,14 @@ export const usePermissions = () => {
   const canAccessPaymentMethods =
     canReadPaymentMethods || canCreatePaymentMethods ||
     canUpdatePaymentMethods || canDeletePaymentMethods;
+  const paymentMethodsManagementPermissions = {
+    canReadPaymentMethods,
+    canCreatePaymentMethods,
+    canUpdatePaymentMethods,
+    canDeletePaymentMethods,
+  };
   
+  // Payroll permissions
   const canReadPayroll = hasPermission('payroll:read');
   const canCreatePayroll = hasPermission('payroll:create');
   const canUpdatePayroll = hasPermission('payroll:update');
@@ -111,6 +168,12 @@ export const usePermissions = () => {
   const canAccessPayroll =
     canReadPayroll || canCreatePayroll ||
     canUpdatePayroll || canDeletePayroll;
+  const payrollManagementPermissions = {
+    canReadPayroll,
+    canCreatePayroll,
+    canUpdatePayroll,
+    canDeletePayroll,
+  };
 
   // User management permissions
   const canReadUsers = hasPermission('users:read');
@@ -119,13 +182,26 @@ export const usePermissions = () => {
   const canDeleteUsers = hasPermission('users:delete');
   const canAccessUsers = 
     canReadUsers || canCreateUsers || canUpdateUsers || canDeleteUsers;
+  const userManagementPermissions = {
+    canReadUsers,
+    canCreateUsers,
+    canUpdateUsers,
+    canDeleteUsers,
+  }
 
+  // Role management permissions
   const canReadRoles = hasPermission('roles:read');
   const canCreateRoles = hasPermission('roles:create');
   const canUpdateRoles = hasPermission('roles:update');
   const canDeleteRoles = hasPermission('roles:delete');
   const canAccessRoles =
     canReadRoles || canCreateRoles || canUpdateRoles || canDeleteRoles;
+  const roleManagementPermissions = {
+    canReadRoles,
+    canCreateRoles,
+    canUpdateRoles,
+    canDeleteRoles,
+  }
 
   const canReadPermissions = hasPermission('permissions:read');
   const canCreatePermissions = hasPermission('permissions:create');
@@ -134,6 +210,12 @@ export const usePermissions = () => {
   const canAccessPermissions =
     canReadPermissions || canCreatePermissions || 
     canUpdatePermissions || canDeletePermissions;
+  const permissionsManagementPermissions = {
+    canReadPermissions,
+    canCreatePermissions,
+    canUpdatePermissions,
+    canDeletePermissions,
+  }
 
   const canManageSystem = hasPermission('system:admin');
 
@@ -221,6 +303,20 @@ export const usePermissions = () => {
     canAccessRefunds,
     canAccessPaymentMethods,
     canAccessPayroll,
+    // Grouped permissions
+    studentsManagementPermissions,
+    coursesManagementPermissions,
+    batchesManagementPermissions,
+    enrollmentsManagementPermissions,
+    discountsManagementPermissions,
+    paymentsManagementPermissions,
+    expensesManagementPermissions,
+    refundsManagementPermissions,
+    paymentMethodsManagementPermissions,
+    payrollManagementPermissions,
+    userManagementPermissions,
+    roleManagementPermissions,
+    permissionsManagementPermissions,
   };
 };
 

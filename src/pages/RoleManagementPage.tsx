@@ -44,7 +44,7 @@ import {
   VpnKey as KeyIcon,
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
-import { usePermissions } from '../hooks/usePermissions';
+import usePermissions from '../hooks/usePermissions';
 import { userManagementService } from '../services/userManagementService';
 import { Role, Permission, CreateRoleRequest, UpdateRoleRequest, AssignPermissionsRequest } from '../types';
 
@@ -77,8 +77,7 @@ const RoleManagementPage: React.FC = () => {
   });
   
   // Permissions
-  const { userManagementPermissions } = usePermissions();
-
+  const { canReadRoles, canCreateRoles, canUpdateRoles, canDeleteRoles, canReadPermissions } = usePermissions();
   // Load data on component mount
   useEffect(() => {
     loadData();
@@ -89,14 +88,14 @@ const RoleManagementPage: React.FC = () => {
     setError(null);
     
     try {
-      if (!userManagementPermissions.canViewRoles) {
+      if (!canReadRoles) {
         setError('ليس لديك صلاحية لعرض الأدوار');
         return;
       }
 
       const [rolesData, permissionsData] = await Promise.all([
         userManagementService.getAllRoles(),
-        userManagementPermissions.canViewPermissions ? 
+        canReadPermissions ? 
           userManagementService.getAllPermissions() : 
           Promise.resolve([]),
       ]);
@@ -253,7 +252,7 @@ const RoleManagementPage: React.FC = () => {
     );
   }
 
-  if (!userManagementPermissions.canViewRoles) {
+  if (!canReadRoles) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="warning">
@@ -279,7 +278,7 @@ const RoleManagementPage: React.FC = () => {
           >
             تحديث
           </Button>
-          {userManagementPermissions.canCreateRoles && (
+          {canCreateRoles && (
             <>
               <Button
                 variant="outlined"
@@ -429,7 +428,7 @@ const RoleManagementPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {userManagementPermissions.canUpdateRoles && (
+                        {canUpdateRoles && (
                           <>
                             <Tooltip title="تعديل الدور">
                               <IconButton 
@@ -451,7 +450,7 @@ const RoleManagementPage: React.FC = () => {
                             </Tooltip>
                           </>
                         )}
-                        {userManagementPermissions.canDeleteRoles && role.name !== 'admin' && (
+                        {canDeleteRoles && role.name !== 'admin' && (
                           <Tooltip title="حذف">
                             <IconButton 
                               size="small" 
