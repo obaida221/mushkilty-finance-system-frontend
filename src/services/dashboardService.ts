@@ -213,10 +213,10 @@ class DashboardService {
           if (enrollment.status && enrollment.status.toLowerCase() === 'accepted') {
             // Try to get enrollment date from multiple possible fields
             const enrollmentDate = new Date(
-              enrollment.enrollmentDate ||
-              enrollment.createdAt ||
+              enrollment.enrolled_at ||
+              enrollment.created_at ||
               enrollment.date ||
-              enrollment.registeredAt
+              enrollment.updated_at
             );
 
             // Check if the enrollment date is valid and in the current year
