@@ -10,6 +10,7 @@ import { CacheProvider } from "@emotion/react"
 import createCache from "@emotion/cache"
 import { ThemeContextProvider, useThemeMode } from "./context/ThemeContext"
 import { AuthProvider } from "./context/AuthContext"
+import { ExchangeRateProvider } from "./context/ExchangeRateContext"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import LoginPage from "./pages/LoginPage"
 import DashboardLayout from "./components/DashboardLayout"
@@ -48,6 +49,7 @@ const AppContent: React.FC = () => {
     <CacheProvider value={cacheRtl}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        <ExchangeRateProvider>
         <AuthProvider>
           <Router>
             <Routes>
@@ -108,7 +110,7 @@ const AppContent: React.FC = () => {
                         <Route 
                           path="/academic" 
                           element={
-                            <ProtectedRoute requiredPermission="students:read">
+                            <ProtectedRoute requiredPermission="batches:read">
                               <AcademicManagementPage />
                             </ProtectedRoute>
                           } 
@@ -202,7 +204,7 @@ const AppContent: React.FC = () => {
                         <Route 
                           path="/discounts" 
                           element={
-                            <ProtectedRoute requiredPermission="discount-codes:read">
+                            <ProtectedRoute requiredPermission="discounts:read">
                               <DiscountsPage />
                             </ProtectedRoute>
                           } 
@@ -210,7 +212,7 @@ const AppContent: React.FC = () => {
                         <Route 
                           path="/payroll" 
                           element={
-                            <ProtectedRoute requiredPermission="payrolls:read">
+                            <ProtectedRoute requiredPermission="payroll:read">
                               <PayrollPage />
                             </ProtectedRoute>
                           } 
@@ -233,6 +235,7 @@ const AppContent: React.FC = () => {
             </Routes>
           </Router>
         </AuthProvider>
+        </ExchangeRateProvider>
       </ThemeProvider>
     </CacheProvider>
   )

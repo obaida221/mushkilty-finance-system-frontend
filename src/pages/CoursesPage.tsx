@@ -44,7 +44,6 @@ import {
 } from "@mui/icons-material"
 import { useCourses } from '../hooks/useCourses'
 import { useBatches } from '../hooks/useBatches'
-import { useEnrollments } from '../hooks/useEnrollments'
 import type { Course, CreateCourseDto } from "../types"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
@@ -92,7 +91,7 @@ const CoursesPage: React.FC = () => {
   } = useCourses()
 
   const { batches, getBatchesByCourse } = useBatches()
-  const { enrollments } = useEnrollments()
+  // const { enrollments } = useEnrollments()
 
   const getCurrentUserId = (): number => {
     const userData = localStorage.getItem('user');
@@ -211,9 +210,10 @@ const CoursesPage: React.FC = () => {
   // Get course statistics
   const getCourseStats = (courseId: number) => {
     const courseBatches = getBatchesByCourse(courseId)
-    const courseEnrollments = enrollments.filter(enrollment => 
-      courseBatches.some(batch => batch.id === enrollment.batch_id)
+    const courseEnrollments = courseBatches.filter(
+      batche => batche.enrollments
     )
+    console.log('courseEnrollments', courseEnrollments)
     return {
       batchCount: courseBatches.length,
       enrollmentCount: courseEnrollments.length,
@@ -309,6 +309,7 @@ const CoursesPage: React.FC = () => {
         headerAlign: "center",
         renderCell: (params) => {
           const stats = getCourseStats(params.row.id)
+          console.log('stats', stats)
           return (
             <Chip 
               label={stats.enrollmentCount} 
@@ -578,7 +579,7 @@ const CoursesPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editingCourse ? "تحديث" : "إضافة"}

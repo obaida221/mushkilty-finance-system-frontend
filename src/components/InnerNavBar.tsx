@@ -1,11 +1,13 @@
 import React from 'react'
 import { Box, Tabs, Tab, Paper } from '@mui/material'
+import { usePermission } from '../context/AuthContext'
 
 interface TabItem {
   label: string
   value: string
   icon?: React.ReactElement
   count?: number
+  permission?: string // إضافة خاصية الصلاحية
 }
 
 interface InnerNavBarProps {
@@ -15,6 +17,12 @@ interface InnerNavBarProps {
 }
 
 const InnerNavBar: React.FC<InnerNavBarProps> = ({ tabs, value, onChange }) => {
+  const { hasPermission } = usePermission();
+  
+  // تصفية التبويبات حسب الصلاحيات
+  const filteredTabs = tabs.filter(tab => 
+    !tab.permission || hasPermission(tab.permission)
+  );
   return (
     <Paper 
       elevation={0} 
@@ -47,7 +55,7 @@ const InnerNavBar: React.FC<InnerNavBarProps> = ({ tabs, value, onChange }) => {
           }
         }}
       >
-        {tabs.map((tab) => (
+        {filteredTabs.map((tab) => (
           <Tab
             key={tab.value}
             label={

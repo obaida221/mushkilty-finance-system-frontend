@@ -1,8 +1,9 @@
 "use client"
 
 import React from "react"
-import { Box, Typography, Grid, Card, CardContent, Paper, Alert, CircularProgress, IconButton, Tooltip } from "@mui/material"
-import { TrendingUp, TrendingDown, School, AccountBalance, Refresh } from "@mui/icons-material"
+import { Box, Typography, Grid, Card, CardContent, Paper, Alert, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem } from "@mui/material"
+import { TrendingUp, TrendingDown, School, AccountBalance, Refresh, CurrencyExchange, } from "@mui/icons-material"
+import { useExchangeRate } from "../context/ExchangeRateContext"
 import {
   LineChart,
   Line,
@@ -29,9 +30,10 @@ interface StatCardProps {
   isPositive: boolean
   icon: React.ReactElement
   color: string
+  currency?: string
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, icon, color }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, icon, color, currency }) => {
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
@@ -40,9 +42,12 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, isPositive, i
             <Typography variant="body2" color="text.secondary" gutterBottom>
               {title}
             </Typography>
-            <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
-              {value}
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+              <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
+                {value}{currency ? ` ${currency}` : ""}
+              </Typography>
+
+            </Box>
           </Box>
           <Box
             sx={{
@@ -83,6 +88,10 @@ const DashboardContent: React.FC = () => {
     autoRefresh: true,
     refreshInterval: 300000 // 5 minutes
   });
+  const { exchangeRate: currentRate, setExchangeRate: setGlobalExchangeRate, convertToIQD } = useExchangeRate();
+  const [exchangeRateDialogOpen, setExchangeRateDialogOpen] = React.useState(false);
+  const [tempExchangeRate, setTempExchangeRate] = React.useState(currentRate.toString());
+  const [currencyFilter, setCurrencyFilter] = React.useState("total");
 
   if (loading && !data) {
     return (
@@ -117,6 +126,8 @@ const DashboardContent: React.FC = () => {
     );
   }
 
+  console.log('Dashboard data', data);
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -127,7 +138,7 @@ const DashboardContent: React.FC = () => {
         <Box display="flex" alignItems="center" gap={2}>
           {lastUpdated && (
             <Typography variant="body2" color="text.secondary">
-              آخر تحديث: {lastUpdated.toLocaleTimeString('ar-IQ')}
+              آخر تحديث: {lastUpdated.toLocaleTimeString('ar-EN')}
             </Typography>
           )}
           <Tooltip title="تحديث البيانات">
@@ -135,52 +146,104 @@ const DashboardContent: React.FC = () => {
               <Refresh />
             </IconButton>
           </Tooltip>
+          <Tooltip title="حساب سعر الصرف">
+            <IconButton onClick={() => setExchangeRateDialogOpen(true)} color="primary">
+              <CurrencyExchange />
+            </IconButton>
+          </Tooltip>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>فلترة العملة</InputLabel>
+            <Select
+              value={currencyFilter}
+              label="فلترة العملة"
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+            >
+              <MenuItem value="total">المجموع بالعراقي (USD+IQD)</MenuItem>
+              <MenuItem value="iqd">المبالغ بالدينار العراقي</MenuItem>
+              <MenuItem value="usd">المبالغ بالدولار الأمريكي</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
       </Box>
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="إجمالي الدخل"
-            value={`${data.stats.totalIncome.toLocaleString()} د.ع`}
-            change={data.stats.incomeChange}
-            isPositive={data.stats.incomeChange.includes('+')}
-            icon={<TrendingUp />}
-            color="#10B981"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="إجمالي المصروفات"
-            value={`${data.stats.totalExpenses.toLocaleString()} د.ع`}
-            change={data.stats.expensesChange}
-            isPositive={!data.stats.expensesChange.includes('+')}
-            icon={<TrendingDown />}
-            color="#EF4444"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="الطلاب النشطين"
-            value={data.stats.activeStudents.toString()}
-            change={data.stats.studentsChange}
-            isPositive={data.stats.studentsChange.includes('+')}
-            icon={<School />}
-            color="#3B82F6"
-          />
-        </Grid>
+          {/* Total Income (excluding refunds) */}
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              title="إجمالي الدخل"
+              value={currencyFilter === "iqd" 
+                ? `${((data.stats.totalIncomeIQD || 0) - (data.stats.refundsIQD || 0)).toLocaleString()}`
+                : currencyFilter === "usd"
+                ? `${((data.stats.totalIncomeUSD || 0) - (data.stats.refundsUSD || 0)).toLocaleString()}`
+                : `${(
+                    ((data.stats.totalIncomeIQD || 0) - (data.stats.refundsIQD || 0)) + 
+                    convertToIQD((data.stats.totalIncomeUSD || 0) - (data.stats.refundsUSD || 0), 'USD')
+                  ).toLocaleString()}`}
+              currency={currencyFilter === "iqd" ? "د.ع" : currencyFilter === "usd" ? "$" : "د.ع"}
+              change={data.stats.incomeChangeIQD}
+              isPositive={(data.stats.incomeChangeIQD || '').includes('+')}
+              icon={<TrendingUp />}
+              color="#10B981"
+            />
+          </Grid>
+
+          {/* Total Expenses (paid payrolls + expenses) */}
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              title="إجمالي المصروفات"
+              value={currencyFilter === "iqd"
+                ? `${(data.stats.totalExpensesIQD || 0).toLocaleString()}`
+                : currencyFilter === "usd"
+                ? `${(data.stats.totalExpensesUSD || 0).toLocaleString()}`
+                : `${((data.stats.totalExpensesIQD || 0) + convertToIQD(data.stats.totalExpensesUSD || 0, 'USD')).toLocaleString()}`}
+              currency={currencyFilter === "iqd" ? "د.ع" : currencyFilter === "usd" ? "$" : "د.ع"}
+              change={data.stats.expensesChangeIQD}
+              isPositive={false}
+              icon={<TrendingDown />}
+              color="#EF4444"
+            />
+          </Grid>
+
+          {/* Active Students */}
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              title="الطلاب النشطين"
+              value={data.stats.activeStudents.toString()}
+              change={data.stats.studentsChange}
+              isPositive={(data.stats.studentsChange || '').includes('+')}
+              icon={<School />}
+              color="#3B82F6"
+            />
+          </Grid>
+
+        {/* Net Profit (Income - Expenses) */}
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             title="صافي الربح"
-            value={`${data.stats.netProfit.toLocaleString()} د.ع`}
-            change={data.stats.profitChange}
-            isPositive={data.stats.profitChange.includes('+')}
+            value={currencyFilter === "iqd"
+              ? `${(
+                ((data.stats.totalIncomeIQD || 0) - (data.stats.refundsIQD || 0)) -
+                (data.stats.totalExpensesIQD || 0)
+              ).toLocaleString()}`
+              : currencyFilter === "usd"
+                ? `${(
+                  ((data.stats.totalIncomeUSD || 0) - (data.stats.refundsUSD || 0)) -
+                  (data.stats.totalExpensesUSD || 0)
+                ).toLocaleString()}`
+                : `${(
+                  ((data.stats.totalIncomeIQD || 0) - (data.stats.refundsIQD || 0) + convertToIQD((data.stats.totalIncomeUSD || 0) - (data.stats.refundsUSD || 0), 'USD')) -
+                  ((data.stats.totalExpensesIQD || 0) + convertToIQD(data.stats.totalExpensesUSD || 0, 'USD'))
+                ).toLocaleString()}`}
+            currency={currencyFilter === "iqd" ? "د.ع" : currencyFilter === "usd" ? "$" : "د.ع"}
+            change={data.stats.profitChangeIQD}
+            isPositive={(data.stats.profitChangeIQD || '').includes('+')}
             icon={<AccountBalance />}
             color="#DC2626"
           />
         </Grid>
       </Grid>
+      
 
       {/* Charts Row 1 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -342,6 +405,61 @@ const DashboardContent: React.FC = () => {
           )}
         </Paper>
       </Box>
+
+      {/* Exchange Rate Dialog */}
+      <Dialog open={exchangeRateDialogOpen} onClose={() => setExchangeRateDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>حساب سعر الصرف</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="سعر الصرف (دولار إلى دينار عراقي)"
+            type="number"
+            value={tempExchangeRate}
+            onChange={(e) => setTempExchangeRate(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              النتائج المحسوبة:
+            </Typography>
+            <Typography>
+              إجمالي الإيرادات (دينار): {(
+                (data.stats.totalIncomeIQD || 0) + 
+                convertToIQD(data.stats.totalIncomeUSD || 0, 'USD')
+              ).toLocaleString()} د.ع
+            </Typography>
+            <Typography>
+              إجمالي المصاريف (دينار): {(
+                (data.stats.totalExpensesIQD || 0) + 
+                convertToIQD(data.stats.totalExpensesUSD || 0, 'USD')
+              ).toLocaleString()} د.ع
+            </Typography>
+            <Typography>
+              صافي الربح (دينار): {(
+                (data.stats.totalIncomeIQD || 0) + 
+                convertToIQD(data.stats.totalIncomeUSD || 0, 'USD') -
+                (data.stats.totalExpensesIQD || 0) - 
+                convertToIQD(data.stats.totalExpensesUSD || 0, 'USD')
+              ).toLocaleString()} د.ع
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setExchangeRateDialogOpen(false)}>إغلاق</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              const rate = parseFloat(tempExchangeRate);
+              if (!isNaN(rate) && rate > 0) {
+                setGlobalExchangeRate(rate);
+              }
+              setExchangeRateDialogOpen(false);
+            }}>
+              حفظ
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

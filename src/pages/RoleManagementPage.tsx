@@ -498,7 +498,7 @@ const RoleManagementPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setRoleDialogOpen(false)}>إلغاء</Button>
           <Button 
             onClick={selectedRole ? handleUpdateRole : handleCreateRole}
@@ -562,7 +562,7 @@ const RoleManagementPage: React.FC = () => {
             الصلاحيات المحددة: {selectedRolePermissions.length} من {permissions.length}
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setPermissionDialogOpen(false)}>إلغاء</Button>
           <Button 
             onClick={handleAssignPermissions}
@@ -585,7 +585,7 @@ const RoleManagementPage: React.FC = () => {
             هذا الإجراء لا يمكن التراجع عنه وسيؤثر على جميع المستخدمين المعينين لهذا الدور
           </Alert>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteDialogOpen(false)}>إلغاء</Button>
           <Button onClick={handleDeleteRole} color="error" variant="contained">
             حذف

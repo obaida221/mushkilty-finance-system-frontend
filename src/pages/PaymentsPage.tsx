@@ -10,10 +10,13 @@ import {
   Refresh, Person, CreditCard, Close
 } from "@mui/icons-material";
 import { usePayments } from "../hooks/usePayments";
+import { useRefunds } from "../hooks/useRefunds";
 import { usePaymentMethods } from "../hooks/usePaymentMethods";
 import { useStudents } from "../hooks/useStudents";
 import { useEnrollments } from "../hooks/useEnrollments";
 import { useBatches } from "../hooks/useBatches";
+import { usePermissions } from "../hooks/usePermissions";
+import { useExchangeRate } from "../context/ExchangeRateContext";
 import type { Payment } from "../types/payment";
 import type { CreatePaymentDto, PaymentStatus } from "../hooks/usePayments";
 
@@ -58,6 +61,8 @@ const DetailItem = ({ label, value, fallback = "غير محدد", multiline = fa
 );
 
 const PaymentsPage = () => {
+  const { canCreatePayments, canReadPayments, canUpdatePayments, canDeletePayments, canCreateRefunds, canDeleteRefunds } = usePermissions();
+  const { convertToIQD } = useExchangeRate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -71,7 +76,7 @@ const PaymentsPage = () => {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: "success" | "error"
+    severity: "success" | "error" | "warning"
   }>({
     open: false,
     message: "",
@@ -80,6 +85,8 @@ const PaymentsPage = () => {
 
   const [paymentSourceFilter, setPaymentSourceFilter] = useState("all");
 
+  const { refunds, createRefund, fetchRefunds, deleteRefund } = useRefunds();
+  
   const {
     payments,
     loading: paymentsLoading,
@@ -236,26 +243,50 @@ const PaymentsPage = () => {
 
       const enrollment = enrollments.find(e => e.id === paymentForm.enrollment_id);
       if (enrollment) {
-        // Calculate previous payments for this enrollment (excluding returned payments)
+        // Calculate previous payments for this enrollment (excluding returned and refunded payments)
+        console.log('Editing Payment:', editingPayment);
+        console.log('Payment Form:', paymentForm);
+        console.log('All Payments:', payments);
         let previousPayments = payments
-          .filter(p => p.enrollment_id === paymentForm.enrollment_id && p.status !== 'returned')
-          .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+          .filter(p => p.enrollment_id === paymentForm.enrollment_id && (p.status as PaymentStatus) !== 'returned' && (p.status as PaymentStatus) !== 'refunded')
+          .reduce((sum, p) => {
+            const amount = Number(p.amount || 0);
+            // Convert to enrollment currency if needed
+            if (p.currency !== enrollment.currency) {
+              return sum + (p.currency === 'USD' ? convertToIQD(amount, 'USD') : amount / convertToIQD(1, 'USD'));
+            }
+            return sum + amount;
+          }, 0);
 
         // If editing a payment, exclude it from previous payments calculation
         if (editingPayment && editingPayment.enrollment_id === paymentForm.enrollment_id) {
           const editingPaymentAmount = Number(editingPayment.amount || 0);
           // If the payment being edited is not returned, subtract it from previous payments
-          if (editingPayment.status !== 'returned') {
-            previousPayments -= editingPaymentAmount;
+          if ((editingPayment.status as PaymentStatus) !== 'returned' && (editingPayment.status as PaymentStatus) !== 'refunded') {
+            // Convert to enrollment currency if needed
+            let adjustedAmount = editingPaymentAmount;
+            if (editingPayment.currency !== enrollment.currency) {
+              adjustedAmount = editingPayment.currency === 'USD' ? convertToIQD(editingPaymentAmount, 'USD') : editingPaymentAmount / convertToIQD(1, 'USD');
+            }
+            previousPayments -= adjustedAmount;
           }
         }
 
-        const totalAfterPayment = previousPayments + paymentForm.amount;
+        // Convert new payment amount to enrollment currency if needed
+        let newPaymentAmount = Number(paymentForm.amount);
+        if (paymentForm.currency !== enrollment.currency) {
+          newPaymentAmount = paymentForm.currency === 'USD' ? convertToIQD(Number(paymentForm.amount), 'USD') : Number(paymentForm.amount) / convertToIQD(1, 'USD');
+        }
+        const totalAfterPayment = previousPayments + newPaymentAmount;
         const enrollmentPrice = Number(enrollment.total_price || 0);
+        console.log('Previous Payments:', previousPayments);
+        console.log('New Payment Amount:', newPaymentAmount);
+        console.log('Total After Payment:', totalAfterPayment);
+        console.log('Enrollment Price:', enrollmentPrice);
 
         if (totalAfterPayment > enrollmentPrice) {
           handleSnackbar(
-            `المبلغ المدفوع سيتجاوز السعر الإجمالي. المبلغ المدفوع حالياً: ${previousPayments} ${enrollment.currency}. المبلغ المتبقي: ${enrollmentPrice - previousPayments} ${enrollment.currency}`,
+            `المبلغ المدفوع سيتجاوز السعر الإجمالي. المبلغ المدفوع حالياً: ${previousPayments} ${enrollment.currency === "USD" ? "$" : "دينار عراقي"}. المبلغ المتبقي: ${enrollmentPrice - previousPayments} ${enrollment.currency}`,
             "error"
           );
           return;
@@ -286,7 +317,69 @@ const PaymentsPage = () => {
       };
 
       if (editingPayment) {
+        // Check if changing status to returned and user has required permissions
+        if (payload.status === "returned" && !canCreateRefunds) {
+          handleSnackbar("ليس لديك صلاحية لإنشاء مرتجعات", "error");
+          return;
+        }
+        
+        // Check if changing status from returned and user has required permissions
+        if (editingPayment && editingPayment.status === "returned" && payload.status !== "returned" && !canDeleteRefunds) {
+          handleSnackbar("ليس لديك صلاحية لحذف المرتجعات", "error");
+          return;
+        }
+        
+        // Check if payment status is being changed from returned to something else
+        const wasReturned = editingPayment.status === "returned";
+        const isNowReturned = payload.status === "returned";
+        
         await updatePayment(editingPayment.id, payload);
+
+        // If status changed from returned to something else, delete the refund
+        if (wasReturned && !isNowReturned) {
+          try {
+            const existingRefund = refunds.find(r => r.payment_id === editingPayment.id);
+            if (existingRefund) {
+              await deleteRefund(existingRefund.id);
+              await fetchRefunds();
+              // Trigger event to update refund count
+              window.dispatchEvent(new CustomEvent('refundDeleted'));
+              handleSnackbar("تم حذف المرتجع بنجاح", "success");
+            }
+          } catch (err: any) {
+            console.error("Failed to delete refund:", err);
+            const errorMessage = err.response?.data?.message || err.message || "حدث خطأ أثناء حذف المرتجع";
+            handleSnackbar(errorMessage, "error");
+          }
+        }
+        
+        // If status changed to refunded, create a refund record
+        if (payload.status === "returned" && canCreateRefunds) {
+          try {
+            // Check if refund already exists
+            const existingRefund = refunds.find(r => r.payment_id === editingPayment.id);
+            if (existingRefund) {
+              handleSnackbar("هذه الدفعة لديها مرتجع بالفعل", "error");
+              return;
+            }
+
+            const refundPayload = {
+              payment_id: editingPayment.id,
+              reason: payload.note || "مرتجع من تعديل الدفعة",
+              refunded_at: new Date().toISOString()
+            };
+            await createRefund(refundPayload);
+            await fetchRefunds();
+            // Trigger a custom event to update the refunds count in FinancialManagementPage
+            window.dispatchEvent(new CustomEvent('refundCreated'));
+            handleSnackbar("تم إنشاء المرتجع بنجاح", "success");
+          } catch (refundErr: any) {
+            console.error("Failed to create refund:", refundErr);
+            const errorMessage = refundErr.response?.data?.message || refundErr.message || "حدث خطأ أثناء إنشاء المرتجع";
+            handleSnackbar(errorMessage, "error");
+          }
+        }
+        
         handleSnackbar("تم تحديث الواردة بنجاح", "success");
       } else {
         await createPayment(payload);
@@ -297,7 +390,8 @@ const PaymentsPage = () => {
       refreshPayments();
     } catch (err: any) {
       console.error(err);
-      handleSnackbar(err.response?.data?.message || "حدث خطأ أثناء الحفظ", "error");
+      const errorMessage = err.response?.data?.message || err.message || "حدث خطأ أثناء الحفظ";
+      handleSnackbar(errorMessage, "error");
     }
   };
 
@@ -328,7 +422,7 @@ const PaymentsPage = () => {
 
   // فلترة الواردات
   const filteredPayments = payments.filter((payment: Payment) => {
-    console.log("Filtering payment:", payment);
+    // console.log("Filtering payment:", payment);
     const matchesSearch =
       (payment.payer?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (payment.note?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
@@ -347,14 +441,25 @@ const PaymentsPage = () => {
     return matchesSearch && matchesCurrency && matchesType && matchesStatus && matchesPaymentSource;
   });
 
-  // الإحصائيات
-  const totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
-  const iqdAmount = payments
-    .filter(p => p.currency === "IQD")
-    .reduce((sum, p) => sum + Number(p.amount), 0);
-  const usdAmount = payments
-    .filter(p => p.currency === "USD")
-    .reduce((sum, p) => sum + Number(p.amount), 0);
+  // الإحصائيات - حساب المبالغ بكفاءة عالية
+  const completedPayments = payments.filter(p => p.status === "completed");
+  
+  // حساب المبالغ بالدينار العراقي والدولار الأمريكي في دورة واحدة
+  const { iqdAmount, usdAmount } = completedPayments.reduce(
+    (acc, payment) => {
+      const amount = Number(payment.amount);
+      if (payment.currency === "IQD") {
+        acc.iqdAmount += amount;
+      } else if (payment.currency === "USD") {
+        acc.usdAmount += amount;
+      }
+      return acc;
+    },
+    { iqdAmount: 0, usdAmount: 0 }
+  );
+  
+  // حساب إجمالي المبالغ بالدينار العراقي بعد تحويل الدولار
+  const totalAmount = iqdAmount + convertToIQD(usdAmount, "USD");
 
   const columns: GridColDef[] = [
     {
@@ -409,17 +514,24 @@ const PaymentsPage = () => {
       field: "amount",
       headerName: "المبلغ",
       minWidth: 150,
-        renderCell: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "success.main" }}>
-          {params.row.amount.toLocaleString()} {params.row.currency}
-        </Typography>
-      ),
+        renderCell: (params) => {
+          const amount = Number(params.row.amount);
+          const formattedAmount = params.row.currency === "USD" 
+            ? amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : amount.toLocaleString("en-IQ", { maximumFractionDigits: 0 });
+            
+          return (
+            <Typography sx={{ fontWeight: 600, color: "success.main" }}>
+              {formattedAmount} {params.row.currency === "USD" ? "$" : "د.ع"}
+            </Typography>
+          );
+        },
     },
     {
       field: "type",
       headerName: "النوع",
       minWidth: 100,     
-       renderCell: (params) => (
+      renderCell: (params) => (
         <Chip
           label={params.value === "full" ? "كاملة" : "قسط"}
           size="small"
@@ -453,7 +565,7 @@ const PaymentsPage = () => {
       headerName: "ملاحظات",
       minWidth: 120,
       sortable: false,
-       renderCell: (params) => (
+      renderCell: (params) => (
         <Typography variant="body2" color={params.value ? "text.primary" : "text.secondary"}>
           {params.value || "لا توجد ملاحظات"}
         </Typography>
@@ -467,21 +579,27 @@ const PaymentsPage = () => {
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <Tooltip title="عرض التفاصيل">
-            <IconButton size="small" color="primary" onClick={() => openDetailsDialog(params.row)}>
-              <Visibility fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="تعديل">
-            <IconButton size="small" color="primary" onClick={() => handleOpenDialog(params.row)}>
-              <Edit fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="حذف">
-            <IconButton size="small" color="error" onClick={() => openDeleteDialog(params.row)}>
-              <Delete fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {canReadPayments && (
+            <Tooltip title="عرض التفاصيل">
+              <IconButton size="small" color="primary" onClick={() => openDetailsDialog(params.row)}>
+                <Visibility fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canUpdatePayments && (
+            <Tooltip title="تعديل">
+              <IconButton size="small" color="primary" onClick={() => handleOpenDialog(params.row)}>
+                <Edit fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canDeletePayments && (
+            <Tooltip title="حذف">
+              <IconButton size="small" color="error" onClick={() => openDeleteDialog(params.row)}>
+                <Delete fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       ),
     },
@@ -508,9 +626,11 @@ const PaymentsPage = () => {
           >
             تحديث
           </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
-            واردة جديدة
-          </Button>
+          {canCreatePayments && (
+            <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
+              واردة جديدة
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -521,7 +641,8 @@ const PaymentsPage = () => {
       )}
 
       {/* بطاقات الإحصائيات */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      {canReadPayments && (
+        <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -589,9 +710,11 @@ const PaymentsPage = () => {
           </Card>
         </Grid>
       </Grid>
+      )}
 
       {/* البحث والفلترة */}
-      <Paper sx={{ mb: 3, p: 2 }}>
+      {canReadPayments && (
+        <Paper sx={{ mb: 3, p: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6} md={6}>
             <TextField
@@ -672,12 +795,14 @@ const PaymentsPage = () => {
           </Grid>
         </Grid>
       </Paper>
+      )}
 
       {/* جدول الواردات */}
       <Paper>
         <Box sx={{ p: 2 }}>
-          <DataGrid
-            rows={filteredPayments}
+          {canReadPayments ? (
+            <DataGrid
+              rows={filteredPayments}
             columns={columns}
             initialState={{
               pagination: { paginationModel: { pageSize: 10 } }
@@ -694,8 +819,28 @@ const PaymentsPage = () => {
                 bgcolor: "background.default",
                 borderColor: "divider"
               }
-            }}
-          />
+              }}
+            />
+          ) : (
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 300,
+              p: 3,
+              textAlign: 'center'
+            }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                ليس لديك صلاحية مشاهدة سجل المدفوعات
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {canCreatePayments 
+                  ? "يمكنك إضافة مدفوعات جديدة باستخدام زر الإضافة أعلاه"
+                  : "تواصل مع المسؤول للحصول على الصلاحيات اللازمة"}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Paper>
 
@@ -858,7 +1003,7 @@ const PaymentsPage = () => {
                   <TextField
                     fullWidth
                     label="المبلغ"
-                    value={`${paymentForm.amount.toLocaleString()} ${paymentForm.currency}`}
+                    value={`${paymentForm.amount.toLocaleString()} ${paymentForm.currency === "USD" ? "$" : "دينار"}`}
                     disabled
                     InputProps={{
                       startAdornment: (
@@ -923,11 +1068,25 @@ const PaymentsPage = () => {
                   <Select
                     value={paymentForm.status}
                     label="حالة الواردة"
-                    onChange={(e) => setPaymentForm({ ...paymentForm, status: e.target.value as PaymentStatus })}
+                    onChange={(e) => {
+                      const newStatus = e.target.value as PaymentStatus;
+                      // Check if changing to returned and user doesn't have permission
+                      if (newStatus === "returned" && !canCreateRefunds) {
+                        handleSnackbar("ليس لديك صلاحية لإنشاء مرتجعات", "error");
+                        return;
+                      }
+                      // Check if changing from returned and user doesn't have permission
+                      if (editingPayment && editingPayment.status === "returned" && newStatus !== "returned" && !canDeleteRefunds) {
+                        handleSnackbar("ليس لديك صلاحية لحذف المرتجعات", "error");
+                        return;
+                      }
+                      setPaymentForm({ ...paymentForm, status: newStatus });
+                    }}
+                    disabled={editingPayment && editingPayment.status === "returned" && !canDeleteRefunds ? true : undefined}
                   >
                     <MenuItem value="completed">مكتملة</MenuItem>
                     <MenuItem value="pending">معلقة</MenuItem>
-                    <MenuItem value="returned">مرتجعة</MenuItem>
+                    {canCreateRefunds && <MenuItem value="returned">مرتجعة</MenuItem>}
                   </Select>
                 </FormControl>
               </Grid>
@@ -956,7 +1115,7 @@ const PaymentsPage = () => {
             </Grid>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button
             variant="contained"
@@ -1008,7 +1167,7 @@ const PaymentsPage = () => {
                           <Grid item xs={12} sm={6}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                               <DetailItem label="المعرف" value={selectedDetailsPayment.id} />
-                              <DetailItem label="المبلغ" value={`${selectedDetailsPayment.amount.toLocaleString()} ${selectedDetailsPayment.currency}`} />
+                              <DetailItem label="المبلغ" value={`${selectedDetailsPayment.amount.toLocaleString()} ${selectedDetailsPayment.currency === "USD" ? "$" : "دينار"}`} />
                               <DetailItem label="نوع الواردة" value={selectedDetailsPayment.type === "full" ? "كاملة" : "قسط"} />
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Typography component="span" fontWeight="bold">الحالة:</Typography>
@@ -1267,7 +1426,7 @@ const PaymentsPage = () => {
           )}
         </DialogContent>
         
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button 
             onClick={handleCloseDetailsDialog} 
             variant="outlined"
@@ -1286,7 +1445,7 @@ const PaymentsPage = () => {
             هل أنت متأكد من حذف الواردة الخاصة بـ "{selectedPayment?.payer || selectedPayment?.user?.name}" بقيمة {selectedPayment?.amount.toLocaleString()} {selectedPayment?.currency}؟
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={closeDeleteDialog}>إلغاء</Button>
           <Button variant="contained" color="error" onClick={handleDeletePayment}>
             حذف

@@ -435,7 +435,7 @@ const PaymentMethodsPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>إلغاء</Button>
           <Button
             variant="contained"
@@ -455,7 +455,7 @@ const PaymentMethodsPage: React.FC = () => {
             هل أنت متأكد من حذف طريقة الدفع "{selectedPaymentMethod?.name}"؟
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteDialogOpen(false)} size="small">إلغاء</Button>
           <Button
             variant="contained"
@@ -534,7 +534,7 @@ const PaymentMethodsPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDetailsDialogOpen(false)} variant="outlined">إغلاق</Button>
         </DialogActions>
       </Dialog>

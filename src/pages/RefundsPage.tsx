@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { useState } from "react"
 import {
   Box,
@@ -25,9 +25,9 @@ import {
   Divider,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, Undo, Edit, Delete, TrendingDown, Visibility } from "@mui/icons-material"
+import { Search, Add, Undo, Edit, Delete, TrendingDown, Visibility, Refresh } from "@mui/icons-material"
 import { useRefunds } from "../hooks/useRefunds"
-import { usePayments } from "../hooks/usePayments"
+import { usePayments, updatePayment, type PaymentStatus } from "../hooks/usePayments"
 import type { Refund } from "../types/financial"
 import type { Payment } from "../types/payment"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
@@ -39,7 +39,8 @@ interface RefundFormType {
 }
 
 const RefundsPage: React.FC = () => {
-  const { refunds, loading, error, createRefund, updateRefund, deleteRefund } = useRefunds();
+  const { refunds, loading, error, createRefund, updateRefund, deleteRefund, fetchRefunds } = useRefunds();
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const { payments, loading: paymentsLoading } = usePayments();
   
   const [searchQuery, setSearchQuery] = useState("")
@@ -50,7 +51,22 @@ const RefundsPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [refundToDelete, setRefundToDelete] = useState<Refund | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: "success" | "error" }>({ 
+  React.useEffect(() => {
+    if (refunds.length > 0 && !lastRefreshTime) {
+      setLastRefreshTime(new Date())
+    }
+  }, [refunds, lastRefreshTime])
+
+  const handleRefreshRefunds = async () => {
+    try {
+      await fetchRefunds()
+      setLastRefreshTime(new Date())
+    } catch (err) {
+      console.error("فشل في تحديث البيانات:", err)
+    }
+  }
+
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: "success" | "error" | "warning" }>({ 
     open: false, 
     message: "", 
     severity: "success" 
@@ -115,7 +131,19 @@ const RefundsPage: React.FC = () => {
     
     setDeleteLoading(true);
     try {
+      // Get the payment associated with this refund
+      const payment = payments.find(p => p.id === refundToDelete.payment_id);
+      
+      // Delete the refund
       await deleteRefund(refundToDelete.id);
+      
+      // Update payment status back to completed
+      if (payment) {
+        await updatePayment(payment.id, { status: "completed" });
+        // Trigger event to update payment count
+        window.dispatchEvent(new CustomEvent('paymentUpdated'));
+      }
+      
       handleSnackbar("تم حذف المرتجع بنجاح", "success");
       handleCloseDeleteDialog();
     } catch (err: any) {
@@ -140,11 +168,30 @@ const RefundsPage: React.FC = () => {
         reason: refundForm.reason || undefined,
       };
 
+      // Get the payment associated with this refund
+      const payment = payments.find(p => p.id === Number(refundForm.payment_id));
+      
+      // Check if payment is already returned
+      if (payment?.status as PaymentStatus === "returned") {
+        handleSnackbar("هذه الدفعة مرتجعة بالفعل", "error");
+        return;
+      }
+
       if (editingRefund) {
+        if (payment?.status as PaymentStatus !== "returned") {
+          handleSnackbar("يجب أن تكون حالة الدفعة مرتجعة", "error");
+          return;
+        }
         await updateRefund(editingRefund.id, payload);
         handleSnackbar("تم تحديث المرتجع بنجاح", "success");
       } else {
         await createRefund(payload);
+        // Update payment status to returned
+        if (payment) {
+          await updatePayment(payment.id, { status: "returned" });
+          // Trigger event to update payment count
+          window.dispatchEvent(new CustomEvent('paymentUpdated'));
+        }
         handleSnackbar("تم إضافة المرتجع بنجاح", "success");
       }
       handleCloseDialog();
@@ -230,7 +277,7 @@ const RefundsPage: React.FC = () => {
       maxWidth: 180,
       renderCell: (params) => (
         <Typography sx={{ fontWeight: 600, color: "warning.main" }}>
-          {Number(params.row.payment?.amount || 0).toLocaleString()} {params.row.payment?.currency}
+          {Number(params.row.payment?.amount || 0).toLocaleString()} {params.row.payment?.currency === "USD" ? "$" : "د.ع" }
         </Typography>
       )
     },
@@ -316,10 +363,21 @@ const RefundsPage: React.FC = () => {
     <Box>
 
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 3 }}>
-        <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => handleOpenDialog()}>
-          إضافة مرتجع
-        </Button>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          إدارة المرتجعات
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            {lastRefreshTime ? `آخر تحديث: ${lastRefreshTime.toLocaleTimeString("ar-EN")}` : ""}
+          </Typography>
+          <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefreshRefunds}>
+            تحديث
+          </Button>
+          <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => handleOpenDialog()}>
+            إضافة مرتجع
+          </Button>
+        </Box>
       </Box>
 
       {/* Error Display */}
@@ -452,10 +510,12 @@ const RefundsPage: React.FC = () => {
                 getOptionLabel={(option) => {
                   if (!option) return "";
                   // Payment type from payment.ts doesn't have enrollment relation, but we handle both cases
-                  const studentName = option.payer || "واردة خارجية";
+                  const paymentType = option.type === "full" ? "دفعة كاملة" : "قسط";
+                  const paymentIncomeType = `${paymentType} من ${option.enrollment ? " تسجيل طالب" : " واردة خارجية"}`;
+                  const payerName = option.enrollment?.student.full_name || option.payer;
                   const amount = `${option.amount.toLocaleString()} ${option.currency}`;
                   const date = new Date(option.paid_at).toLocaleDateString();
-                  return `${studentName} - ${amount} (${date})`;
+                  return `${paymentIncomeType}: ${payerName} - ${amount} (${date})`;
                 }}
                 value={payments.find(p => p.id === Number(refundForm.payment_id)) || null}
                 onChange={(_, newValue) => {
@@ -534,9 +594,9 @@ const RefundsPage: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
-          <Button onClick={handleSaveRefund} variant="contained" color="warning">
+          <Button onClick={handleSaveRefund} variant="contained" color="primary">
             {editingRefund ? "تحديث" : "إضافة"}
           </Button>
         </DialogActions>
@@ -549,7 +609,7 @@ const RefundsPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         title="حذف المرتجع"
         message="هل أنت متأكد من حذف المرتجع"
-        itemName={refundToDelete ? `المرتجع رقم ${refundToDelete.id}` : ""}
+        itemName={refundToDelete ? `رقم ${refundToDelete.id}` : ""}
         loading={deleteLoading}
       />
 
@@ -715,7 +775,7 @@ const RefundsPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDetailsDialog}>إغلاق</Button>
         </DialogActions>
       </Dialog>

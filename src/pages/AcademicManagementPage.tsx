@@ -9,6 +9,7 @@ import { useCourses } from '../hooks/useCourses'
 import { useDiscountCodes } from '../hooks/useDiscountCodes'
 import { useBatches } from '../hooks/useBatches'
 import { useEnrollments } from '../hooks/useEnrollments'
+import ProtectedRoute from '../components/ProtectedRoute'
 
 // Import the existing pages (they'll work as content sections)
 import StudentsPage from './StudentsPage'
@@ -35,30 +36,35 @@ const AcademicManagementPage: React.FC = () => {
       value: 'students',
       icon: <PersonAdd />,
       count: students.length,
+      permission: 'students:read',
     },
     {
       label: 'الدورات',
       value: 'courses',
       icon: <School />,
       count: courses.length,
+      permission: 'courses:read',
     },
     {
       label: 'الخصومات',
       value: 'discounts',
       icon: <DiscountIcon />,
       count: discountCodes.length,
+      permission: 'discounts:read',
     },
     {
       label: 'الدُفعات',
       value: 'batches',
       icon: <GroupIcon />,
       count: batches.length,
+      permission: 'batches:read',
     },
     {
       label: 'التسجيلات',
       value: 'enrollments',
       icon: <HowToRegIcon />,
       count: enrollments.length,
+      permission: 'enrollments:read',
     },
   ]
 
@@ -81,11 +87,31 @@ const AcademicManagementPage: React.FC = () => {
 
       {/* Content based on active tab */}
       <Box sx={{ mt: 3 }}>
-        {activeTab === 'students' && <StudentsPage />}
-        {activeTab === 'courses' && <CoursesPage />}
-        {activeTab === 'batches' && <BatchesPage />}
-        {activeTab === 'enrollments' && <EnrollmentsPage />}
-        {activeTab === 'discounts' && <DiscountsPage />}
+        {activeTab === 'students' && (
+          <ProtectedRoute requiredPermission="students:read">
+            <StudentsPage />
+          </ProtectedRoute>
+        )}
+        {activeTab === 'courses' && (
+          <ProtectedRoute requiredPermission="courses:read">
+            <CoursesPage />
+          </ProtectedRoute>
+        )}
+        {activeTab === 'batches' && (
+          <ProtectedRoute requiredPermission="batches:read">
+            <BatchesPage />
+          </ProtectedRoute>
+        )}
+        {activeTab === 'enrollments' && (
+          <ProtectedRoute requiredPermission="enrollments:read">
+            <EnrollmentsPage />
+          </ProtectedRoute>
+        )}
+        {activeTab === 'discounts' && (
+          <ProtectedRoute requiredPermission="discounts:read">
+            <DiscountsPage />
+          </ProtectedRoute>
+        )}
       </Box>
     </Box>
   )

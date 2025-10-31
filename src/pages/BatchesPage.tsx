@@ -83,7 +83,7 @@ const BatchesPage: React.FC = () => {
   } = useBatches()
 
   const { courses, loading: coursesLoading } = useCourses()
-  const { enrollments, getEnrollmentsByBatch } = useEnrollments()
+  const { enrollments } = useEnrollments()
   const { users, loading: usersLoading } = useUsers()
 
   const [batchForm, setBatchForm] = useState<CreateBatchDto>({
@@ -200,7 +200,7 @@ const BatchesPage: React.FC = () => {
       schedule: batch.schedule || "",
       capacity: batch.capacity,
       status: batch.status,
-      actual_price: batch.actual_price,
+      actual_price: parseFloat(batch.actual_price?.toString() || "0"),
     })    
     setEditingBatch(batch)
     setOpenDialog(true)
@@ -280,7 +280,7 @@ const BatchesPage: React.FC = () => {
   // Stats calculations
   const totalBatches = batches.length
   const activeBatches = getBatchesByStatus("open").length
-  const totalEnrollments = enrollments.length
+  const totalEnrollments = batches.reduce((sum, batch) => sum + (batch.enrollments?.length || 0), 0)
   const averageEnrollments = totalBatches > 0 ? Math.round(totalEnrollments / totalBatches) : 0
 
   // DataGrid columns
@@ -326,9 +326,9 @@ const BatchesPage: React.FC = () => {
       minWidth: 100,
       renderCell: (params) => {
         const statusConfig = {
-          open: { label: "مفتوح", color: "success" as const, icon: <CheckCircle fontSize="small" /> },
-          closed: { label: "مغلق", color: "error" as const, icon: <Cancel fontSize="small" /> },
-          full: { label: "مكتمل", color: "warning" as const, icon: <People fontSize="small" /> },
+          open: { label: "مفتوحة", color: "success" as const, icon: <CheckCircle fontSize="small" /> },
+          closed: { label: "مغلقة", color: "error" as const, icon: <Cancel fontSize="small" /> },
+          full: { label: "مكتملة", color: "warning" as const, icon: <People fontSize="small" /> },
         }
         const config = statusConfig[params.value as keyof typeof statusConfig] || statusConfig.open
         return (
@@ -356,8 +356,8 @@ const BatchesPage: React.FC = () => {
       align: "center",
       headerAlign: "center",
       renderCell: (params) => {
-        const batchEnrollments = getEnrollmentsByBatch(params.row.id)
-        return batchEnrollments.length
+        const batchEnrollments = params.row.enrollments
+        return batchEnrollments.length || 0
       },
     },
     {
@@ -435,7 +435,7 @@ const BatchesPage: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           {lastUpdated && (
             <Typography variant="caption" color="text.secondary">
-              آخر تحديث: {lastUpdated.toLocaleTimeString("ar-IQ")}
+              آخر تحديث: {lastUpdated.toLocaleTimeString("ar-EN")}
             </Typography>
           )}
           <Button 
@@ -545,9 +545,9 @@ const BatchesPage: React.FC = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                 >
                   <MenuItem value="all">جميع الحالات</MenuItem>
-                  <MenuItem value="open">مفتوح</MenuItem>
-                  <MenuItem value="closed">مغلق</MenuItem>
-                  <MenuItem value="full">مكتمل</MenuItem>
+                  <MenuItem value="open">مفتوحة</MenuItem>
+                  <MenuItem value="closed">مغلقة</MenuItem>
+                  <MenuItem value="full">مكتملة</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -665,9 +665,9 @@ const BatchesPage: React.FC = () => {
                     label="الحالة"
                     onChange={(e) => setBatchForm({ ...batchForm, status: e.target.value as any })}
                   >
-                    <MenuItem value="open">مفتوح</MenuItem>
-                    <MenuItem value="closed">مغلق</MenuItem>
-                    <MenuItem value="full">مكتمل</MenuItem>
+                    <MenuItem value="open">مفتوحة</MenuItem>
+                    <MenuItem value="closed">مغلقة</MenuItem>
+                    <MenuItem value="full">مكتملة</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -746,7 +746,7 @@ const BatchesPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editingBatch ? "تحديث" : "إضافة"}
@@ -805,7 +805,7 @@ const BatchesPage: React.FC = () => {
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseCourseDialog}>إلغاء</Button>
         </DialogActions>
       </Dialog>
@@ -857,7 +857,7 @@ const BatchesPage: React.FC = () => {
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseTrainerDialog}>إلغاء</Button>
         </DialogActions>
       </Dialog>
@@ -994,7 +994,7 @@ const BatchesPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseViewDialog} variant="outlined">إغلاق</Button>
         </DialogActions>
       </Dialog>

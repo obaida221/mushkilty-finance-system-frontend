@@ -392,7 +392,7 @@ const PermissionManagementPage: React.FC = () => {
             هذا الإجراء لا يمكن التراجع عنه وسيؤثر على جميع الأدوار المعينة لهذه الصلاحية
           </Alert>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteDialogOpen(false)}>إلغاء</Button>
           <Button color="error" variant="contained">
             حذف

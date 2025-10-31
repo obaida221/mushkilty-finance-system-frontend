@@ -872,7 +872,7 @@ const EnrollmentsPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editingEnrollment ? "تحديث" : "تسجيل"}
@@ -940,7 +940,7 @@ const EnrollmentsPage: React.FC = () => {
                                 {details.student.full_name}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {details.student.phone} | {details.student.email}
+                                {details.student.phone}
                               </Typography>
                             </Box>
                           ) : (

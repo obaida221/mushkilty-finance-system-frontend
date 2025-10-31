@@ -711,7 +711,7 @@ const StudentsPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editingStudent ? "تعديل" : "إضافة"}

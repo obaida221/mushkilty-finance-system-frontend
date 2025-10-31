@@ -565,7 +565,7 @@ const DiscountsPage: React.FC = () => {
             </Grid>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>إلغاء</Button>
           <Button 
             onClick={selectedDiscount ? handleUpdateDiscount : handleCreateDiscount} 
@@ -585,7 +585,7 @@ const DiscountsPage: React.FC = () => {
             هل أنت متأكد من حذف كود الخصم "{selectedDiscount?.code}"؟
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteDialogOpen(false)}>إلغاء</Button>
           <Button variant="contained" color="error" onClick={handleDeleteDiscount}>
             حذف
@@ -637,7 +637,7 @@ const DiscountsPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDetailsDialogOpen(false)} variant="outlined">إغلاق</Button>
         </DialogActions>
       </Dialog>

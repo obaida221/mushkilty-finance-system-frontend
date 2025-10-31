@@ -30,7 +30,7 @@ const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
           سيتم فقدان جميع التغييرات.
         </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onStay} color="primary">
           البقاء والمتابعة
         </Button>

@@ -3,7 +3,7 @@ import { paymentsAPI } from "../api";
 import type { Payment } from "../types/payment";
 import { useStudents } from "./useStudents";
 
-export type PaymentStatus = 'completed' | 'returned' | 'pending';
+export type PaymentStatus = 'completed' | 'returned' | 'pending' | 'refunded';
 
 export type CreatePaymentDto = {
   user_id: number;
@@ -34,6 +34,16 @@ interface UsePaymentsReturn extends UsePaymentsState {
   getPaymentsByStudent: (studentId: number) => Payment[];
   refreshPayments: () => void;
 }
+
+export const updatePayment = async (id: number, data: Partial<CreatePaymentDto>) => {
+  try {
+    const response = await paymentsAPI.update(id, data);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to update payment:", error);
+    throw error;
+  }
+};
 
 export const usePayments = (): UsePaymentsReturn => {
   const [state, setState] = useState<UsePaymentsState>({

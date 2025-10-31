@@ -42,13 +42,27 @@ function TabPanel(props: TabPanelProps) {
 
 const UsersPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
-  const { userManagementPermissions } = usePermissions();
+  const { 
+    canReadUsers: canViewUsers,
+    canReadRoles: canViewRoles,
+    canReadPermissions: canViewPermissions,
+    canCreateUsers,
+    canUpdateUsers,
+    canDeleteUsers,
+    canCreateRoles,
+    canUpdateRoles,
+    canDeleteRoles,
+    canCreatePermissions,
+    canUpdatePermissions,
+    canDeletePermissions,
+    canManageSystem
+  } = usePermissions();
 
   // Check if user has any permission to access user management
   const canAccessUserManagement = 
-    userManagementPermissions.canViewUsers ||
-    userManagementPermissions.canViewRoles ||
-    userManagementPermissions.canViewPermissions;
+    canViewUsers ||
+    canViewRoles ||
+    canViewPermissions;
 
   if (!canAccessUserManagement) {
     return (
@@ -64,16 +78,16 @@ const UsersPage: React.FC = () => {
   const availableTabs = [];
   let tabIndex = 0;
 
-  if (userManagementPermissions.canViewUsers) {
+  // if (canViewUsers) {
     availableTabs.push({
       label: 'المستخدمون',
       icon: <PersonIcon />,
       component: <UserManagementPage />,
       index: tabIndex++
     });
-  }
+  // }
 
-  if (userManagementPermissions.canViewRoles) {
+  if (canViewRoles) {
     availableTabs.push({
       label: 'الأدوار',
       icon: <SecurityIcon />,
@@ -82,7 +96,7 @@ const UsersPage: React.FC = () => {
     });
   }
 
-  if (userManagementPermissions.canViewPermissions) {
+  if (canViewPermissions) {
     availableTabs.push({
       label: 'الصلاحيات',
       icon: <KeyIcon />,

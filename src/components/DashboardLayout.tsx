@@ -27,21 +27,22 @@ import {
   Menu as MenuIcon,
   Dashboard,
   People,
-  Receipt,
-  MoneyOff,
-  AccountBalance,
+  // Receipt,
+  // MoneyOff,
+  // AccountBalance,
   Logout,
   AccountCircle,
   LightMode,
   DarkMode,
-  Equalizer,
-  Paid,
-  PersonAdd,
+  // Equalizer,
+  // Paid,
+  // PersonAdd,
   LocalLibrary,
   AccountBalanceWallet,
 } from "@mui/icons-material"
 import { useAuth } from "../context/AuthContext"
 import { usePermission } from "../context/AuthContext"
+import { usePermissions } from "../hooks/usePermissions"
 import { useThemeMode } from "../context/ThemeContext"
 
 const drawerWidth = 280
@@ -56,8 +57,8 @@ interface DashboardMenuItem {
 const menuItems: DashboardMenuItem[] = [
   { text: "لوحة التحكم", icon: <Dashboard />, path: "/", permission: "dashboard:read" },
   { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permission: "users:read" },
-  { text: "الشؤون الأكاديمية", icon: <LocalLibrary />, path: "/academic", permission: "students:read" },
-  { text: "إدارة المالية", icon: <AccountBalanceWallet />, path: "/financial", permission: "payments:read" },
+  { text: "الشؤون الأكاديمية", icon: <LocalLibrary />, path: "/academic", permission: "academic:read" },
+  { text: "إدارة المالية", icon: <AccountBalanceWallet />, path: "/financial", permission: "financial:read" },
 ]
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -65,6 +66,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const { user, logout } = useAuth()
   const { hasPermission } = usePermission()
+  const { canAccessAcademic, canAccessFinancial } = usePermissions()
   const { mode, toggleTheme } = useThemeMode()
   const navigate = useNavigate()
   const location = useLocation()
@@ -92,6 +94,11 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const filteredMenuItems = menuItems.filter((item) => {
     // If item has no permission requirement, show it
     if (!item.permission) return true
+    
+    // Check for composite permissions
+    if (item.permission === "academic:read") return canAccessAcademic
+    if (item.permission === "financial:read") return canAccessFinancial
+    
     // Otherwise, check if user has the required permission
     return hasPermission(item.permission)
   })

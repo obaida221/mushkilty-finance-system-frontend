@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import {
   Box,
   Typography,
@@ -29,9 +29,11 @@ import {
   useMediaQuery,
 } from "@mui/material"
 import { DataGrid, type GridColDef } from "@mui/x-data-grid"
-import { Search, Add, MoneyOff, Edit, Delete, TrendingDown, Visibility } from "@mui/icons-material"
+import { Search, Add, MoneyOff, Edit, Delete, Receipt, Visibility, Refresh } from "@mui/icons-material"
 import { useExpenses, type CreateExpenseDto } from "../hooks/useExpenses"
 import { useAuth } from "../context/AuthContext"
+import { usePermissions } from "../hooks/usePermissions"
+import { useExchangeRate } from "../context/ExchangeRateContext"
 import type { Expense, Currency } from "../types/financial"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
@@ -46,7 +48,10 @@ type ExpenseFormType = {
 const ExpensesPage: React.FC = () => {
   const { user } = useAuth();
   const { expenses, error, createExpense, updateExpense, deleteExpense } = useExpenses()
+  const { canCreateExpenses, canReadExpenses, canUpdateExpenses, canDeleteExpenses } = usePermissions()
+  const { convertToIQD } = useExchangeRate()
   const [searchQuery, setSearchQuery] = useState("")
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
   const [openDetailDialog, setOpenDetailDialog] = useState(false)
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
@@ -63,6 +68,23 @@ const ExpensesPage: React.FC = () => {
     expenseId: null,
     expenseName: ""
   })
+
+  // تعيين وقت آخر تحديث عند تحميل البيانات
+  useEffect(() => {
+    if (expenses.length > 0 && !lastRefreshTime) {
+      setLastRefreshTime(new Date())
+    }
+  }, [expenses, lastRefreshTime])
+
+  // دالة تحديث البيانات
+  const handleRefreshExpenses = async () => {
+    try {
+      // سيتم تحديث البيانات هنا
+      setLastRefreshTime(new Date())
+    } catch (err) {
+      console.error("فشل في تحديث البيانات:", err)
+    }
+  }
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const theme = useTheme();
@@ -198,6 +220,8 @@ const ExpensesPage: React.FC = () => {
     .filter(e => e.currency === "USD")
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
+  const totalInIQD = totalIQD + convertToIQD(totalUSD, "USD");
+
   const columns: GridColDef[] = [
   { 
     field: "id", 
@@ -216,8 +240,8 @@ const ExpensesPage: React.FC = () => {
     valueGetter: (params) => {
       const date = new Date(params.row.expense_date);
       return isMobile 
-        ? date.toLocaleDateString('ar-IQ', { month: 'numeric', day: 'numeric' })
-        : date.toLocaleDateString('ar-IQ');
+        ? date.toLocaleDateString('ar-EN', { month: 'numeric', day: 'numeric' })
+        : date.toLocaleDateString('ar-EN');
     }
   },
   { 
@@ -233,7 +257,7 @@ const ExpensesPage: React.FC = () => {
     flex: isMobile ? 1 : 1.2, 
     minWidth: isMobile ? 120 : 200,
     hideable: true,
-    hide: isMobile,
+    // hide: isMobile,
     valueGetter: (params) => params.row.description || "—"
   },
   { 
@@ -248,7 +272,7 @@ const ExpensesPage: React.FC = () => {
         color: "error.main",
         fontSize: isMobile ? '0.75rem' : '0.875rem'
       }}>
-        {Number(params.row.amount).toLocaleString()} {params.row.currency}
+        {Number(params.row.amount).toLocaleString()} {params.row.currency === "USD" ? "$" : "د.ع"}
       </Typography>
     )
   },
@@ -269,22 +293,26 @@ const ExpensesPage: React.FC = () => {
         >
           <Visibility fontSize={isMobile ? "small" : "medium"} />
         </IconButton>
-        <IconButton 
-          color="primary" 
-          size={isMobile ? "small" : "medium"}
-          onClick={() => handleOpenDialog(params.row)}
-          title="تعديل"
-        >
-          <Edit fontSize={isMobile ? "small" : "medium"} />
-        </IconButton>
-        <IconButton 
-          color="error" 
-          size={isMobile ? "small" : "medium"}
-          onClick={() => handleOpenDeleteDialog(params.row)}
-          title="حذف"
-        >
-          <Delete fontSize={isMobile ? "small" : "medium"} />
-        </IconButton>
+        {canUpdateExpenses && 
+          <IconButton 
+            color="primary" 
+            size={isMobile ? "small" : "medium"}
+            onClick={() => handleOpenDialog(params.row)}
+            title="تعديل"
+          >
+            <Edit fontSize={isMobile ? "small" : "medium"} />
+          </IconButton>
+        }
+        {canDeleteExpenses &&
+          <IconButton
+            color="error"
+            size={isMobile ? "small" : "medium"}
+            onClick={() => handleOpenDeleteDialog(params.row)}
+            title="حذف"
+          >
+            <Delete fontSize={isMobile ? "small" : "medium"} />
+          </IconButton>
+        }
       </Box>
     ),
   },
@@ -305,8 +333,19 @@ return (
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>المصروفات</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة مصروف</Button>
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Typography variant="caption" color="text.secondary">
+          {lastRefreshTime ? `آخر تحديث: ${lastRefreshTime.toLocaleTimeString("ar-EN")}` : ""}
+        </Typography>
+        <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefreshExpenses}>
+          تحديث
+        </Button>
+        {canCreateExpenses && (
+          <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة مصروف</Button>
+        )}
       </Box>
+    </Box>
 
       {/* Error Display */}
       {error && (
@@ -317,7 +356,7 @@ return (
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -325,36 +364,19 @@ return (
                   <MoneyOff sx={{ color: "white" }} />
                 </Box>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">إجمالي المصروفات (IQD)</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>{totalIQD.toLocaleString()} د.ع</Typography>
+                  <Typography variant="body2" color="text.secondary">إجمالي المصروفات (IQD+USD)</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>{totalInIQD.toLocaleString()} د.ع</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        {totalUSD > 0 && (
-          <Grid item xs={12} sm={6} md={4}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Box sx={{ bgcolor: "warning.main", p: 1.5, borderRadius: 2 }}>
-                    <TrendingDown sx={{ color: "white" }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">إجمالي المصروفات (USD)</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>${totalUSD.toLocaleString()}</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box sx={{ bgcolor: "info.main", p: 1.5, borderRadius: 2 }}>
-                  <MoneyOff sx={{ color: "white" }} />
+                  <Receipt sx={{ color: "white" }} />
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">عدد المصروفات</Typography>
@@ -364,6 +386,38 @@ return (
             </CardContent>
           </Card>
         </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box sx={{ bgcolor: "error.main", p: 1.5, borderRadius: 2 }}>
+                  <Typography sx={{ color: "white", fontWeight: 'bold' }}>IQD</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">إجمالي العراقي (IQD)</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>{totalIQD.toLocaleString()} د.ع</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        {totalUSD > 0 && (
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box sx={{ bgcolor: "warning.main", p: 1.5, borderRadius: 2 }}>
+                  <Typography sx={{ color: "white", fontWeight: 'bold' }}>USD</Typography>
+                </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">إجمالي الدولار (USD)</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>${totalUSD.toLocaleString()}</Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
 
       {/* Table */}
@@ -378,26 +432,31 @@ return (
             sx={{ mb: 3 }}
           />
           <Box sx={{ 
-            height: isMobile ? 400 : 500,
+            // height: isMobile ? 400 : 500,
             width: '100%'
           }}>
-            <DataGrid
-              rows={filteredExpenses}
-              columns={columns}
-              getRowId={(row) => row.id}
-              pageSizeOptions={[5, 10, 25]}
-              initialState={{
-              pagination: { paginationModel: { pageSize: 10 } },
-              sorting: { sortModel: [{ field: "date", sort: "desc" }] },
-              }}
-              disableRowSelectionOnClick
-            autoHeight
-              sx={{
-                border: "none",
-              "& .MuiDataGrid-cell": { borderColor: "divider" },
-              "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
-              }}
-            />
+            {canReadExpenses && (
+              <DataGrid
+                rows={filteredExpenses}
+                columns={columns}
+                getRowId={(row) => row.id}
+                pageSizeOptions={[5, 10, 25]}
+                initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+                sorting: { sortModel: [{ field: "date", sort: "desc" }] },
+                }}
+                  disableRowSelectionOnClick
+                  autoHeight
+                  sx={{
+                  border: "none",
+                "& .MuiDataGrid-cell": { borderColor: "divider" },
+                "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
+                }}
+              />)
+              }
+            {!canReadExpenses && (
+              <Box>ليس لديك صلاحية لعرض المصروفات.</Box>
+            )}
           </Box>
         </Box>
       </Paper>
@@ -406,7 +465,8 @@ return (
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <MoneyOff /> {editingExpense ? "تعديل مصروف" : "إضافة مصروف جديد"}
+            <MoneyOff />
+            <Typography>{editingExpense ? "تعديل مصروف" : "إضافة مصروف جديد"}</Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -461,7 +521,7 @@ return (
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button onClick={handleSaveExpense} variant="contained">{editingExpense ? "تحديث" : "إضافة"}</Button>
         </DialogActions>
@@ -622,7 +682,7 @@ return (
                         تاريخ المصروف
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {new Date(selectedExpense.expense_date).toLocaleDateString('ar-IQ', {
+                        {new Date(selectedExpense.expense_date).toLocaleDateString('ar-EN', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'

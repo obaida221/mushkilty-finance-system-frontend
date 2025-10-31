@@ -345,7 +345,7 @@ const PayrollPage: React.FC = () => {
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Typography variant="caption" color="text.secondary">
-            {lastRefreshTime ? `آخر تحديث: ${lastRefreshTime.toLocaleTimeString("en-IQ")}` : ""}
+            {lastRefreshTime ? `آخر تحديث: ${lastRefreshTime.toLocaleTimeString("ar-EN")}` : ""}
           </Typography>
           <Button variant="outlined" startIcon={<Refresh />} onClick={refreshPayrolls}>
             تحديث
@@ -559,7 +559,7 @@ const PayrollPage: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog}>إلغاء</Button>
           <Button onClick={handleSavePayroll} variant="contained">
             {editingPayroll ? "تحديث" : "إضافة"}
