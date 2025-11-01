@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth, usePermission } from '../context/AuthContext';
@@ -6,6 +7,7 @@ import AccessDeniedPage from './AccessDeniedPage';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermission?: string;
+  requiredPermissions?: string[];
   fallback?: React.ReactNode;
   redirectTo?: string;
   showAccessDenied?: boolean;
@@ -14,16 +16,19 @@ interface ProtectedRouteProps {
 /**
  * ProtectedRoute Component
  * Protects routes based on authentication and optionally specific permissions
- * 
+ * Can accept either a single permission or an array of permissions (any of which grants access)
+ *
  * @param children - The component to render if authorized
- * @param requiredPermission - Optional permission name required to access the route
+ * @param requiredPermission - Optional single permission name required to access route
+ * @param requiredPermissions - Optional array of permission names (any one grants access)
  * @param fallback - Optional fallback component for permission denied
  * @param redirectTo - Optional redirect path instead of showing access denied
  * @param showAccessDenied - Whether to show access denied page or use fallback/redirect
  */
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requiredPermission, 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredPermission,
+  requiredPermissions,
   fallback,
   redirectTo,
   showAccessDenied = true
@@ -45,28 +50,41 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Check specific permission if required
-  if (requiredPermission && !hasPermission(requiredPermission)) {
+  // Check if user has required permission
+  const hasRequiredPermission = requiredPermission ? hasPermission(requiredPermission) : true;
+
+  // Check if user has any of required permissions
+  const hasAnyRequiredPermission = requiredPermissions 
+    ? requiredPermissions.some(permission => hasPermission(permission))
+    : true;
+
+  // If user doesn't have required permissions
+  if (!hasRequiredPermission && !hasAnyRequiredPermission) {
     // Use custom redirect if specified
     if (redirectTo) {
       return <Navigate to={redirectTo} replace />;
     }
-    
+
     // Use custom fallback if specified
     if (fallback) {
       return <>{fallback}</>;
     }
-    
+
     // Show access denied page by default
     if (showAccessDenied) {
+      // If we have multiple permissions, show them in message
+      const permissionText = requiredPermissions 
+        ? requiredPermissions.join(" أو ")
+        : requiredPermission;
+
       return (
-        <AccessDeniedPage 
-          requiredPermission={requiredPermission}
-          message={`تحتاج إلى صلاحية "${requiredPermission}" للوصول إلى هذه الصفحة`}
+        <AccessDeniedPage
+          requiredPermission={permissionText}
+          message={`تحتاج إلى إحدى الصلاحيات التالية: "${permissionText}" للوصول إلى هذه الصفحة`}
         />
       );
     }
-    
+
     // Fallback to simple access denied message
     return (
       <div className="flex items-center justify-center min-h-screen">

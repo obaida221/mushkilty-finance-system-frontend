@@ -27,15 +27,13 @@ export const usePermissions = () => {
     return false;
   };
 
-
-
   // Academic permissions
   const canReadStudents = hasPermission('students:read');
   const canCreateStudents = hasPermission('students:create');
   const canUpdateStudents = hasPermission('students:update');
   const canDeleteStudents = hasPermission('students:delete');
-  const canAccessStudents = 
-    canReadStudents || canCreateStudents || 
+  const canAccessStudents =
+    canReadStudents || canCreateStudents ||
     canUpdateStudents || canDeleteStudents;
   const studentsManagementPermissions = {
     canReadStudents,
@@ -48,8 +46,8 @@ export const usePermissions = () => {
   const canCreateCourses = hasPermission('courses:create');
   const canUpdateCourses = hasPermission('courses:update');
   const canDeleteCourses = hasPermission('courses:delete');
-  const canAccessCourses = 
-    canReadCourses || canCreateCourses || 
+  const canAccessCourses =
+    canReadCourses || canCreateCourses ||
     canUpdateCourses || canDeleteCourses;
   const coursesManagementPermissions = {
     canReadCourses,
@@ -62,8 +60,8 @@ export const usePermissions = () => {
   const canCreateBatches = hasPermission('batches:create');
   const canUpdateBatches = hasPermission('batches:update');
   const canDeleteBatches = hasPermission('batches:delete');
-  const canAccessBatches = 
-    canReadBatches || canCreateBatches || 
+  const canAccessBatches =
+    canReadBatches || canCreateBatches ||
     canUpdateBatches || canDeleteBatches;
   const batchesManagementPermissions = {
     canReadBatches,
@@ -71,7 +69,6 @@ export const usePermissions = () => {
     canUpdateBatches,
     canDeleteBatches,
   };
-  
 
   const canReadEnrollments = hasPermission('enrollments:read');
   const canCreateEnrollments = hasPermission('enrollments:create');
@@ -101,7 +98,6 @@ export const usePermissions = () => {
     canDeleteDiscounts,
   };
 
-
   // Financial permissions
   const canReadPayments = hasPermission('payments:read');
   const canCreatePayments = hasPermission('payments:create');
@@ -115,8 +111,8 @@ export const usePermissions = () => {
     canCreatePayments,
     canUpdatePayments,
     canDeletePayments,
-  }
-  
+  };
+
   const canReadExpenses = hasPermission('expenses:read');
   const canCreateExpenses = hasPermission('expenses:create');
   const canUpdateExpenses = hasPermission('expenses:update');
@@ -130,7 +126,7 @@ export const usePermissions = () => {
     canUpdateExpenses,
     canDeleteExpenses,
   };
-  
+
   const canReadRefunds = hasPermission('refunds:read');
   const canCreateRefunds = hasPermission('refunds:create');
   const canUpdateRefunds = hasPermission('refunds:update');
@@ -145,7 +141,7 @@ export const usePermissions = () => {
     canDeleteRefunds,
   };
 
-  // Payment methods permissions  
+  // Payment methods permissions
   const canReadPaymentMethods = hasPermission('payment-methods:read');
   const canCreatePaymentMethods = hasPermission('payment-methods:create');
   const canUpdatePaymentMethods = hasPermission('payment-methods:update');
@@ -159,7 +155,7 @@ export const usePermissions = () => {
     canUpdatePaymentMethods,
     canDeletePaymentMethods,
   };
-  
+
   // Payroll permissions
   const canReadPayroll = hasPermission('payroll:read');
   const canCreatePayroll = hasPermission('payroll:create');
@@ -180,14 +176,14 @@ export const usePermissions = () => {
   const canCreateUsers = hasPermission('users:create');
   const canUpdateUsers = hasPermission('users:update');
   const canDeleteUsers = hasPermission('users:delete');
-  const canAccessUsers = 
+  const canAccessUsers =
     canReadUsers || canCreateUsers || canUpdateUsers || canDeleteUsers;
   const userManagementPermissions = {
     canReadUsers,
     canCreateUsers,
     canUpdateUsers,
     canDeleteUsers,
-  }
+  };
 
   // Role management permissions
   const canReadRoles = hasPermission('roles:read');
@@ -201,21 +197,21 @@ export const usePermissions = () => {
     canCreateRoles,
     canUpdateRoles,
     canDeleteRoles,
-  }
+  };
 
   const canReadPermissions = hasPermission('permissions:read');
   const canCreatePermissions = hasPermission('permissions:create');
   const canUpdatePermissions = hasPermission('permissions:update');
   const canDeletePermissions = hasPermission('permissions:delete');
   const canAccessPermissions =
-    canReadPermissions || canCreatePermissions || 
+    canReadPermissions || canCreatePermissions ||
     canUpdatePermissions || canDeletePermissions;
   const permissionsManagementPermissions = {
     canReadPermissions,
     canCreatePermissions,
     canUpdatePermissions,
     canDeletePermissions,
-  }
+  };
 
   const canManageSystem = hasPermission('system:admin');
 
@@ -226,49 +222,87 @@ export const usePermissions = () => {
   const canReadAnalytics = hasPermission('analytics:read');
 
   // Composite permissions
-  const canAccessAcademic = 
-    hasPermission('academic:read') || canAccessStudents || 
-    canAccessCourses || canAccessBatches || 
+  const canAccessAcademic =
+    hasPermission('academic:read') || canAccessStudents ||
+    canAccessCourses || canAccessBatches ||
     canAccessEnrollments || canAccessDiscounts;
 
-  const canAccessFinancial = hasPermission('financial:read') || 
-    canAccessPayments || canAccessExpenses || canAccessRefunds || 
+  const canAccessFinancial = hasPermission('financial:read') ||
+    canAccessPayments || canAccessExpenses || canAccessRefunds ||
     canAccessPaymentMethods || canAccessPayroll;
 
+  // Get default tab for each section based on permissions
+  const getDefaultAcademicTab = () => {
+    if (canReadStudents) return 'students';
+    if (canReadCourses) return 'courses';
+    if (canReadBatches) return 'batches';
+    if (canReadEnrollments) return 'enrollments';
+    if (canReadDiscounts) return 'discounts';
+    return 'students'; // Default fallback
+  };
+
+  const getDefaultFinancialTab = () => {
+    if (canReadExpenses) return 'expenses';
+    if (canReadPayments) return 'payments';
+    if (canReadRefunds) return 'refunds';
+    if (canReadPaymentMethods) return 'payment-methods';
+    if (canReadPayroll) return 'payroll';
+    return 'expenses'; // Default fallback
+  };
+
+  const getDefaultUserManagementTab = () => {
+    if (canReadUsers) return 'users';
+    if (canReadRoles) return 'roles';
+    if (canReadPermissions) return 'permissions';
+    return 'users'; // Default fallback
+  };
+
+  // Get first accessible route based on permissions
+  const getFirstAccessibleRoute = () => {
+    if (canReadDashboard) return '/';
+    if (canAccessUsers || canAccessRoles || canAccessPermissions) return '/users';
+    if (canAccessAcademic) return '/academic';
+    if (canAccessFinancial) return '/financial';
+    return '/dashboard'; // Default fallback
+  };
+
   return {
+    // Permission checker
+    hasPermission,
+
     // Individual permissions
     canReadStudents,
     canReadCourses,
     canReadBatches,
     canReadEnrollments,
     canReadDiscounts,
-    
+
     // Financial permissions
     canReadPayments,
     canCreatePayments,
     canUpdatePayments,
     canDeletePayments,
-    
+
     canReadExpenses,
     canCreateExpenses,
     canUpdateExpenses,
     canDeleteExpenses,
-    
+
     canReadRefunds,
     canCreateRefunds,
     canUpdateRefunds,
     canDeleteRefunds,
-    
+
     canReadPaymentMethods,
     canCreatePaymentMethods,
     canUpdatePaymentMethods,
     canDeletePaymentMethods,
-    
+
     canReadPayroll,
     canCreatePayroll,
     canUpdatePayroll,
     canDeletePayroll,
-    
+
     // User management permissions
     canReadUsers,
     canCreateUsers,
@@ -287,7 +321,7 @@ export const usePermissions = () => {
 
     // System permissions
     canManageSystem,
-    
+
     // Dashboard permissions
     canReadDashboard,
     canReadAnalytics,
@@ -303,6 +337,15 @@ export const usePermissions = () => {
     canAccessRefunds,
     canAccessPaymentMethods,
     canAccessPayroll,
+
+    // Default tabs
+    getDefaultAcademicTab,
+    getDefaultFinancialTab,
+    getDefaultUserManagementTab,
+
+    // Navigation
+    getFirstAccessibleRoute,
+
     // Grouped permissions
     studentsManagementPermissions,
     coursesManagementPermissions,

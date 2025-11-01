@@ -27,11 +27,7 @@ import {
   Grid,
   Snackbar,
   InputAdornment,
-  List,
-  ListItem,
-  // ListItemText,
   Checkbox,
-  FormControlLabel,
   Divider,
 } from '@mui/material';
 import {
@@ -55,27 +51,27 @@ const RoleManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Dialog states
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedRolePermissions, setSelectedRolePermissions] = useState<number[]>([]);
-  
+
   // Form state
   const [roleForm, setRoleForm] = useState<CreateRoleRequest>({
     name: '',
     description: '',
   });
-  
+
   // Snackbar
-  const [snackbar, setSnackbar] = useState({ 
-    open: false, 
-    message: '', 
-    severity: 'success' as 'success' | 'error' 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error'
   });
-  
+
   // Permissions
   const { canReadRoles, canCreateRoles, canUpdateRoles, canDeleteRoles, canReadPermissions } = usePermissions();
   // Load data on component mount
@@ -86,7 +82,7 @@ const RoleManagementPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       if (!canReadRoles) {
         setError('ليس لديك صلاحية لعرض الأدوار');
@@ -95,11 +91,11 @@ const RoleManagementPage: React.FC = () => {
 
       const [rolesData, permissionsData] = await Promise.all([
         userManagementService.getAllRoles(),
-        canReadPermissions ? 
-          userManagementService.getAllPermissions() : 
+        canReadPermissions ?
+          userManagementService.getAllPermissions() :
           Promise.resolve([]),
       ]);
-      
+
       setRoles(rolesData);
       setPermissions(permissionsData);
     } catch (error: any) {
@@ -125,13 +121,13 @@ const RoleManagementPage: React.FC = () => {
 
   const handleUpdateRole = async () => {
     if (!selectedRole) return;
-    
+
     try {
       const updateData: UpdateRoleRequest = {
         name: roleForm.name,
         description: roleForm.description,
       };
-      
+
       await userManagementService.updateRole(selectedRole.id, updateData);
       setSnackbar({ open: true, message: 'تم تحديث الدور بنجاح', severity: 'success' });
       setRoleDialogOpen(false);
@@ -144,7 +140,7 @@ const RoleManagementPage: React.FC = () => {
 
   const handleDeleteRole = async () => {
     if (!selectedRole) return;
-    
+
     try {
       await userManagementService.deleteRole(selectedRole.id);
       setSnackbar({ open: true, message: 'تم حذف الدور بنجاح', severity: 'success' });
@@ -213,7 +209,7 @@ const RoleManagementPage: React.FC = () => {
 
   const openPermissionDialog = async (role: Role) => {
     setSelectedRole(role);
-    
+
     try {
       // Get current role permissions
       const rolePermissions = await userManagementService.getRolePermissions(role.id);
@@ -231,11 +227,62 @@ const RoleManagementPage: React.FC = () => {
   };
 
   const handlePermissionToggle = (permissionId: number) => {
-    setSelectedRolePermissions(prev => 
+    setSelectedRolePermissions(prev =>
       prev.includes(permissionId)
         ? prev.filter(id => id !== permissionId)
         : [...prev, permissionId]
     );
+  };
+
+  const handleSelectAllPermissions = () => {
+    if (selectedRolePermissions.length === permissions.length) {
+      // If all permissions are selected, deselect all
+      setSelectedRolePermissions([]);
+    } else {
+      // Select all permissions
+      setSelectedRolePermissions(permissions.map(p => p.id));
+    }
+  };
+
+  // Permission categories for better organization
+  const PERMISSION_CATEGORIES = {
+    users: 'المستخدمين',
+    roles: 'الأدوار',
+    permissions: 'الصلاحيات',
+    students: 'الطلاب',
+    courses: 'الدورات',
+    batches: 'الدُفعات',
+    enrollments: 'التسجيلات',
+    'discount-codes': 'أكواد الخصم',
+    'payment-methods': 'طرق الدفع',
+    payments: 'المدفوعات',
+    refunds: 'المبالغ المسترجعة',
+    expenses: 'المصاريف',
+    payroll: 'كشوف المرتبات',
+    payrolls: 'الرواتب',
+    system: 'النظام',
+    dashboard: 'لوحة التحكم',
+  };
+
+  // Utility functions
+  const getPermissionCategory = (permissionName: string): string => {
+    const category = permissionName.split(':')[0];
+    return PERMISSION_CATEGORIES[category as keyof typeof PERMISSION_CATEGORIES] || 'أخرى';
+  };
+
+  const getPermissionAction = (permissionName: string): string => {
+    const action = permissionName.split(':')[1];
+    const actionMap: { [key: string]: string } = {
+      create: 'إنشاء',
+      read: 'عرض',
+      update: 'تحديث',
+      delete: 'حذف',
+      search: 'بحث',
+      validate: 'تحقق',
+      reports: 'تقارير',
+      admin: 'إدارة',
+    };
+    return actionMap[action] || action || 'غير محدد';
   };
 
   // Filter roles based on search query
@@ -413,14 +460,14 @@ const RoleManagementPage: React.FC = () => {
                     </TableCell>
                     <TableCell>{role.description}</TableCell>
                     <TableCell>
-                      <Chip 
+                      <Chip
                         label={role.rolePermissions?.length || 0}
                         color="primary"
                         size="small"
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip 
+                      <Chip
                         label={role.users?.length || 0}
                         color="secondary"
                         size="small"
@@ -431,8 +478,8 @@ const RoleManagementPage: React.FC = () => {
                         {canUpdateRoles && (
                           <>
                             <Tooltip title="تعديل الدور">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 color="primary"
                                 onClick={() => openEditRoleDialog(role)}
                               >
@@ -440,8 +487,8 @@ const RoleManagementPage: React.FC = () => {
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="إدارة الصلاحيات">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 color="secondary"
                                 onClick={() => openPermissionDialog(role)}
                               >
@@ -452,8 +499,8 @@ const RoleManagementPage: React.FC = () => {
                         )}
                         {canDeleteRoles && role.name !== 'admin' && (
                           <Tooltip title="حذف">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               color="error"
                               onClick={() => openDeleteDialog(role)}
                             >
@@ -499,7 +546,7 @@ const RoleManagementPage: React.FC = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setRoleDialogOpen(false)}>إلغاء</Button>
-          <Button 
+          <Button
             onClick={selectedRole ? handleUpdateRole : handleCreateRole}
             variant="contained"
             disabled={!roleForm.name.trim()}
@@ -510,60 +557,97 @@ const RoleManagementPage: React.FC = () => {
       </Dialog>
 
       {/* Permission Assignment Dialog */}
-      <Dialog 
-        open={permissionDialogOpen} 
-        onClose={() => setPermissionDialogOpen(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={permissionDialogOpen}
+        onClose={() => setPermissionDialogOpen(false)}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>
           إدارة صلاحيات الدور: {selectedRole?.name}
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            اختر الصلاحيات التي تريد تعيينها لهذا الدور
-          </Typography>
-          
           {permissions.length === 0 ? (
             <Alert severity="info">
               لا توجد صلاحيات متاحة. يرجى إنشاء الصلاحيات الافتراضية أولاً.
             </Alert>
           ) : (
-            <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-              {permissions.map((permission) => (
-                <ListItem key={permission.id} dense>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={selectedRolePermissions.includes(permission.id)}
-                        onChange={() => handlePermissionToggle(permission.id)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {permission.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {permission.description || 'لا يوجد وصف'}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  اختر الصلاحيات التي تريد تعيينها لهذا الدور
+                </Typography>
+              </Box>
+              <TableContainer sx={{ maxHeight: 300, overflow: 'auto' }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox" sx={{ width: 60 }}>
+                        <Tooltip title="تحديد الكل">
+                        <Checkbox
+                          checked={selectedRolePermissions.length === permissions.length && permissions.length > 0}
+                          indeterminate={selectedRolePermissions.length > 0 && selectedRolePermissions.length < permissions.length}
+                          onChange={handleSelectAllPermissions}
+                            />
+                        </Tooltip>
+                      </TableCell>
+                        <TableCell>الصلاحية</TableCell>
+                        <TableCell>الإجراء</TableCell>
+                      <TableCell>الفئة</TableCell>
+                      <TableCell>الوصف</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {permissions.map((permission) => (
+                      <TableRow key={permission.id} hover>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedRolePermissions.includes(permission.id)}
+                            onChange={() => handlePermissionToggle(permission.id)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontFamily="monospace">
+                            {permission.name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={getPermissionAction(permission.name)}
+                            size="small"
+                            color="secondary"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={getPermissionCategory(permission.name)}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {permission.description || 'لا يوجد وصف'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           <Typography variant="body2" color="text.secondary">
             الصلاحيات المحددة: {selectedRolePermissions.length} من {permissions.length}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setPermissionDialogOpen(false)}>إلغاء</Button>
-          <Button 
+          <Button
             onClick={handleAssignPermissions}
             variant="contained"
             disabled={permissions.length === 0}

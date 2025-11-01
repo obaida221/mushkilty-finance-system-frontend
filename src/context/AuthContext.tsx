@@ -8,7 +8,16 @@ import { authService } from "../services/authService"
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(() => {
+    // Try to load user from localStorage on initial render
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+      return null;
+    }
+  });
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'))
   const [loading, setLoading] = useState(true)
 
@@ -30,7 +39,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData)
     } catch (error) {
       console.error('Profile fetch error:', error)
-      logout()
+      // Don't immediately logout on error - check if we have cached user data
+      const cachedUser = localStorage.getItem('user');
+      if (!cachedUser) {
+        logout();
+      }
     } finally {
       setLoading(false)
     }
@@ -44,6 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fetch user profile with permissions
       const profileData = await authService.getProfile()
       setUser(profileData)
+      
+      // Store user data in localStorage
+      localStorage.setItem('user', JSON.stringify(profileData));
 
       return data
     } catch (error) {
@@ -64,6 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authService.logout()
     setToken(null)
     setUser(null)
+    // Force a reload to clear any cached state
+    window.location.href = '/login';
   }
 
   const value: AuthContextType = {

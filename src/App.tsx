@@ -44,197 +44,197 @@ const cacheRtl = createCache({
 
 const AppContent: React.FC = () => {
   const { theme } = useThemeMode()
-  
+
   return (
     <CacheProvider value={cacheRtl}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <ExchangeRateProvider>
-        <AuthProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/debug-permissions" element={<DebugPermissionsPage />} />
-              <Route path="/inner-nav-test" element={<InnerNavTestPage />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <Routes>
-                        {/* Dashboard */}
-                        <Route 
-                          path="/" 
-                          element={
-                            <ProtectedRoute requiredPermission="dashboard:read">
-                              <DashboardPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        
-                        {/* User Management */}
-                        <Route 
-                          path="/users" 
-                          element={
-                            <ProtectedRoute requiredPermission="users:read">
-                              <UsersPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/users/manage" 
-                          element={
-                            <ProtectedRoute requiredPermission="users:read">
-                              <UserManagementPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/roles/manage" 
-                          element={
-                            <ProtectedRoute requiredPermission="roles:read">
-                              <RoleManagementPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/permissions/manage" 
-                          element={
-                            <ProtectedRoute requiredPermission="permissions:read">
-                              <PermissionManagementPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        
-                        {/* Academic Management - Unified Page */}
-                        <Route 
-                          path="/academic" 
-                          element={
-                            <ProtectedRoute requiredPermission="batches:read">
-                              <AcademicManagementPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        
-                        {/* Academic Management - Individual Pages (keep for backward compatibility) */}
-                        <Route 
-                          path="/students" 
-                          element={
-                            <ProtectedRoute requiredPermission="students:read">
-                              <StudentsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/courses" 
-                          element={
-                            <ProtectedRoute requiredPermission="courses:read">
-                              <CoursesPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/batches" 
-                          element={
-                            <ProtectedRoute requiredPermission="batches:read">
-                              <BatchesPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/enrollments" 
-                          element={
-                            <ProtectedRoute requiredPermission="enrollments:read">
-                              <EnrollmentsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        
-                        {/* Financial Management - Unified Page */}
-                        <Route 
-                          path="/financial" 
-                          element={
-                            <ProtectedRoute requiredPermission="payments:read">
-                              <FinancialManagementPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        
-                        {/* Financial Management - Individual Pages (keep for backward compatibility) */}
-                        <Route 
-                          path="/transactions" 
-                          element={
-                            <ProtectedRoute requiredPermission="transactions:read">
-                              <TransactionsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/payment-methods" 
-                          element={
-                            <ProtectedRoute requiredPermission="payment-methods:read">
-                              <PaymentMethodsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/payments" 
-                          element={
-                            <ProtectedRoute requiredPermission="payments:read">
-                              <PaymentsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/expenses" 
-                          element={
-                            <ProtectedRoute requiredPermission="expenses:read">
-                              <ExpensesPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/refunds" 
-                          element={
-                            <ProtectedRoute requiredPermission="refunds:read">
-                              <RefundsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/discounts" 
-                          element={
-                            <ProtectedRoute requiredPermission="discounts:read">
-                              <DiscountsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/payroll" 
-                          element={
-                            <ProtectedRoute requiredPermission="payroll:read">
-                              <PayrollPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        
-                        {/* Analytics */}
-                        <Route 
-                          path="/analytics" 
-                          element={
-                            <ProtectedRoute requiredPermission="analytics:read">
-                              <AnalyticsPage />
-                            </ProtectedRoute>
-                          } 
-                        />
-                      </Routes>
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Router>
-        </AuthProvider>
+          <AuthProvider>
+            <Router>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/debug-permissions" element={<DebugPermissionsPage />} />
+                <Route path="/inner-nav-test" element={<InnerNavTestPage />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <Routes>
+                          {/* Dashboard */}
+                          <Route
+                            path="/"
+                            element={
+                              <ProtectedRoute requiredPermission="dashboard:read">
+                                <DashboardPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          {/* User Management */}
+                          <Route
+                            path="/users"
+                            element={
+                              <ProtectedRoute requiredPermission="users:read">
+                                <UsersPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/users/manage"
+                            element={
+                              <ProtectedRoute requiredPermission="users:read">
+                                <UserManagementPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/roles/manage"
+                            element={
+                              <ProtectedRoute requiredPermission="roles:read">
+                                <RoleManagementPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/permissions/manage"
+                            element={
+                              <ProtectedRoute requiredPermission="permissions:read">
+                                <PermissionManagementPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          {/* Academic Management - Unified Page */}
+                          <Route
+                            path="/academic"
+                            element={
+                              <ProtectedRoute requiredPermissions={["students:read", "courses:read", "batches:read", "enrollments:read", "discounts:read"]}>
+                                <AcademicManagementPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          {/* Academic Management - Individual Pages (keep for backward compatibility) */}
+                          <Route
+                            path="/students"
+                            element={
+                              <ProtectedRoute requiredPermission="students:read">
+                                <StudentsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/courses"
+                            element={
+                              <ProtectedRoute requiredPermission="courses:read">
+                                <CoursesPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/batches"
+                            element={
+                              <ProtectedRoute requiredPermission="batches:read">
+                                <BatchesPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/enrollments"
+                            element={
+                              <ProtectedRoute requiredPermission="enrollments:read">
+                                <EnrollmentsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          {/* Financial Management - Unified Page */}
+                          <Route
+                            path="/financial"
+                            element={
+                              <ProtectedRoute requiredPermissions={["payments:read", "expenses:read", "refunds:read", "payment-methods:read", "payroll:read"]}>
+                                <FinancialManagementPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          {/* Financial Management - Individual Pages (keep for backward compatibility) */}
+                          <Route
+                            path="/transactions"
+                            element={
+                              <ProtectedRoute requiredPermission="transactions:read">
+                                <TransactionsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/payment-methods"
+                            element={
+                              <ProtectedRoute requiredPermission="payment-methods:read">
+                                <PaymentMethodsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/payments"
+                            element={
+                              <ProtectedRoute requiredPermission="payments:read">
+                                <PaymentsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/expenses"
+                            element={
+                              <ProtectedRoute requiredPermission="expenses:read">
+                                <ExpensesPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/refunds"
+                            element={
+                              <ProtectedRoute requiredPermission="refunds:read">
+                                <RefundsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/discounts"
+                            element={
+                              <ProtectedRoute requiredPermission="discounts:read">
+                                <DiscountsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/payroll"
+                            element={
+                              <ProtectedRoute requiredPermission="payroll:read">
+                                <PayrollPage />
+                              </ProtectedRoute>
+                            }
+                          />
+
+                          {/* Analytics */}
+                          <Route
+                            path="/analytics"
+                            element={
+                              <ProtectedRoute requiredPermission="analytics:read">
+                                <AnalyticsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                        </Routes>
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Router>
+          </AuthProvider>
         </ExchangeRateProvider>
       </ThemeProvider>
     </CacheProvider>

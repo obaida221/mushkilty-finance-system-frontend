@@ -1,7 +1,8 @@
+
 "use client"
 
-import React, { useState } from 'react'
-import { Box, Typography } from '@mui/material'
+import React, { useState, useEffect } from 'react'
+import { Box, Typography, Snackbar, Alert } from '@mui/material'
 import { PersonAdd, School, Discount as DiscountIcon, Group as GroupIcon, HowToReg as HowToRegIcon } from '@mui/icons-material'
 import InnerNavBar from '../components/InnerNavBar'
 import { useStudents } from '../hooks/useStudents'
@@ -9,9 +10,10 @@ import { useCourses } from '../hooks/useCourses'
 import { useDiscountCodes } from '../hooks/useDiscountCodes'
 import { useBatches } from '../hooks/useBatches'
 import { useEnrollments } from '../hooks/useEnrollments'
+import { usePermissions } from '../hooks/usePermissions.tsx'
 import ProtectedRoute from '../components/ProtectedRoute'
 
-// Import the existing pages (they'll work as content sections)
+// Import existing pages (they'll work as content sections)
 import StudentsPage from './StudentsPage'
 import CoursesPage from './CoursesPage'
 import DiscountsPage from './DiscountsPage'
@@ -20,15 +22,26 @@ import EnrollmentsPage from './EnrollmentsPage'
 
 const AcademicManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('students')
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'warning' as 'warning' | 'error' | 'info' | 'success'
+  });
 
   // Get real counts from hooks
   const { students } = useStudents()
   const { courses } = useCourses()
-  
-  // Get real counts from hooks
   const { discountCodes } = useDiscountCodes()
   const { batches } = useBatches()
   const { enrollments } = useEnrollments()
+  const { modulePermissions, getDefaultAcademicTab } = usePermissions()
+  const {
+    canReadStudents,
+    canReadCourses,
+    canReadBatches,
+    canReadEnrollments,
+    canReadDiscounts
+  } = modulePermissions
 
   const tabs = [
     {
@@ -68,6 +81,85 @@ const AcademicManagementPage: React.FC = () => {
     },
   ]
 
+  // Initialize with default tab based on permissions (only run once on mount)
+  useEffect(() => {
+    // Check if there's a saved tab in session storage
+    const savedTab = sessionStorage.getItem('academicActiveTab')
+    if (savedTab) {
+      // Check if user has permission for the saved tab
+      const tab = tabs.find(t => t.value === savedTab)
+      if (tab) {
+        if (
+          (savedTab === 'students' && canReadStudents) ||
+          (savedTab === 'courses' && canReadCourses) ||
+          (savedTab === 'batches' && canReadBatches) ||
+          (savedTab === 'enrollments' && canReadEnrollments) ||
+          (savedTab === 'discounts' && canReadDiscounts)
+        ) {
+          setActiveTab(savedTab)
+          return
+        }
+      }
+    }
+
+    // If no valid saved tab, use the default based on permissions
+    const defaultTab = getDefaultAcademicTab()
+    setActiveTab(defaultTab)
+  }, [canReadStudents, canReadCourses, canReadBatches, canReadEnrollments, canReadDiscounts])
+
+  // Save active tab to session storage
+  useEffect(() => {
+    sessionStorage.setItem('academicActiveTab', activeTab)
+  }, [activeTab])
+
+  // Load active tab from session storage on mount
+  useEffect(() => {
+    const savedTab = sessionStorage.getItem('academicActiveTab')
+    if (savedTab) {
+      // Check if user has permission for the saved tab
+      const tab = tabs.find(t => t.value === savedTab)
+      if (tab) {
+        if (
+          (savedTab === 'students' && canReadStudents) ||
+          (savedTab === 'courses' && canReadCourses) ||
+          (savedTab === 'batches' && canReadBatches) ||
+          (savedTab === 'enrollments' && canReadEnrollments) ||
+          (savedTab === 'discounts' && canReadDiscounts)
+        ) {
+          setActiveTab(savedTab)
+        }
+      }
+    }
+  }, [canReadStudents, canReadCourses, canReadBatches, canReadEnrollments, canReadDiscounts])
+
+  // Handle tab change with permission check
+  const handleTabChange = (newValue: string) => {
+    const tab = tabs.find(t => t.value === newValue)
+    if (!tab) return
+
+    if (
+      (newValue === 'students' && canReadStudents) ||
+      (newValue === 'courses' && canReadCourses) ||
+      (newValue === 'batches' && canReadBatches) ||
+      (newValue === 'enrollments' && canReadEnrollments) ||
+      (newValue === 'discounts' && canReadDiscounts)
+    ) {
+      setActiveTab(newValue)
+    } else {
+      // Show permission denied message
+      setSnackbar({
+        open: true,
+        message: `ليس لديك صلاحية للوصول إلى ${tab.label}`,
+        severity: 'warning'
+      })
+    }
+  }
+
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }))
+  }
+
   return (
     <Box>
       {/* Header */}
@@ -83,7 +175,11 @@ const AcademicManagementPage: React.FC = () => {
       </Box>
 
       {/* Inner Navigation Bar */}
-      <InnerNavBar tabs={tabs} value={activeTab} onChange={setActiveTab} />
+      <InnerNavBar
+        tabs={tabs}
+        value={activeTab}
+        onChange={handleTabChange}
+      />
 
       {/* Content based on active tab */}
       <Box sx={{ mt: 3 }}>
@@ -113,6 +209,18 @@ const AcademicManagementPage: React.FC = () => {
           </ProtectedRoute>
         )}
       </Box>
+
+      {/* Permission Denied Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

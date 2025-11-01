@@ -50,7 +50,7 @@ const PERMISSION_CATEGORIES = {
   permissions: 'إدارة الصلاحيات',
   students: 'إدارة الطلاب',
   courses: 'إدارة الدورات',
-  batches: 'إدارة المجموعات',
+  batches: 'إدارة الدُفعات',
   enrollments: 'إدارة التسجيلات',
   'discount-codes': 'أكواد الخصم',
   'payment-methods': 'طرق الدفع',
@@ -58,6 +58,8 @@ const PERMISSION_CATEGORIES = {
   refunds: 'إدارة المبالغ المسترجعة',
   expenses: 'إدارة المصاريف',
   payroll: 'إدارة كشوف المرتبات',
+  payrolls: 'إدارة الرواتب',
+  reports: 'التقارير',
   system: 'إدارة النظام',
   dashboard: 'لوحة التحكم',
 };

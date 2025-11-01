@@ -137,6 +137,65 @@ export const usePermissions = () => {
     canUpdatePayroll: hasPermission('payrolls:update'),
     canDeletePayroll: hasPermission('payrolls:delete'),
     canViewPayrollReports: hasPermission('payrolls:reports'),
+
+    // Payment Methods
+    canViewPaymentMethods: hasPermission('payment-methods:read'),
+    canCreatePaymentMethods: hasPermission('payment-methods:create'),
+    canUpdatePaymentMethods: hasPermission('payment-methods:update'),
+    canDeletePaymentMethods: hasPermission('payment-methods:delete'),
+
+    // Academic Modules
+    canReadStudents: hasPermission('students:read'),
+    canReadCourses: hasPermission('courses:read'),
+    canReadBatches: hasPermission('batches:read'),
+    canReadEnrollments: hasPermission('enrollments:read'),
+    canReadDiscounts: hasPermission('discounts:read'),
+  };
+
+  // Get default tab for financial section based on permissions
+  const getDefaultFinancialTab = () => {
+    if (modulePermissions.canViewExpenses) return 'expenses';
+    if (modulePermissions.canViewPayments) return 'payments';
+    if (modulePermissions.canViewRefunds) return 'refunds';
+    if (modulePermissions.canViewPaymentMethods) return 'payment-methods';
+    if (modulePermissions.canViewPayroll) return 'payroll';
+    return 'expenses'; // Default fallback
+  };
+
+  // Get default tab for academic section based on permissions
+  const getDefaultAcademicTab = () => {
+    if (modulePermissions.canViewStudents) return 'students';
+    if (modulePermissions.canViewCourses) return 'courses';
+    if (modulePermissions.canViewBatches) return 'batches';
+    if (modulePermissions.canViewEnrollments) return 'enrollments';
+    return 'students'; // Default fallback
+  };
+
+  // Get first accessible route based on user permissions
+  const getFirstAccessibleRoute = () => {
+    // Check dashboard permission first
+    if (modulePermissions.canViewDashboard) return '/';
+    
+    // Check academic permissions
+    if (modulePermissions.canViewStudents || modulePermissions.canViewCourses || 
+        modulePermissions.canViewBatches || modulePermissions.canViewEnrollments) {
+      return '/academic';
+    }
+    
+    // Check financial permissions
+    if (modulePermissions.canViewExpenses || modulePermissions.canViewPayments || 
+        modulePermissions.canViewRefunds || modulePermissions.canViewPayroll) {
+      return '/financial';
+    }
+    
+    // Check user management permissions
+    if (userManagementPermissions.canViewUsers || userManagementPermissions.canViewRoles || 
+        userManagementPermissions.canViewPermissions) {
+      return '/users';
+    }
+    
+    // Default fallback
+    return '/';
   };
 
   return {
@@ -147,6 +206,9 @@ export const usePermissions = () => {
     getAllPermissions,
     userManagementPermissions,
     modulePermissions,
+    getDefaultFinancialTab,
+    getDefaultAcademicTab,
+    getFirstAccessibleRoute,
   };
 };
 

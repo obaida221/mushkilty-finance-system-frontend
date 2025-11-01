@@ -46,16 +46,6 @@ const UsersPage: React.FC = () => {
     canReadUsers: canViewUsers,
     canReadRoles: canViewRoles,
     canReadPermissions: canViewPermissions,
-    canCreateUsers,
-    canUpdateUsers,
-    canDeleteUsers,
-    canCreateRoles,
-    canUpdateRoles,
-    canDeleteRoles,
-    canCreatePermissions,
-    canUpdatePermissions,
-    canDeletePermissions,
-    canManageSystem
   } = usePermissions();
 
   // Check if user has any permission to access user management

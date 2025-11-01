@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Box, Tabs, Tab, Paper } from '@mui/material'
-import { usePermission } from '../context/AuthContext'
+import { usePermissions } from '../hooks/usePermissions.tsx'
 
 interface TabItem {
   label: string
@@ -17,24 +17,33 @@ interface InnerNavBarProps {
 }
 
 const InnerNavBar: React.FC<InnerNavBarProps> = ({ tabs, value, onChange }) => {
-  const { hasPermission } = usePermission();
-  
+  const { hasPermission } = usePermissions();
+
   // تصفية التبويبات حسب الصلاحيات
-  const filteredTabs = tabs.filter(tab => 
+  const filteredTabs = tabs.filter(tab =>
     !tab.permission || hasPermission(tab.permission)
   );
+
+  // التحقق مما إذا كان التبويب الحالي لا يزال موجودًا بعد التصفية
+  useEffect(() => {
+    if (value && filteredTabs.length > 0 && !filteredTabs.some(tab => tab.value === value)) {
+      // إذا لم يكن التبويب الحالي موجودًا، قم بالتبديل إلى أول تبويب متاح
+      onChange(filteredTabs[0].value);
+    }
+  }, [value, filteredTabs, onChange]);
+
   return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        borderBottom: 1, 
+    <Paper
+      elevation={0}
+      sx={{
+        borderBottom: 1,
         borderColor: 'divider',
         mb: 3,
         bgcolor: 'background.paper'
       }}
     >
-      <Tabs 
-        value={value} 
+      <Tabs
+        value={value}
         onChange={(_, newValue) => onChange(newValue)}
         variant="scrollable"
         scrollButtons="auto"
