@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -52,12 +53,12 @@ const UserManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Dialog states
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  
+
   // Form state
   const [userForm, setUserForm] = useState<CreateUserRequest>({
     email: '',
@@ -65,14 +66,14 @@ const UserManagementPage: React.FC = () => {
     password: '',
     role_id: 0,
   });
-  
+
   // Snackbar
-  const [snackbar, setSnackbar] = useState({ 
-    open: false, 
-    message: '', 
-    severity: 'success' as 'success' | 'error' 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error'
   });
-  
+
   // Permissions
   const { userManagementPermissions } = usePermissions();
 
@@ -84,7 +85,7 @@ const UserManagementPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       if (!userManagementPermissions.canReadUsers) {
         setError('ليس لديك صلاحية لعرض المستخدمين');
@@ -95,7 +96,7 @@ const UserManagementPage: React.FC = () => {
         userManagementService.getAllUsers(),
         userManagementService.getAllRoles(),
       ]);
-      
+
       setUsers(usersData);
       setRoles(rolesData);
     } catch (error: any) {
@@ -118,29 +119,45 @@ const UserManagementPage: React.FC = () => {
       resetUserForm();
       loadData();
     } catch (error: any) {
-      setSnackbar({ 
-        open: true, 
-        message: `فشل في إنشاء المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`, 
-        severity: 'error' 
+      setSnackbar({
+        open: true,
+        message: `فشل في إنشاء المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`,
+        severity: 'error'
       });
-      console.error('Create user error:', error ? error.response : 'non-object error' );
+      console.error('Create user error:', error ? error.response : 'non-object error');
     }
   };
 
   const handleUpdateUser = async () => {
     if (!selectedUser) return;
-    
+
     try {
+      // التحقق من أن المستخدم الحالي لديه دور admin وأنه المدير الوحيد
+      const isAdminUser = selectedUser.role?.name === 'admin';
+      const adminUsersCount = users.filter(u => u.role?.name === 'admin').length;
+      const newRole = roles.find(r => r.id === userForm.role_id);
+      const isNewRoleNotAdmin = newRole?.name !== 'admin';
+
+      // إذا كان المستخدم الحالي مديرًا وهو المدير الوحيد ويتم تغيير دوره
+      if (isAdminUser && adminUsersCount <= 1 && isNewRoleNotAdmin) {
+        setSnackbar({
+          open: true,
+          message: 'لا يمكن تغيير دور هذا المدير، يجب أن يوجد مدير واحد على الأقل في النظام',
+          severity: 'error'
+        });
+        return;
+      }
+
       const updateData: UpdateUserRequest = {
         email: userForm.email,
         name: userForm.name,
         role_id: userForm.role_id,
       };
-      
+
       if (userForm.password) {
         updateData.password = userForm.password;
       }
-      
+
       await userManagementService.updateUser(selectedUser.id, updateData);
       setSnackbar({ open: true, message: 'تم تحديث المستخدم بنجاح', severity: 'success' });
       setUserDialogOpen(false);
@@ -148,27 +165,45 @@ const UserManagementPage: React.FC = () => {
       loadData();
     } catch (error: any) {
       setSnackbar({
-        open: true, 
+        open: true,
         message: `فشل في تحديث المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`,
-        // error.message || 'فشل في تحديث المستخدم', 
-        severity: 'error' });
+        // error.message || 'فشل في تحديث المستخدم',
+        severity: 'error'
+      });
     }
   };
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
-    
+
     try {
+      // التحقق من أن المستخدم ليس مديرًا أو أنه ليس المدير الوحيد
+      const isAdminUser = selectedUser.role?.name === 'admin';
+      const adminUsersCount = users.filter(u => u.role?.name === 'admin').length;
+
+      if (isAdminUser && adminUsersCount <= 1) {
+        setSnackbar({
+          open: true,
+          message: 'لا يمكن حذف هذا المدير، يجب أن يوجد مدير واحد على الأقل في النظام',
+          severity: 'error'
+        });
+        setDeleteDialogOpen(false);
+        setSelectedUser(null);
+        return;
+      }
+
       await userManagementService.deleteUser(selectedUser.id);
       setSnackbar({ open: true, message: 'تم حذف المستخدم بنجاح', severity: 'success' });
       setDeleteDialogOpen(false);
       setSelectedUser(null);
       loadData();
     } catch (error: any) {
-      setSnackbar({ open: true, 
+      setSnackbar({
+        open: true,
         message: `فشل في حذف المستخدم: ${error.message ? error.response.data.message : 'خطأ غير معروف'}`,
-        // error.message || 'فشل في حذف المستخدم', 
-        severity: 'error' });
+        // error.message || 'فشل في حذف المستخدم',
+        severity: 'error'
+      });
     }
   };
 
@@ -347,9 +382,9 @@ const UserManagementPage: React.FC = () => {
       <Paper>
         <TableContainer>
           <Table>
-            <TableHead>
+            <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell>المعرف</TableCell>
+                <TableCell>ID</TableCell>
                 <TableCell>البريد الإلكتروني</TableCell>
                 <TableCell>الاسم</TableCell>
                 <TableCell>الدور</TableCell>
@@ -380,7 +415,7 @@ const UserManagementPage: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      {user.created_at 
+                      {user.created_at
                         ? new Date(user.created_at).toLocaleDateString('ar')
                         : 'غير محدد'
                       }
@@ -389,8 +424,8 @@ const UserManagementPage: React.FC = () => {
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         {userManagementPermissions.canUpdateUsers && (
                           <Tooltip title="تعديل">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               color="primary"
                               onClick={() => openEditUserDialog(user)}
                             >
@@ -398,10 +433,10 @@ const UserManagementPage: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         )}
-                        {userManagementPermissions.canDeleteUsers && (
+                        {userManagementPermissions.canDeleteUsers && user.role?.name !== 'admin' && (
                           <Tooltip title="حذف">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               color="error"
                               onClick={() => openDeleteDialog(user)}
                             >
@@ -456,6 +491,7 @@ const UserManagementPage: React.FC = () => {
               <Select
                 value={userForm.role_id}
                 onChange={(e) => setUserForm({ ...userForm, role_id: e.target.value as number })}
+                disabled={selectedUser?.role?.name === 'admin' && users.filter(u => u.role?.name === 'admin').length <= 1}
               >
                 <MenuItem value={0} disabled>
                   اختر دور المستخدم
@@ -466,12 +502,17 @@ const UserManagementPage: React.FC = () => {
                   </MenuItem>
                 ))}
               </Select>
+              {selectedUser?.role?.name === 'admin' && users.filter(u => u.role?.name === 'admin').length <= 1 && (
+                <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                  لا يمكن تغيير دور هذا المدير، يجب أن يوجد مدير واحد على الأقل في النظام
+                </Typography>
+              )}
             </FormControl>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setUserDialogOpen(false)}>إلغاء</Button>
-          <Button 
+          <Button
             onClick={selectedUser ? handleUpdateUser : handleCreateUser}
             variant="contained"
             disabled={!userForm.email || !userForm.role_id || (!selectedUser && !userForm.password)}

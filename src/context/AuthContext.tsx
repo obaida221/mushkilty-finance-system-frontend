@@ -23,6 +23,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = async () => {
     try {
       const userData = await authService.getProfile()
+
+      // Store user data with permissions
+      localStorage.setItem('user', JSON.stringify(userData));
+
       setUser(userData)
     } catch (error) {
       console.error('Profile fetch error:', error)
@@ -36,7 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = await authService.login(email, password)
       setToken(data.access_token)
-      setUser(data.user)
+
+      // Fetch user profile with permissions
+      const profileData = await authService.getProfile()
+      setUser(profileData)
+
       return data
     } catch (error) {
       throw error
@@ -86,7 +94,7 @@ export const useAuth = () => {
 // Helper hook to check permissions
 export const usePermission = () => {
   const { user } = useAuth()
-  
+
   const hasPermission = (permissionName: string): boolean => {
     return authService.hasPermission(user, permissionName)
   }
