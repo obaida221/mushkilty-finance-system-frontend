@@ -223,7 +223,7 @@ const PayrollPage: React.FC = () => {
 
   // Filter by search and status
   const filteredPayrolls = payrolls.filter((p) => {
-    console.log('Filtering payrolls:', p)
+    // console.log('Filtering payrolls:', p)
     const matchesSearch = p.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          p.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          p.note?.toLowerCase().includes(searchQuery.toLowerCase())

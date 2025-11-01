@@ -30,7 +30,7 @@ export const useRefunds = () => {
       const response = await refundsAPI.getAll();
       setRefunds(response.data);
     } catch (err: any) {
-      console.error('Failed to fetch refunds:', err);
+      // console.error('Failed to fetch refunds:', err);
       setError(err?.response?.data?.message || err?.message || 'Failed to load refunds');
     } finally {
       setLoading(false);
@@ -56,7 +56,7 @@ export const useRefunds = () => {
       await fetchRefunds(); // Refresh the list
       return response.data;
     } catch (err: any) {
-      console.error('Failed to create refund:', err);
+      // console.error('Failed to create refund:', err);
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to create refund';
       setError(errorMsg);
       throw err;
@@ -73,7 +73,7 @@ export const useRefunds = () => {
       await fetchRefunds(); // Refresh the list
       return response.data;
     } catch (err: any) {
-      console.error('Failed to update refund:', err);
+      // console.error('Failed to update refund:', err);
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to update refund';
       setError(errorMsg);
       throw err;
@@ -89,7 +89,7 @@ export const useRefunds = () => {
       await refundsAPI.delete(id);
       await fetchRefunds(); // Refresh the list
     } catch (err: any) {
-      console.error('Failed to delete refund:', err);
+      // console.error('Failed to delete refund:', err);
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to delete refund';
       setError(errorMsg);
       throw err;

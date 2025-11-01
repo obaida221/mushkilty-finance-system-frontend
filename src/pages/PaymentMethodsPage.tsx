@@ -92,7 +92,7 @@ const PaymentMethodsPage: React.FC = () => {
     try {
       const response = await paymentMethodsAPI.getAll();
       setPaymentMethods(response.data);
-      console.log('Loaded payment methods:', response.data);
+      // console.log('Loaded payment methods:', response.data);
     } catch (error: any) {
       console.error('Failed to load payment methods:', error);
       setError(error.response.data.message  || 'فشل في تحميل وسائل الدفع');

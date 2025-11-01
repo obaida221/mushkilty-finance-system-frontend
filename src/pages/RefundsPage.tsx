@@ -579,7 +579,7 @@ const RefundsPage: React.FC = () => {
                 {(() => {
                   const payment = payments.find(p => p.id === Number(refundForm.payment_id));
                   if (!payment) return null;
-                  console.log("Selected payment details:", payment);
+                  // console.log("Selected payment details:", payment);
                   return (
                     <Box>
                       <Typography variant="body2">

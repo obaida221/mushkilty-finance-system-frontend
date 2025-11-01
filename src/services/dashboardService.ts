@@ -137,9 +137,9 @@ class DashboardService {
     try {
       // Get expenses data
       const expensesResponse = await this.request('/expenses');
-      console.log('Expenses Response:', expensesResponse);
+      // console.log('Expenses Response:', expensesResponse);
       const expensesData = Array.isArray(expensesResponse) ? expensesResponse : (expensesResponse?.data || []);
-      console.log('Expenses Data:', expensesData);
+      // console.log('Expenses Data:', expensesData);
       const expensesByCurrency = expensesData.reduce((acc: {IQD: number, USD: number}, expense: any) => {
         if (expense?.currency === 'USD') {
           acc.USD += Number(expense?.amount) || 0;
@@ -151,9 +151,9 @@ class DashboardService {
 
       // Get income data
       const incomeResponse = await this.request('/payments');
-      console.log('Income Response:', incomeResponse);
+      // console.log('Income Response:', incomeResponse);
       const incomeData = Array.isArray(incomeResponse) ? incomeResponse : (incomeResponse?.data || []);
-      console.log('Income Data:', incomeData);
+      // console.log('Income Data:', incomeData);
 
       // // Get refunds data
       // const refundsResponse = await this.request('/refunds');
@@ -184,25 +184,25 @@ class DashboardService {
       });
 
       // Calculate profits by currency
-      console.log('Income by Currency:', incomeByCurrency);
-      console.log('Expenses by Currency:', expensesByCurrency);
+      // console.log('Income by Currency:', incomeByCurrency);
+      // console.log('Expenses by Currency:', expensesByCurrency);
       const netProfitIQD = incomeByCurrency.IQD - expensesByCurrency.IQD;
       const netProfitUSD = incomeByCurrency.USD - expensesByCurrency.USD;
-      console.log('Net Profit IQD:', netProfitIQD);
-      console.log('Net Profit USD:', netProfitUSD);
+      // console.log('Net Profit IQD:', netProfitIQD);
+      // console.log('Net Profit USD:', netProfitUSD);
 
       // Calculate active students based on all accepted enrollments in the current year
       let activeStudentsCount = 0;
       try {
         // Get current year dynamically - will update automatically each year
         const currentYear = new Date().getFullYear();
-        console.log(`Calculating active students for year: ${currentYear}`);
+        // console.log(`Calculating active students for year: ${currentYear}`);
 
         // Fetch all enrollments data
         const enrollmentsResponse = await this.request('/enrollments');
         const enrollmentsData = Array.isArray(enrollmentsResponse) ? enrollmentsResponse : (enrollmentsResponse?.data || []);
-        console.log(`Total enrollments fetched: ${enrollmentsData.length}`);
-        console.log('Sample enrollment data:', enrollmentsData.slice(0, 3));
+        // console.log(`Total enrollments fetched: ${enrollmentsData.length}`);
+        // console.log('Sample enrollment data:', enrollmentsData.slice(0, 3));
 
         // Create a Set to store unique student IDs with accepted enrollments in current year
         const activeStudentIds = new Set();
@@ -225,7 +225,7 @@ class DashboardService {
               if (enrollment.studentId || enrollment.student_id || enrollment.student || enrollment.id) {
                 const studentId = enrollment.studentId || enrollment.student_id || enrollment.student || enrollment.id;
                 activeStudentIds.add(studentId);
-                console.log(`Added student ${studentId} to active students list`);
+                // console.log(`Added student ${studentId} to active students list`);
               }
             }
           }
@@ -233,10 +233,10 @@ class DashboardService {
 
         // Count unique active students
         activeStudentsCount = activeStudentIds.size;
-        console.log(`Active students in ${currentYear}:`, activeStudentsCount);
-        console.log('Active student IDs:', Array.from(activeStudentIds));
+        // console.log(`Active students in ${currentYear}:`, activeStudentsCount);
+        // console.log('Active student IDs:', Array.from(activeStudentIds));
       } catch (error) {
-        console.error('Failed to fetch enrollments data:', error);
+        // console.error('Failed to fetch enrollments data:', error);
         // Keep activeStudentsCount as 0 if there's an error
       }
 
@@ -293,7 +293,7 @@ class DashboardService {
                  (student.enrollments && student.enrollments.some((e: any) => e.status === 'active'));
         }).length;
       } catch (error) {
-        console.error('Failed to fetch previous period data:', error);
+        // console.error('Failed to fetch previous period data:', error);
       }
 
       const stats = {
@@ -315,7 +315,7 @@ class DashboardService {
         profitChangeUSD: calculatePercentageChange(netProfitUSD, (previousIncomeUSD - previousExpensesUSD))
       };
 
-      console.log('Final Stats:', stats);
+      // console.log('Final Stats:', stats);
 
       const [
         revenueChart,
@@ -352,7 +352,7 @@ class DashboardService {
         recentActivities
       };
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+      // console.error('Failed to load dashboard data:', error);
       throw error;
     }
   }

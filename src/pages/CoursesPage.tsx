@@ -213,7 +213,7 @@ const CoursesPage: React.FC = () => {
     const courseEnrollments = courseBatches.filter(
       batche => batche.enrollments
     )
-    console.log('courseEnrollments', courseEnrollments)
+    // console.log('courseEnrollments', courseEnrollments)
     return {
       batchCount: courseBatches.length,
       enrollmentCount: courseEnrollments.length,
@@ -309,7 +309,7 @@ const CoursesPage: React.FC = () => {
         headerAlign: "center",
         renderCell: (params) => {
           const stats = getCourseStats(params.row.id)
-          console.log('stats', stats)
+          // console.log('stats', stats)
           return (
             <Chip 
               label={stats.enrollmentCount} 

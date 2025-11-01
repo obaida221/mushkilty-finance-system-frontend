@@ -244,9 +244,9 @@ const PaymentsPage = () => {
       const enrollment = enrollments.find(e => e.id === paymentForm.enrollment_id);
       if (enrollment) {
         // Calculate previous payments for this enrollment (excluding returned and refunded payments)
-        console.log('Editing Payment:', editingPayment);
-        console.log('Payment Form:', paymentForm);
-        console.log('All Payments:', payments);
+        // console.log('Editing Payment:', editingPayment);
+        // console.log('Payment Form:', paymentForm);
+        // console.log('All Payments:', payments);
         let previousPayments = payments
           .filter(p => p.enrollment_id === paymentForm.enrollment_id && (p.status as PaymentStatus) !== 'returned' && (p.status as PaymentStatus) !== 'refunded')
           .reduce((sum, p) => {

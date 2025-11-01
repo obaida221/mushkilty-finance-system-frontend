@@ -38,7 +38,7 @@ export const useDashboard = (options: UseDashboardOptions = {}) => {
       setLastUpdated(new Date());
     } catch (err: any) {
       setError(err?.message || 'Failed to load dashboard data');
-      console.error('Dashboard load error:', err);
+      // console.error('Dashboard load error:', err);
     } finally {
       setLoading(false);
     }

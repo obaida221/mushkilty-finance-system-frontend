@@ -15,7 +15,7 @@ export const useDiscountCodes = () => {
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch discount codes');
-      console.error('Error fetching discount codes:', err);
+      // console.error('Error fetching discount codes:', err);
     } finally {
       setLoading(false);
     }

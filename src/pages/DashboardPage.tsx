@@ -126,7 +126,7 @@ const DashboardContent: React.FC = () => {
     );
   }
 
-  console.log('Dashboard data', data);
+  // console.log('Dashboard data', data);
 
   return (
     <Box sx={{ p: 3 }}>

@@ -34,7 +34,7 @@ export const usePayrolls = () => {
       const response = await payrollsAPI.getAll();
       setPayrolls(response.data);
     } catch (err: any) {
-      console.error('Failed to fetch payrolls:', err);
+      // console.error('Failed to fetch payrolls:', err);
       setError(err?.response?.data?.message || err?.message || 'Failed to load payrolls');
     } finally {
       setLoading(false);
@@ -53,7 +53,7 @@ export const usePayrolls = () => {
       await fetchPayrolls(); // Refresh the list
       return response.data;
     } catch (err: any) {
-      console.error('Failed to create payroll:', err);
+      // console.error('Failed to create payroll:', err);
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to create payroll';
       setError(errorMsg);
       throw err;
@@ -70,7 +70,7 @@ export const usePayrolls = () => {
       await fetchPayrolls(); // Refresh the list
       return response.data;
     } catch (err: any) {
-      console.error('Failed to update payroll:', err);
+      // console.error('Failed to update payroll:', err);
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to update payroll';
       setError(errorMsg);
       throw err;
@@ -86,7 +86,7 @@ export const usePayrolls = () => {
       await payrollsAPI.delete(id);
       await fetchPayrolls(); // Refresh the list
     } catch (err: any) {
-      console.error('Failed to delete payroll:', err);
+      // console.error('Failed to delete payroll:', err);
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to delete payroll';
       setError(errorMsg);
       throw err;

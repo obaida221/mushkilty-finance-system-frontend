@@ -40,7 +40,7 @@ export const updatePayment = async (id: number, data: Partial<CreatePaymentDto>)
     const response = await paymentsAPI.update(id, data);
     return response.data;
   } catch (error) {
-    console.error("Failed to update payment:", error);
+    // console.error("Failed to update payment:", error);
     throw error;
   }
 };
