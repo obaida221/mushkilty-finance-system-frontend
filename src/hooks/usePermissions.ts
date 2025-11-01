@@ -30,8 +30,8 @@ export const usePermissions = () => {
   // Academic permissions
   const canReadStudents = hasPermission('students:read');
   const canCreateStudents = hasPermission('students:create');
-  const canUpdateStudents = hasPermission('students:update');
-  const canDeleteStudents = hasPermission('students:delete');
+  const canUpdateStudents = hasPermission('students:update') && canReadStudents;
+  const canDeleteStudents = hasPermission('students:delete') && canReadStudents;
   const canAccessStudents =
     canReadStudents || canCreateStudents ||
     canUpdateStudents || canDeleteStudents;
@@ -44,8 +44,8 @@ export const usePermissions = () => {
 
   const canReadCourses = hasPermission('courses:read');
   const canCreateCourses = hasPermission('courses:create');
-  const canUpdateCourses = hasPermission('courses:update');
-  const canDeleteCourses = hasPermission('courses:delete');
+  const canUpdateCourses = hasPermission('courses:update') && canReadCourses;
+  const canDeleteCourses = hasPermission('courses:delete') && canReadCourses;
   const canAccessCourses =
     canReadCourses || canCreateCourses ||
     canUpdateCourses || canDeleteCourses;
@@ -58,8 +58,8 @@ export const usePermissions = () => {
 
   const canReadBatches = hasPermission('batches:read');
   const canCreateBatches = hasPermission('batches:create');
-  const canUpdateBatches = hasPermission('batches:update');
-  const canDeleteBatches = hasPermission('batches:delete');
+  const canUpdateBatches = hasPermission('batches:update') && canReadBatches;
+  const canDeleteBatches = hasPermission('batches:delete') && canReadBatches;
   const canAccessBatches =
     canReadBatches || canCreateBatches ||
     canUpdateBatches || canDeleteBatches;
@@ -72,8 +72,8 @@ export const usePermissions = () => {
 
   const canReadEnrollments = hasPermission('enrollments:read');
   const canCreateEnrollments = hasPermission('enrollments:create');
-  const canUpdateEnrollments = hasPermission('enrollments:update');
-  const canDeleteEnrollments = hasPermission('enrollments:delete');
+  const canUpdateEnrollments = hasPermission('enrollments:update') && canReadEnrollments;
+  const canDeleteEnrollments = hasPermission('enrollments:delete') && canReadEnrollments;
   const canAccessEnrollments =
     canReadEnrollments || canCreateEnrollments ||
     canUpdateEnrollments || canDeleteEnrollments;
@@ -86,8 +86,8 @@ export const usePermissions = () => {
 
   const canReadDiscounts = hasPermission('discounts:read');
   const canCreateDiscounts = hasPermission('discounts:create');
-  const canUpdateDiscounts = hasPermission('discounts:update');
-  const canDeleteDiscounts = hasPermission('discounts:delete');
+  const canUpdateDiscounts = hasPermission('discounts:update') && canReadDiscounts;
+  const canDeleteDiscounts = hasPermission('discounts:delete') && canReadDiscounts;
   const canAccessDiscounts =
     canReadDiscounts || canCreateDiscounts ||
     canUpdateDiscounts || canDeleteDiscounts;
@@ -101,8 +101,8 @@ export const usePermissions = () => {
   // Financial permissions
   const canReadPayments = hasPermission('payments:read');
   const canCreatePayments = hasPermission('payments:create');
-  const canUpdatePayments = hasPermission('payments:update');
-  const canDeletePayments = hasPermission('payments:delete');
+  const canUpdatePayments = hasPermission('payments:update') && canReadPayments;
+  const canDeletePayments = hasPermission('payments:delete') && canReadPayments;
   const canAccessPayments =
     canReadPayments || canCreatePayments ||
     canUpdatePayments || canDeletePayments;
@@ -115,8 +115,8 @@ export const usePermissions = () => {
 
   const canReadExpenses = hasPermission('expenses:read');
   const canCreateExpenses = hasPermission('expenses:create');
-  const canUpdateExpenses = hasPermission('expenses:update');
-  const canDeleteExpenses = hasPermission('expenses:delete');
+  const canUpdateExpenses = hasPermission('expenses:update') && canReadExpenses;
+  const canDeleteExpenses = hasPermission('expenses:delete') && canReadExpenses;
   const canAccessExpenses =
     canReadExpenses || canCreateExpenses ||
     canUpdateExpenses || canDeleteExpenses;
@@ -129,8 +129,8 @@ export const usePermissions = () => {
 
   const canReadRefunds = hasPermission('refunds:read');
   const canCreateRefunds = hasPermission('refunds:create');
-  const canUpdateRefunds = hasPermission('refunds:update');
-  const canDeleteRefunds = hasPermission('refunds:delete');
+  const canUpdateRefunds = hasPermission('refunds:update') && canReadRefunds;
+  const canDeleteRefunds = hasPermission('refunds:delete') && canReadRefunds;
   const canAccessRefunds =
     canReadRefunds || canCreateRefunds ||
     canUpdateRefunds || canDeleteRefunds;
@@ -144,8 +144,8 @@ export const usePermissions = () => {
   // Payment methods permissions
   const canReadPaymentMethods = hasPermission('payment-methods:read');
   const canCreatePaymentMethods = hasPermission('payment-methods:create');
-  const canUpdatePaymentMethods = hasPermission('payment-methods:update');
-  const canDeletePaymentMethods = hasPermission('payment-methods:delete');
+  const canUpdatePaymentMethods = hasPermission('payment-methods:update') && canReadPaymentMethods;
+  const canDeletePaymentMethods = hasPermission('payment-methods:delete') && canReadPaymentMethods;
   const canAccessPaymentMethods =
     canReadPaymentMethods || canCreatePaymentMethods ||
     canUpdatePaymentMethods || canDeletePaymentMethods;
@@ -159,8 +159,8 @@ export const usePermissions = () => {
   // Payroll permissions
   const canReadPayroll = hasPermission('payroll:read');
   const canCreatePayroll = hasPermission('payroll:create');
-  const canUpdatePayroll = hasPermission('payroll:update');
-  const canDeletePayroll = hasPermission('payroll:delete');
+  const canUpdatePayroll = hasPermission('payroll:update') && canReadPayroll;
+  const canDeletePayroll = hasPermission('payroll:delete') && canReadPayroll;
   const canAccessPayroll =
     canReadPayroll || canCreatePayroll ||
     canUpdatePayroll || canDeletePayroll;
@@ -174,8 +174,8 @@ export const usePermissions = () => {
   // User management permissions
   const canReadUsers = hasPermission('users:read');
   const canCreateUsers = hasPermission('users:create');
-  const canUpdateUsers = hasPermission('users:update');
-  const canDeleteUsers = hasPermission('users:delete');
+  const canUpdateUsers = hasPermission('users:update') && canReadUsers;
+  const canDeleteUsers = hasPermission('users:delete') && canReadUsers;
   const canAccessUsers =
     canReadUsers || canCreateUsers || canUpdateUsers || canDeleteUsers;
   const userManagementPermissions = {
@@ -188,8 +188,8 @@ export const usePermissions = () => {
   // Role management permissions
   const canReadRoles = hasPermission('roles:read');
   const canCreateRoles = hasPermission('roles:create');
-  const canUpdateRoles = hasPermission('roles:update');
-  const canDeleteRoles = hasPermission('roles:delete');
+  const canUpdateRoles = hasPermission('roles:update') && canReadRoles;
+  const canDeleteRoles = hasPermission('roles:delete') && canReadRoles;
   const canAccessRoles =
     canReadRoles || canCreateRoles || canUpdateRoles || canDeleteRoles;
   const roleManagementPermissions = {
@@ -201,8 +201,8 @@ export const usePermissions = () => {
 
   const canReadPermissions = hasPermission('permissions:read');
   const canCreatePermissions = hasPermission('permissions:create');
-  const canUpdatePermissions = hasPermission('permissions:update');
-  const canDeletePermissions = hasPermission('permissions:delete');
+  const canUpdatePermissions = hasPermission('permissions:update') && canReadPermissions;
+  const canDeletePermissions = hasPermission('permissions:delete') && canReadPermissions;
   const canAccessPermissions =
     canReadPermissions || canCreatePermissions ||
     canUpdatePermissions || canDeletePermissions;
@@ -223,6 +223,16 @@ export const usePermissions = () => {
 
   // Analytics permissions
   const canReadAnalytics = hasPermission('analytics:read');
+
+  // Helper function to check if user has any permission from a list
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    return permissions.some(permission => hasPermission(permission));
+  };
+
+  // Helper function to check if user has all permissions from a list
+  const hasAllPermissions = (permissions: string[]): boolean => {
+    return permissions.every(permission => hasPermission(permission));
+  };
 
   // Composite permissions
   const canAccessAcademic =

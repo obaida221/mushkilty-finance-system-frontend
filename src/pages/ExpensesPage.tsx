@@ -357,6 +357,7 @@ return (
       )}
 
       {/* Statistics Cards */}
+      { canReadExpenses && 
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
@@ -420,11 +421,16 @@ return (
             </Card>
           </Grid>
         )}
-      </Grid>
+      </Grid>}
 
-      {/* Table */}
+    {/* Table */}
+      {/* {canReadExpenses &&
+      ( */}
       <Paper>
-        <Box sx={{ p: 3 }}>
+
+      <Box sx={{ p: 3 }}>
+      {canReadExpenses ? 
+      <>
           <TextField
             fullWidth
             placeholder="البحث في المصروفات..."
@@ -437,7 +443,6 @@ return (
             // height: isMobile ? 400 : 500,
             width: '100%'
           }}>
-            {canReadExpenses && (
               <DataGrid
                 rows={filteredExpenses}
                 columns={columns}
@@ -454,14 +459,15 @@ return (
                 "& .MuiDataGrid-cell": { borderColor: "divider" },
                 "& .MuiDataGrid-columnHeaders": { bgcolor: "background.default", borderColor: "divider" },
                 }}
-              />)
-              }
-            {!canReadExpenses && (
-              <Box>ليس لديك صلاحية لعرض المصروفات.</Box>
-            )}
-          </Box>
-        </Box>
+              />
+            </Box>
+          </>
+        :
+        <Box>ليس لديك صلاحية لعرض المصروفات.</Box>
+        }
+      </Box>
       </Paper>
+      {/* )} */}
 
       {/* Add/Edit Expense Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>

@@ -110,7 +110,7 @@ const AppContent: React.FC = () => {
                           <Route
                             path="/academic"
                             element={
-                              <ProtectedRoute requiredPermissions={["students:read", "courses:read", "batches:read", "enrollments:read", "discounts:read"]}>
+                              <ProtectedRoute requiredPermissions={["students:read", "students:create", "courses:read", "courses:create", "batches:read", "batches:create", "enrollments:read", "enrollments:create", "discounts:read", "discounts:create"]}>
                                 <AcademicManagementPage />
                               </ProtectedRoute>
                             }
@@ -154,7 +154,7 @@ const AppContent: React.FC = () => {
                           <Route
                             path="/financial"
                             element={
-                              <ProtectedRoute requiredPermissions={["payments:read", "expenses:read", "refunds:read", "payment-methods:read", "payroll:read"]}>
+                              <ProtectedRoute requiredPermissions={["payments:read", "payments:create", "expenses:read", "expenses:create", "refunds:read", "refunds:create", "payment-methods:read", "payment-methods:create", "payroll:read", "payroll:create"]}>
                                 <FinancialManagementPage />
                               </ProtectedRoute>
                             }

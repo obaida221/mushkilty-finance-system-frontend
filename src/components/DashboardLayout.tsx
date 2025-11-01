@@ -53,9 +53,9 @@ interface DashboardMenuItem {
 
 const menuItems: DashboardMenuItem[] = [
   { text: "لوحة التحكم", icon: <Dashboard />, path: "/", permission: "dashboard:read" },
-  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permissions: ["users:read", "roles:read", "permissions:read"] },
-  { text: "الشؤون الأكاديمية", icon: <LocalLibrary />, path: "/academic", permissions: ["students:read", "courses:read", "batches:read", "enrollments:read", "discount-codes:read"] },
-  { text: "إدارة المالية", icon: <AccountBalanceWallet />, path: "/financial", permissions: ["payments:read", "payment-methods:read", "expenses:read", "refunds:read", "payrolls:read"] },
+  { text: "المستخدمون والصلاحيات", icon: <People />, path: "/users", permissions: ["users:read", "users:create", "roles:read", "roles:create", "permissions:read", "permissions:create"] },
+  { text: "الشؤون الأكاديمية", icon: <LocalLibrary />, path: "/academic", permissions: ["students:read", "students:create", "courses:read", "courses:create", "batches:read", "batches:create", "enrollments:read", "enrollments:create", "discount-codes:read", "discount-codes:create"] },
+  { text: "إدارة المالية", icon: <AccountBalanceWallet />, path: "/financial", permissions: ["payments:read", "payments:create", "payment-methods:read", "payment-methods:create", "expenses:read", "expenses:create", "refunds:read", "refunds:create", "payrolls:read", "payrolls:create"] },
 ]
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -152,7 +152,17 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       return hasAnyPermission(currentItem.permissions)
     }
 
-    return false
+    return true
+  }
+
+  // Check if a menu item should be visible based on permissions
+  const isMenuItemVisible = (item: DashboardMenuItem) => {
+    if (item.permission) {
+      return hasPermission(item.permission)
+    } else if (item.permissions) {
+      return hasAnyPermission(item.permissions)
+    }
+    return true // No permission required
   }
 
   // Redirect to first accessible route if current page is not accessible
@@ -200,7 +210,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       </Box>
       <Divider />
       <List sx={{ px: 2, py: 2 }}>
-        {menuItems.map((item) => (
+        {menuItems.filter(isMenuItemVisible).map((item) => (
           <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               selected={location.pathname === item.path}

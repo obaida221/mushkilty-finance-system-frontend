@@ -8,6 +8,7 @@ interface TabItem {
   icon?: React.ReactElement
   count?: number
   permission?: string // إضافة خاصية الصلاحية
+  permissions?: string[] // الصلاحيات المتعددة
 }
 
 interface InnerNavBarProps {
@@ -17,12 +18,21 @@ interface InnerNavBarProps {
 }
 
 const InnerNavBar: React.FC<InnerNavBarProps> = ({ tabs, value, onChange }) => {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission } = usePermissions();
 
   // تصفية التبويبات حسب الصلاحيات
-  const filteredTabs = tabs.filter(tab =>
-    !tab.permission || hasPermission(tab.permission)
-  );
+  const filteredTabs = tabs.filter(tab => {
+    // إذا لم تكن هناك صلاحيات مطلوبة، اعرض التبويب
+    if (!tab.permission && !tab.permissions) return true;
+
+    // التحقق من صلاحية واحدة
+    if (tab.permission && hasPermission(tab.permission)) return true;
+
+    // التحقق من أي صلاحية من القائمة
+    if (tab.permissions && hasAnyPermission(tab.permissions)) return true;
+
+    return false;
+  });
 
   // التحقق مما إذا كان التبويب الحالي لا يزال موجودًا بعد التصفية
   useEffect(() => {
