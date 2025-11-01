@@ -153,12 +153,13 @@ const LoginPage: React.FC = () => {
                 {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
               </Button>
 
-              {/* <Box
+              <Box
                 sx={{
                   mt: 3,
                   p: 2,
                   bgcolor: mode === 'light' ? 'background.default' : 'rgba(255,255,255,0.05)',
-                  borderRadius: 1
+                  borderRadius: 1,
+                  textAlign: 'center',
                 }}
               >
                 <Typography
@@ -166,24 +167,16 @@ const LoginPage: React.FC = () => {
                   color={mode === 'light' ? "text.secondary" : "rgba(255,255,255,0.7)"}
                   display="block"
                 >
-                  حسابات تجريبية:
+                  ما عندك حساب؟ 👀
                 </Typography>
                 <Typography
                   variant="caption"
-                  display="block"
-                  sx={{ mt: 1 }}
                   color={mode === 'light' ? "text.secondary" : "rgba(255,255,255,0.7)"}
-                >
-                  المدير: admin@example.com / Admin@123
-                </Typography>
-                <Typography
-                  variant="caption"
                   display="block"
-                  color={mode === 'light' ? "text.secondary" : "rgba(255,255,255,0.7)"}
                 >
-                  المحاسب: accountant@example.com / Accountant@123
+                  تواصل مع مسؤول النظام لإنشاء حساب جديد.
                 </Typography>
-              </Box> */}
+              </Box>
             </form>
           </CardContent>
         </Card>
