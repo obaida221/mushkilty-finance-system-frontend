@@ -37,8 +37,8 @@ import {
   AccountBalanceWallet,
 } from "@mui/icons-material"
 import { useAuth } from "../context/AuthContext"
+import { usePermissions as usePermissiosTS } from "../hooks/usePermissions.ts"
 import { usePermissions } from "../hooks/usePermissions.tsx"
-import { getFirstAccessibleRoute } from "../hooks/usePermissions"
 import { useThemeMode } from "../context/ThemeContext"
 
 const drawerWidth = 280
@@ -67,12 +67,14 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     severity: 'warning' as 'warning' | 'error' | 'info' | 'success'
   });
   const { user, logout } = useAuth()
-  const { hasPermission, hasAnyPermission, getFirstAccessibleRoute } = usePermissions()
+  const { hasPermission, hasAnyPermission } = usePermissions()
+  const { getFirstAccessibleRoute, getDefaultFinancialTab, getDefaultAcademicTab } = usePermissiosTS()
   const { mode, toggleTheme } = useThemeMode()
   const navigate = useNavigate()
   const location = useLocation()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("md"))
+  
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -150,7 +152,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       return hasAnyPermission(currentItem.permissions)
     }
 
-    return true
+    return false
   }
 
   // Redirect to first accessible route if current page is not accessible

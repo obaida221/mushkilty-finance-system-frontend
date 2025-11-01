@@ -31,6 +31,7 @@ import { usePayments, updatePayment, type PaymentStatus } from "../hooks/usePaym
 import type { Refund } from "../types/financial"
 import type { Payment } from "../types/payment"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
+import { usePermissions as usePermissiosTS } from "../hooks/usePermissions.ts"
 
 interface RefundFormType {
   payment_id: string;
@@ -42,6 +43,7 @@ const RefundsPage: React.FC = () => {
   const { refunds, loading, error, createRefund, updateRefund, deleteRefund, fetchRefunds } = useRefunds();
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const { payments, loading: paymentsLoading } = usePayments();
+  const { canReadRefunds, canCreateRefunds, canUpdateRefunds, canDeleteRefunds } = usePermissiosTS();
   
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
@@ -308,18 +310,21 @@ const RefundsPage: React.FC = () => {
           >
             <Visibility fontSize="small" />
           </IconButton>
-          <IconButton 
-            color="primary" 
-            size="small" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleOpenDialog(params.row);
-            }}
-            title="تعديل"
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton 
+           { canUpdateRefunds &&
+            <IconButton 
+              color="primary" 
+              size="small" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenDialog(params.row);
+              }}
+              title="تعديل"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+          }
+          { canDeleteRefunds && 
+            <IconButton 
             color="error" 
             size="small" 
             onClick={(e) => {
@@ -329,14 +334,16 @@ const RefundsPage: React.FC = () => {
             title="حذف"
           >
             <Delete fontSize="small" />
-          </IconButton>
+          </IconButton>}
         </Box>
       )
     },
   ]
 
   const filteredRefunds = refunds.filter((r) => {
-    console.log("Filtering refund:", r);
+    if (!canReadRefunds)
+      return false;
+
     const searchLower = searchQuery.toLowerCase();
     return (
       (r.payment?.enrollment?.student?.name || "").toLowerCase().includes(searchLower) ||
@@ -374,9 +381,9 @@ const RefundsPage: React.FC = () => {
           <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefreshRefunds}>
             تحديث
           </Button>
-          <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => handleOpenDialog()}>
+          {canCreateRefunds && <Button variant="contained" color="primary" startIcon={<Add />} onClick={() => handleOpenDialog()}>
             إضافة مرتجع
-          </Button>
+          </Button>}
         </Box>
       </Box>
 

@@ -32,7 +32,7 @@ import { DataGrid, type GridColDef } from "@mui/x-data-grid"
 import { Search, Add, MoneyOff, Edit, Delete, Receipt, Visibility, Refresh } from "@mui/icons-material"
 import { useExpenses, type CreateExpenseDto } from "../hooks/useExpenses"
 import { useAuth } from "../context/AuthContext"
-import { usePermissions } from "../hooks/usePermissions"
+import { usePermissions } from "../hooks/usePermissions.ts"
 import { useExchangeRate } from "../context/ExchangeRateContext"
 import type { Expense, Currency } from "../types/financial"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
@@ -319,6 +319,8 @@ const ExpensesPage: React.FC = () => {
 ];
 
 const filteredExpenses = expenses.filter((exp) => {
+  if (!canReadExpenses)
+    return false
   const searchLower = searchQuery.toLowerCase();
   return (
     (exp.beneficiary || "").toLowerCase().includes(searchLower) ||
@@ -703,7 +705,8 @@ return (
           >
             إغلاق
           </Button>
-          <Button 
+          { canUpdateExpenses &&
+            <Button 
             variant="contained" 
             startIcon={<Edit />}
             onClick={() => {
@@ -713,7 +716,7 @@ return (
             size={isMobile ? "small" : "medium"}
           >
             تعديل المصروف
-          </Button>
+          </Button>}
         </DialogActions>
       </Dialog>
 

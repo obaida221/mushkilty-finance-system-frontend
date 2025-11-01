@@ -213,6 +213,9 @@ export const usePermissions = () => {
     canDeletePermissions,
   };
 
+  const canAccessUsersManagement =
+    canAccessUsers || canAccessRoles || canAccessPermissions;
+
   const canManageSystem = hasPermission('system:admin');
 
   // Dashboard permissions
@@ -233,27 +236,27 @@ export const usePermissions = () => {
 
   // Get default tab for each section based on permissions
   const getDefaultAcademicTab = () => {
-    if (canReadStudents) return 'students';
-    if (canReadCourses) return 'courses';
-    if (canReadBatches) return 'batches';
-    if (canReadEnrollments) return 'enrollments';
-    if (canReadDiscounts) return 'discounts';
+    if (canAccessStudents) return 'students';
+    if (canAccessCourses) return 'courses';
+    if (canAccessBatches) return 'batches';
+    if (canAccessEnrollments) return 'enrollments';
+    if (canAccessDiscounts) return 'discounts';
     return 'students'; // Default fallback
   };
 
   const getDefaultFinancialTab = () => {
-    if (canReadExpenses) return 'expenses';
-    if (canReadPayments) return 'payments';
-    if (canReadRefunds) return 'refunds';
-    if (canReadPaymentMethods) return 'payment-methods';
-    if (canReadPayroll) return 'payroll';
+    if (canAccessExpenses) return 'expenses';
+    if (canAccessPayments) return 'payments';
+    if (canAccessRefunds) return 'refunds';
+    if (canAccessPaymentMethods) return 'payment-methods';
+    if (canAccessPayroll) return 'payroll';
     return 'expenses'; // Default fallback
   };
 
   const getDefaultUserManagementTab = () => {
-    if (canReadUsers) return 'users';
-    if (canReadRoles) return 'roles';
-    if (canReadPermissions) return 'permissions';
+    if (canAccessUsers) return 'users';
+    if (canAccessRoles) return 'roles';
+    if (canAccessPermissions) return 'permissions';
     return 'users'; // Default fallback
   };
 
