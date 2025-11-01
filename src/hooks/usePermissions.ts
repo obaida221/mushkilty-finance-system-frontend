@@ -330,6 +330,7 @@ export const usePermissions = () => {
     canReadAnalytics,
 
     // Composite permissions
+    canAccessUsersManagement,
     canAccessAcademic,
     canAccessFinancial,
     canAccessUsers,
