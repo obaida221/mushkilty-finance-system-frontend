@@ -29,7 +29,7 @@ const createAppTheme = (mode: ThemeMode): Theme => {
         dark: "#475569",
       },
       background: {
-        default: mode === "dark" ? "#0A0A0A" : "#F8FAFC",
+        default: mode === "dark" ? "#202028ff" : "#F8FAFC",
         paper: mode === "dark" ? "#141414" : "#FFFFFF",
       },
       text: {

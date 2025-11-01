@@ -184,7 +184,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <Box sx={{ textAlign: "center" }}>
           <Box
             component="img"
-            src="https://mushkilty.com/img/logo.webp"
+            src="https://ugc.production.linktr.ee/2280d294-2dce-4a9d-a46a-3db868b1363b_1000037973.png?io=true&size=avatar-v3_0"
             alt="Mushkilty Logo"
             sx={{
               height: 60,

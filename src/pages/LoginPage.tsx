@@ -49,7 +49,7 @@ const LoginPage: React.FC = () => {
         <Box sx={{ textAlign: "center", mb: 4 }}>
           <Box
             component="img"
-            src="https://mushkilty.com/img/logo.webp"
+            src="https://ugc.production.linktr.ee/2280d294-2dce-4a9d-a46a-3db868b1363b_1000037973.png?io=true&size=avatar-v3_0"
             alt="Mushkilty Logo"
             sx={{
               height: 160,
@@ -153,7 +153,7 @@ const LoginPage: React.FC = () => {
                 {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
               </Button>
 
-              <Box
+              {/* <Box
                 sx={{
                   mt: 3,
                   p: 2,
@@ -183,7 +183,7 @@ const LoginPage: React.FC = () => {
                 >
                   المحاسب: accountant@example.com / Accountant@123
                 </Typography>
-              </Box>
+              </Box> */}
             </form>
           </CardContent>
         </Card>
