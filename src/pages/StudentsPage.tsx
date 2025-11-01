@@ -47,10 +47,24 @@ import {
 } from "@mui/icons-material"
 import { useStudents } from '../hooks/useStudents'
 import { useEnrollments } from '../hooks/useEnrollments'
+import { usePermissions } from '../hooks/usePermissions.ts'
 import type { Student, CreateStudentDto } from "../types"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
 
 const StudentsPage: React.FC = () => {
+  const {
+    canReadStudents,
+    canCreateStudents,
+    canUpdateStudents,
+    canDeleteStudents
+  } = usePermissions();
+
+  console.log("permission st:", 
+    canReadStudents,
+    canCreateStudents,
+    canUpdateStudents,
+    canDeleteStudents)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
@@ -384,22 +398,26 @@ const StudentsPage: React.FC = () => {
             >
               <Visibility fontSize="small" />
             </IconButton>
-            <IconButton 
-              size="small" 
-              color="primary" 
-              onClick={() => handleEditStudent(params.row)}
-              disabled={deleteLoading}
-            >
-              <Edit fontSize="small" />
-            </IconButton>
-            <IconButton 
-              size="small" 
-              color="error" 
-              onClick={() => handleDeleteWithDialog(params.row)}
-              disabled={deleteLoading}
-            >
-              <Delete fontSize="small" />
-            </IconButton>
+            { canUpdateStudents && (
+              <IconButton 
+                size="small" 
+                color="primary" 
+                onClick={() => handleEditStudent(params.row)}
+                disabled={deleteLoading}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+            )}
+            {canDeleteStudents &&
+              (<IconButton 
+                size="small" 
+                color="error" 
+                onClick={() => handleDeleteWithDialog(params.row)}
+                disabled={deleteLoading}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+              )}
           </Box>
         ),
       },
@@ -413,6 +431,28 @@ const StudentsPage: React.FC = () => {
       )
     }
 
+    // Check if user has permission to view students
+    if (!canReadStudents) {
+      return (
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '70vh',
+          textAlign: 'center',
+          p: 3
+        }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            ليس لديك صلاحية للوصول إلى صفحة الطلاب
+          </Alert>
+          <Typography variant="body1">
+            للوصول إلى هذه الصفحة، يجب أن تملك صلاحية "عرض الطلاب"
+          </Typography>
+        </Box>
+      );
+    }
+
     return (
     <Box>
         {/* Header */}      
@@ -421,9 +461,11 @@ const StudentsPage: React.FC = () => {
             إدارة الطلاب
           </Typography>
 
-        <Button variant="contained" startIcon={<PersonAdd />} onClick={handleOpenDialog}>
-          إضافة طالب
-        </Button>
+        {canCreateStudents && (
+          <Button variant="contained" startIcon={<PersonAdd />} onClick={handleOpenDialog}>
+            إضافة طالب
+          </Button>
+        )}
       </Box>
 
       {/* Error Alert */}
@@ -1024,7 +1066,7 @@ const StudentsPage: React.FC = () => {
           >
             إغلاق
           </Button>
-          {selectedStudent && (
+          {canUpdateStudents && selectedStudent && (
             <Button 
               onClick={() => {
                 handleCloseDetailsDialog()

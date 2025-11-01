@@ -285,10 +285,29 @@ export const usePermissions = () => {
 
     // Individual permissions
     canReadStudents,
+    canCreateStudents,
+    canUpdateStudents,
+    canDeleteStudents,
+
     canReadCourses,
+    canCreateCourses,
+    canUpdateCourses,
+    canDeleteCourses,
+
     canReadBatches,
+    canCreateBatches,
+    canUpdateBatches,
+    canDeleteBatches,
+
     canReadEnrollments,
+    canCreateEnrollments,
+    canUpdateEnrollments,
+    canDeleteEnrollments,
+
     canReadDiscounts,
+    canCreateDiscounts,
+    canUpdateDiscounts,
+    canDeleteDiscounts,
 
     // Financial permissions
     canReadPayments,

@@ -104,6 +104,12 @@ const BatchesPage: React.FC = () => {
 
   // Handle form submission
   const handleSubmit = async () => {
+    // التحقق من الحقول المطلوبة
+    if (!batchForm.name || !batchForm.course_id || !batchForm.trainer_id) {
+      setSnackbar({ open: true, message: "يرجى ملء جميع الحقول المطلوبة (اسم الدفعة، الدورة، والمدرب)", severity: "error" })
+      return
+    }
+    
     try {
       if (editingBatch) {
         await updateBatch(editingBatch.id, batchForm)
@@ -174,12 +180,13 @@ const BatchesPage: React.FC = () => {
       description: "",
       level: undefined,
       location: "",
-      start_date: null,
-      end_date: null,
+      start_date: "",
+      end_date: "",
       schedule: "",
       capacity: undefined,
       status: "open",
-      actual_price: undefined,
+      actual_price: 0,
+      currency: "IQD",
     })
     setCourseSearch("")
     setTrainerSearch("")
@@ -195,8 +202,8 @@ const BatchesPage: React.FC = () => {
       description: batch.description || "",
       level: batch.level,
       location: batch.location || "",
-      start_date: batch.start_date ? batch.start_date.split('T')[0] : null,
-      end_date: batch.end_date ? batch.end_date.split('T')[0] : null,
+      start_date: batch.start_date ? batch.start_date.split('T')[0] : "",
+      end_date: batch.end_date ? batch.end_date.split('T')[0] : "",
       schedule: batch.schedule || "",
       capacity: batch.capacity,
       status: batch.status,
@@ -357,7 +364,7 @@ const BatchesPage: React.FC = () => {
       headerAlign: "center",
       renderCell: (params) => {
         const batchEnrollments = params.row.enrollments
-        return batchEnrollments.length || 0
+        return batchEnrollments ? batchEnrollments.length : 0
       },
     },
     {
@@ -688,7 +695,7 @@ const BatchesPage: React.FC = () => {
                   fullWidth
                   label="تاريخ البداية"
                   type="date"
-                  value={batchForm.start_date}
+                  value={batchForm.start_date || ""}
                   onChange={(e) => setBatchForm({ ...batchForm, start_date: e.target.value })}
                   InputLabelProps={{ shrink: true }}
                   required
@@ -699,7 +706,7 @@ const BatchesPage: React.FC = () => {
                   fullWidth
                   label="تاريخ النهاية"
                   type="date"
-                  value={batchForm.end_date}
+                  value={batchForm.end_date || ""}
                   onChange={(e) => setBatchForm({ ...batchForm, end_date: e.target.value })}
                   InputLabelProps={{ shrink: true }}
                 />

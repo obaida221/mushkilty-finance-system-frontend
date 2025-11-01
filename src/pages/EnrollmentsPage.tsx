@@ -54,8 +54,15 @@ import { useAuth } from '../context/AuthContext'
 import type { Enrollment, CreateEnrollmentDto } from "../types"
 import type { DiscountCode } from "../types/discount"
 import DeleteConfirmDialog from "../components/global-ui/DeleteConfirmDialog"
+import { usePermissions } from '../hooks/usePermissions.ts'
 
 const EnrollmentsPage: React.FC = () => {
+  const {
+    canReadEnrollments,
+    canCreateEnrollments,
+    canUpdateEnrollments,
+    canDeleteEnrollments,
+  } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("")
   const [openDialog, setOpenDialog] = useState(false)
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null)
@@ -134,6 +141,7 @@ const EnrollmentsPage: React.FC = () => {
 
   // Get filtered discount codes based on batch currency
   const getFilteredDiscountCodes = (batchId: number): DiscountCode[] => {
+    if (!canReadEnrollments) return false
     const batch = batches.find(b => b.id === batchId)
     if (!batch) return discountCodes.filter(d => d.active)
 
@@ -522,24 +530,27 @@ const EnrollmentsPage: React.FC = () => {
           >
             <Visibility fontSize="small" />
           </IconButton>
-          <IconButton 
-            size="small" 
-            color="primary" 
-            onClick={() => handleEditEnrollment(params.row)}
-            disabled={deleteLoading}
-            title="تعديل"
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            color="error" 
-            onClick={() => handleDeleteWithDialog(params.row)}
-            disabled={deleteLoading}
-            title="حذف"
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          {canUpdateEnrollments &&
+            <IconButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleEditEnrollment(params.row)}
+              disabled={deleteLoading}
+              title="تعديل"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+          }
+          { canDeleteEnrollments &&
+            <IconButton 
+              size="small" 
+              color="error" 
+              onClick={() => handleDeleteWithDialog(params.row)}
+              disabled={deleteLoading}
+              title="حذف"
+            >
+              <Delete fontSize="small" />
+            </IconButton>}
         </Box>
       ),
     },
@@ -560,9 +571,10 @@ const EnrollmentsPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           إدارة التسجيلات
         </Typography>
+        { canCreateEnrollments &&
         <Button variant="contained" startIcon={<PersonAdd />} onClick={handleOpenDialog}>
           تسجيل طالب
-        </Button>
+        </Button>}
       </Box>
 
       {/* Error Alert */}
@@ -1191,7 +1203,7 @@ const EnrollmentsPage: React.FC = () => {
           >
             إغلاق
           </Button>
-          {selectedEnrollment && (
+          {selectedEnrollment && canUpdateEnrollments && (
             <Button 
               onClick={() => {
                 handleCloseDetailsDialog()
